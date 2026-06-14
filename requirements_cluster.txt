@@ -1,0 +1,14 @@
+numpy
+pandas
+Pillow
+pyyaml
+tqdm
+
+torch
+torchvision
+
+transformers
+accelerate
+safetensors
+
+qwen-vl-utils
