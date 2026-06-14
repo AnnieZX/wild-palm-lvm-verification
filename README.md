@@ -21,7 +21,7 @@ Orthomosaic Image → YOLO Detection → LVM Verification → Ranked Review Queu
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        INPUT LAYER                                       │
+│                        INPUT LAYER                                      │
 │  ┌────────────────────┐        ┌─────────────────────────────────────┐  │
 │  │  21 Full           │        │  JSON Annotations                   │  │
 │  │  Orthomosaics      │───────▶│  (Bounding boxes + Seg. masks)      │  │
@@ -31,32 +31,32 @@ Orthomosaic Image → YOLO Detection → LVM Verification → Ranked Review Queu
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                     PREPROCESSING PIPELINE                               │
-│                                                                          │
-│   Tile-based parsing → Extract image patches → Render overlay            │
-│   (original imagery + bounding box/mask overlay per prediction)          │
+│                     PREPROCESSING PIPELINE                              │
+│                                                                         │
+│   Tile-based parsing → Extract image patches → Render overlay           │
+│   (original imagery + bounding box/mask overlay per prediction)         │
 └─────────────────────────────────────────────────────────────────────────┘
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    LVM VERIFICATION MODULE                               │
+│                    LVM VERIFICATION MODULE                              │
 │                   (Qwen2.5-VL-7B-Instruct)                              │
-│                                                                          │
-│   Zero-shot / Few-shot prompting                                         │
-│   ↓                                                                      │
-│   Output per patch:                                                      │
-│     • Reliability label:  ✅ reliable │ ⚠️ uncertain │ ❌ unreliable    │
-│     • Plain-language explanation (shape, overlap, background context)    │
-│     • Verification score (0–1)                                           │
+│                                                                         │
+│   Zero-shot / Few-shot prompting                                        │
+│   ↓                                                                     │
+│   Output per patch:                                                     │
+│     • Reliability label:  ✅ reliable │ ⚠️ uncertain │ ❌ unreliable     │
+│     • Plain-language explanation (shape, overlap, background context)   │
+│     • Verification score (0–1)                                          │
 └─────────────────────────────────────────────────────────────────────────┘
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        OUTPUT LAYER                                      │
-│                                                                          │
-│   1. Color-coded bounding box overlays (green / amber / red)             │
-│   2. Ranked prediction list ordered by verification score                │
-│   3. Natural-language explanation for each flagged instance              │
+│                        OUTPUT LAYER                                     │
+│                                                                         │
+│   1. Color-coded bounding box overlays (green / amber / red)            │
+│   2. Ranked prediction list ordered by verification score               │
+│   3. Natural-language explanation for each flagged instance             │
 └─────────────────────────────────────────────────────────────────────────┘
                                        │
                                        ▼
