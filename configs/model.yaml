@@ -1,0 +1,12 @@
+# LVM verifier configuration
+# Change model_type when swapping in a real open-source VLM.
+
+model_type: qwen
+model_name: Qwen/Qwen2.5-VL-3B-Instruct
+mock_model_name: mock_verifier_v0
+
+future_options:
+  - llava
+  - qwen_vl
+  - geochat
+  - gpt4o

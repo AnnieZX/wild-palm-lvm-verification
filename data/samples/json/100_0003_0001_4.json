@@ -1,0 +1,207 @@
+{
+  "version": "2.5.4",
+  "flags": {},
+  "shapes": [
+    {
+      "kie_linking": [],
+      "label": "center",
+      "score": null,
+      "points": [
+        [
+          207.80722891566268,
+          183.10843373493975
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          187.32530120481925,
+          125.27710843373495
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          190.9397590361446,
+          224.0722891566265
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          147.566265060241,
+          190.33734939759037
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          253.59036144578312,
+          201.18072289156626
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "direction": 0,
+      "label": "palm",
+      "score": null,
+      "points": [
+        [
+          142.74698795180723,
+          120.28571428571429
+        ],
+        [
+          256.0,
+          120.28571428571429
+        ],
+        [
+          256.0,
+          228.07792207792207
+        ],
+        [
+          142.74698795180723,
+          228.07792207792207
+        ]
+      ],
+      "group_id": 0,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rotation",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "center",
+      "score": null,
+      "points": [
+        [
+          163.2289156626506,
+          198.7710843373494
+        ]
+      ],
+      "group_id": 1,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          123.46987951807228,
+          159.0120481927711
+        ]
+      ],
+      "group_id": 1,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "label": "end",
+      "score": null,
+      "points": [
+        [
+          109.01204819277109,
+          210.81927710843374
+        ]
+      ],
+      "group_id": 1,
+      "description": "",
+      "difficult": false,
+      "shape_type": "point",
+      "flags": {},
+      "attributes": {}
+    },
+    {
+      "kie_linking": [],
+      "direction": 0,
+      "label": "palm",
+      "score": null,
+      "points": [
+        [
+          104.19277108433738,
+          144.55421686746988
+        ],
+        [
+          195.75903614457832,
+          144.55421686746988
+        ],
+        [
+          195.75903614457832,
+          234.9156626506024
+        ],
+        [
+          104.19277108433738,
+          234.9156626506024
+        ]
+      ],
+      "group_id": 1,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rotation",
+      "flags": {},
+      "attributes": {}
+    }
+  ],
+  "imagePath": "100_0003_0001_4.png",
+  "imageData": null,
+  "imageHeight": 912,
+  "imageWidth": 912,
+  "description": ""
+}
