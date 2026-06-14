@@ -8,5 +8,5 @@ candidate_models:
   - llava
   - geochat
 
-active_model: Qwen/Qwen2.5-VL-3B-Instruct
+active_model: /deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct
 mock_model_name: mock_verifier_v0
