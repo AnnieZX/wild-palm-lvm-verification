@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Thesis data
+data/raw/
+data/processed/
+outputs/
+
+# Large imagery
+*.tif
+*.tiff
+
+# Cluster data
+cluster_data/
+
+# Secrets
+.env
