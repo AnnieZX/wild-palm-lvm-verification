@@ -117,15 +117,29 @@ class QwenVerifier(BaseVerifier):
         )
         return output_text[0]
 
-    def verify_image(self, image_path: str, metadata: dict) -> dict:
+    def verify_image(
+        self,
+        image_path: str,
+        metadata: dict,
+        prompt: str | None = None,
+        use_legacy_validation: bool = True,
+    ) -> dict:
         """
         Verify one palm overlay image with Qwen2.5-VL.
+
+        Args:
+            image_path: Path to the input image.
+            metadata: Palm metadata dictionary.
+            prompt: Optional custom prompt. Uses the default template when omitted.
+            use_legacy_validation: When False, skip legacy schema validation and
+                return only raw_response plus basic metadata fields.
 
         Returns a dictionary containing raw_response and, when parsing succeeds,
         validated schema fields.
         """
         image_path = Path(image_path)
-        prompt = build_verification_prompt(metadata)
+        if prompt is None:
+            prompt = build_verification_prompt(metadata)
 
         print(f"Running Qwen verification for: {image_path.name}")
         raw_response = self._generate_response(image_path, prompt)
@@ -136,6 +150,9 @@ class QwenVerifier(BaseVerifier):
             "raw_response": raw_response,
             "model_name": self.model_name,
         }
+
+        if not use_legacy_validation:
+            return result
 
         try:
             parsed = parse_json_response(raw_response)
