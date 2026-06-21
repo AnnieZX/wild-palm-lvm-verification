@@ -14,13 +14,6 @@
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Batch Qwen2.5-VL verification for sample palms (15 instances).
-# Submit from the project root:
-#   mkdir -p logs outputs/raw_responses
-#   sbatch jobs/qwen_batch_sample.slurm
-# ---------------------------------------------------------------------------
-
 PROJECT_DIR="${SLURM_SUBMIT_DIR}"
 METADATA_CSV="${PROJECT_DIR}/outputs/lvm_inputs_metadata.csv"
 RESULTS_CSV="${PROJECT_DIR}/outputs/qwen_sample_results.csv"
@@ -36,15 +29,12 @@ cd "${PROJECT_DIR}"
 mkdir -p logs
 mkdir -p outputs/raw_responses
 
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate palm-lvm
-
 echo "Python: $(which python)"
 python --version
 
 echo
 echo "=== nvidia-smi ==="
-nvidia-smi
+nvidia-smi || true
 
 echo
 echo "=== Cluster environment check ==="
