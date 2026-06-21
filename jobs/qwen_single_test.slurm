@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen_single
+#SBATCH --job-name=qwen_batch_sample
 #SBATCH --partition=yangGrp
 #SBATCH --account=yanggrp
 #SBATCH --nodelist=lovelace
@@ -8,9 +8,9 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:L40S:1
 #SBATCH --mem=96G
-#SBATCH --time=02:00:00
-#SBATCH --output=logs/qwen_single_%j.out
-#SBATCH --error=logs/qwen_single_%j.err
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/qwen_batch_sample_%j.out
+#SBATCH --error=logs/qwen_batch_sample_%j.err
 
 set -euo pipefail
 
@@ -29,7 +29,7 @@ nvidia-smi || true
 
 python scripts/check_cluster_environment.py
 
-echo "Running Qwen single test..."
-python scripts/run_qwen_single.py
+echo "Running Qwen batch sample..."
+python scripts/run_qwen_batch_sample.py
 
 echo "End time: $(date)"
