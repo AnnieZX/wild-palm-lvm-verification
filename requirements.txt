@@ -11,4 +11,3 @@ transformers
 accelerate
 torch
 torchvision
-qwen-vl-utils
