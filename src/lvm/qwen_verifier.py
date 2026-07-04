@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from src.lvm.base_verifier import BaseVerifier
 from src.lvm.prompt_template import build_verification_prompt
@@ -116,6 +117,70 @@ class QwenVerifier(BaseVerifier):
             clean_up_tokenization_spaces=False,
         )
         return output_text[0]
+
+    def generate_batch_responses(
+        self,
+        items: list[tuple[Path | str, str]],
+        max_new_tokens: int = 512,
+    ) -> list[str]:
+        """Run batch inference for multiple (image_path, prompt) pairs."""
+        if not items:
+            return []
+
+        from qwen_vl_utils import process_vision_info
+
+        texts: list[str] = []
+        image_input_batches: list[Any] = []
+        video_input_batches: list[Any] = []
+
+        for image_path, prompt in items:
+            image_path = Path(image_path).resolve()
+            if not image_path.exists():
+                raise FileNotFoundError(f"Image not found: {image_path}")
+
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": str(image_path)},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
+            texts.append(
+                self.processor.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+            )
+            image_inputs, video_inputs = process_vision_info(messages)
+            image_input_batches.append(image_inputs)
+            video_input_batches.append(video_inputs)
+
+        inputs = self.processor(
+            text=texts,
+            images=image_input_batches,
+            videos=video_input_batches,
+            padding=True,
+            return_tensors="pt",
+        )
+        inputs = inputs.to(self.model.device)
+
+        generated_ids = self.model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+        )
+        generated_ids_trimmed = [
+            output_ids[len(input_ids) :]
+            for input_ids, output_ids in zip(inputs.input_ids, generated_ids)
+        ]
+        return self.processor.batch_decode(
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )
 
     def verify_image(
         self,

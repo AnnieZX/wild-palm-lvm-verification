@@ -132,6 +132,9 @@ wild-palm-lvm-verification/
 │   ├── run_qwen_ablation_100.py         # Full ablation inference
 │   ├── analyze_ablation_100.py          # Ablation summarization
 │   ├── run_full_inference_and_overlay.py
+│   ├── generate_verification_dataset.py
+│   ├── build_verification_prompts.py
+│   ├── run_verification_inference.py
 │   ├── visualize_yolo_gt_overlap_full.py
 │   ├── check_cluster_environment.py
 │   └── experimental/              # Smoke test + supplementary YOLO QA
@@ -151,6 +154,7 @@ wild-palm-lvm-verification/
     ├── full_inference/            # YOLO predictions + overlays
     ├── yolo_gt_overlap_full/      # GT vs YOLO overlap images
     ├── yolo_analysis/             # GT match + count CSVs
+    ├── verification_dataset/      # One Qwen input per YOLO detection
     └── ablation_*                 # LVM ablation artifacts
 ```
 
@@ -224,6 +228,49 @@ Runs inference on every `*.png` under Raw_Patches with:
 | `outputs/full_inference/overlays/{image_id}_overlay.png` | Green boxes + confidence labels |
 
 Requires `ultralytics` (install on cluster as needed).
+
+### Verification dataset (YOLO → Qwen inputs)
+
+```bash
+python scripts/generate_verification_dataset.py
+```
+
+Converts every YOLO detection above a confidence threshold into one verification sample. Does **not** use LabelMe — only raw patch PNGs and YOLO predictions.
+
+Options: `--predictions`, `--images-root`, `--output-dir`, `--confidence` (default `0.5`).
+
+For each detection the script:
+
+1. Loads the raw patch image
+2. Dims the background slightly
+3. Draws only the target YOLO bounding box
+4. Saves overlay image + metadata JSON
+
+**Outputs:**
+
+| Path | Content |
+|------|---------|
+| `outputs/verification_dataset/images/sample_XXXXXX.png` | Single-detection overlay |
+| `outputs/verification_dataset/metadata/sample_XXXXXX.json` | `sample_id`, `image_name`, `bbox`, `confidence`, geometry fields |
+| `outputs/verification_dataset/index.csv` | One row per sample |
+
+Build Qwen prompts from the dataset:
+
+```bash
+python scripts/build_verification_prompts.py
+```
+
+Writes `outputs/verification_dataset/prompts/sample_XXXXXX.txt` — one text prompt per sample, paired with the overlay image at inference time.
+
+Run Qwen inference (cluster GPU required):
+
+```bash
+python scripts/run_verification_inference.py \
+  --batch-size 4 \
+  --model-config configs/model.yaml
+```
+
+Model path comes from `active_model` in config (override with `--model-path`). Writes `outputs/verification_results/sample_XXXXXX.json` per sample.
 
 ---
 
