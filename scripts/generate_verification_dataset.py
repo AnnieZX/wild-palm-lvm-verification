@@ -62,8 +62,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--progress-interval",
         type=int,
-        default=500,
-        help="Print progress every N detections (0 to disable)",
+        default=100,
+        help="Print progress every N images (0 to disable)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of worker processes (default: CPU count)",
     )
     return parser.parse_args()
 
@@ -84,6 +90,8 @@ def main() -> None:
     print(f"  Predictions: {args.predictions}")
     print(f"  Output:      {args.output_dir}")
     print(f"  Confidence:  >= {args.confidence}")
+    if args.workers is not None:
+        print(f"  Workers:     {args.workers}")
     print()
 
     index_df = build_verification_dataset(
@@ -92,6 +100,7 @@ def main() -> None:
         output_dir=args.output_dir,
         confidence_threshold=args.confidence,
         progress_interval=args.progress_interval,
+        num_workers=args.workers,
     )
 
     print()

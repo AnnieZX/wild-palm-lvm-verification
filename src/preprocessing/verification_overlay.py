@@ -16,6 +16,8 @@ def render_single_detection_overlay(
     dim_factor: float = DEFAULT_DIM_FACTOR,
     box_color: tuple[int, int, int] = COLOR_BBOX,
     box_thickness: int = 2,
+    dimmed_base: np.ndarray | None = None,
+    image_size: tuple[int, int] | None = None,
 ) -> np.ndarray:
     """
     Dim the full image, restore the bbox region at full brightness, and draw the target box.
@@ -24,6 +26,9 @@ def render_single_detection_overlay(
         image: BGR source patch.
         bbox: Target detection as (x, y, width, height).
         dim_factor: Brightness multiplier applied outside the bbox (0–1).
+        dimmed_base: Precomputed dimmed image (same shape as image). Reused across
+            multiple detections on the same patch for speed.
+        image_size: Cached (height, width). Defaults to image.shape[:2].
     """
     x, y, width, height = bbox
     x1 = int(round(x))
@@ -31,13 +36,21 @@ def render_single_detection_overlay(
     x2 = int(round(x + width))
     y2 = int(round(y + height))
 
-    img_h, img_w = image.shape[:2]
+    if image_size is None:
+        img_h, img_w = image.shape[:2]
+    else:
+        img_h, img_w = image_size
+
     x1 = max(0, min(x1, img_w - 1))
     y1 = max(0, min(y1, img_h - 1))
     x2 = max(0, min(x2, img_w))
     y2 = max(0, min(y2, img_h))
 
-    dimmed = (image.astype(np.float32) * dim_factor).clip(0, 255).astype(np.uint8)
+    if dimmed_base is None:
+        dimmed = (image.astype(np.float32) * dim_factor).clip(0, 255).astype(np.uint8)
+    else:
+        dimmed = dimmed_base
+
     output = dimmed.copy()
     if x2 > x1 and y2 > y1:
         output[y1:y2, x1:x2] = image[y1:y2, x1:x2]
