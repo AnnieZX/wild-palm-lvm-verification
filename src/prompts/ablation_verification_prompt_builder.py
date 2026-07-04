@@ -10,12 +10,20 @@ from typing import Any
 import cv2
 import pandas as pd
 
-from src.preprocessing.ablation_verification_images import build_a4_combined_image
+from src.preprocessing.ablation_verification_images import (
+    build_a4_combined_image,
+    build_a5_crop_only_image,
+)
+from src.preprocessing.verification_dataset import resolve_patch_image
 from src.prompts.ablation_verification_prompts import (
     ABLATION_CONDITIONS,
     build_ablation_verification_prompt,
 )
 from src.prompts.verification_prompt import prompt_filename_for_sample
+
+CONDITIONS_WITH_LOCAL_IMAGES = frozenset(
+    {"A4_overlay_crop_confidence", "A5_crop_only"},
+)
 
 
 def load_sample_metadata(metadata_path: Path) -> dict[str, Any]:
@@ -32,21 +40,33 @@ def _relative_path(from_dir: Path, target: Path) -> str:
     return os.path.relpath(target, from_dir).replace("\\", "/")
 
 
+def _bbox_from_metadata(metadata: dict[str, Any], record: pd.Series) -> tuple[float, float, float, float]:
+    bbox = metadata.get("bbox")
+    if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+        return tuple(float(v) for v in bbox)  # type: ignore[return-value]
+    return (
+        float(record["bbox_x"]),
+        float(record["bbox_y"]),
+        float(record["bbox_width"]),
+        float(record["bbox_height"]),
+    )
+
+
 def build_condition_prompt_index(
     *,
     condition: str,
     condition_dir: Path,
     verification_dataset_dir: Path,
     samples_df: pd.DataFrame,
+    raw_patches_root: Path,
 ) -> pd.DataFrame:
-    """Write prompts (and A4 images) for one ablation condition."""
+    """Write prompts and condition-specific images for one ablation condition."""
     condition_dir.mkdir(parents=True, exist_ok=True)
     prompts_dir = condition_dir / "prompts"
     prompts_dir.mkdir(parents=True, exist_ok=True)
 
-    images_dir = condition_dir / "images"
-    if condition == "A4_overlay_crop_confidence":
-        images_dir.mkdir(parents=True, exist_ok=True)
+    if condition in CONDITIONS_WITH_LOCAL_IMAGES:
+        (condition_dir / "images").mkdir(parents=True, exist_ok=True)
 
     dataset_images_dir = verification_dataset_dir / "images"
     dataset_metadata_dir = verification_dataset_dir / "metadata"
@@ -70,23 +90,32 @@ def build_condition_prompt_index(
         prompt_path = prompts_dir / prompt_name
         prompt_path.write_text(prompt_text, encoding="utf-8")
 
+        bbox = _bbox_from_metadata(metadata, record)
+
         if condition == "A4_overlay_crop_confidence":
             overlay = cv2.imread(str(overlay_path))
             if overlay is None:
                 raise FileNotFoundError(f"Could not read overlay image: {overlay_path}")
-
-            bbox = metadata.get("bbox")
-            if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
-                bbox = (
-                    float(record["bbox_x"]),
-                    float(record["bbox_y"]),
-                    float(record["bbox_width"]),
-                    float(record["bbox_height"]),
-                )
-
-            combined = build_a4_combined_image(overlay, tuple(float(v) for v in bbox))
+            combined = build_a4_combined_image(overlay, bbox)
             image_rel = f"images/{sample_id}.png"
             cv2.imwrite(str(condition_dir / image_rel), combined)
+
+        elif condition == "A5_crop_only":
+            image_name = str(metadata.get("image_name", record.get("image_name", "")))
+            raw_patch_path = resolve_patch_image(raw_patches_root, image_name)
+            if raw_patch_path is None:
+                raise FileNotFoundError(
+                    f"Raw patch not found for {image_name!r} under {raw_patches_root}"
+                )
+
+            raw_patch = cv2.imread(str(raw_patch_path))
+            if raw_patch is None:
+                raise FileNotFoundError(f"Could not read raw patch image: {raw_patch_path}")
+
+            crop_image = build_a5_crop_only_image(raw_patch, bbox)
+            image_rel = f"images/{sample_id}.png"
+            cv2.imwrite(str(condition_dir / image_rel), crop_image)
+
         else:
             image_rel = _relative_path(condition_dir, dataset_images_dir / f"{sample_id}.png")
 
@@ -111,6 +140,7 @@ def build_condition_prompt_index(
 def build_ablation_verification_inputs(
     verification_dataset_dir: Path,
     output_root: Path,
+    raw_patches_root: Path,
     sample_count: int = 100,
     conditions: tuple[str, ...] = ABLATION_CONDITIONS,
 ) -> pd.DataFrame:
@@ -122,10 +152,14 @@ def build_ablation_verification_inputs(
     """
     verification_dataset_dir = verification_dataset_dir.resolve()
     output_root = output_root.resolve()
+    raw_patches_root = raw_patches_root.resolve()
     index_csv = verification_dataset_dir / "index.csv"
 
     if not index_csv.exists():
         raise FileNotFoundError(f"Verification dataset index not found: {index_csv}")
+
+    if not raw_patches_root.exists():
+        raise FileNotFoundError(f"Raw patches directory not found: {raw_patches_root}")
 
     samples_df = pd.read_csv(index_csv).head(sample_count)
     if samples_df.empty:
@@ -142,9 +176,10 @@ def build_ablation_verification_inputs(
             condition_dir=condition_dir,
             verification_dataset_dir=verification_dataset_dir,
             samples_df=samples_df,
+            raw_patches_root=raw_patches_root,
         )
 
-        if condition == "A4_overlay_crop_confidence":
+        if condition in CONDITIONS_WITH_LOCAL_IMAGES:
             image_dir = str((condition_dir / "images").relative_to(output_root))
         else:
             image_dir = _relative_path(output_root, verification_dataset_dir / "images")

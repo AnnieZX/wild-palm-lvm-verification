@@ -6,7 +6,7 @@ from `outputs/verification_dataset/`.
 
 Replaced by:
 - `scripts/build_ablation_verification_prompts.py`
-- `src/prompts/ablation_verification_prompts.py` (A1–A4 conditions)
+- `src/prompts/ablation_verification_prompts.py` (A1–A5 conditions)
 
 ## Archived contents
 

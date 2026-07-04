@@ -1,43 +1,97 @@
-"""Prompt variants for verification input ablation (A1–A4)."""
+"""Prompt variants for verification input ablation (A1–A5)."""
 
 from __future__ import annotations
-
-from src.prompts.verification_prompt import DECISION_DEFINITIONS, json_response_template
 
 ABLATION_CONDITIONS = (
     "A1_overlay_only",
     "A2_overlay_confidence",
     "A3_overlay_confidence_geometry",
     "A4_overlay_crop_confidence",
+    "A5_crop_only",
 )
 
-PALM_DOMAIN_GUIDANCE = """
-Wild palms in aerial orthomosaic imagery often show:
-- radial or crown-like structure
-- long feather-like fronds
-- fronds extending from a central crown
-- texture distinct from dense broadleaf canopy
-- partially occluded palms may still be valid if palm frond structure is visible
+JSON_RESPONSE_TEMPLATE = """{
+  "decision": "Reliable | Uncertain | Unreliable",
+  "confidence_reasoning": "",
+  "visual_reasoning": ""
+}"""
 
-Do not require the full crown to be perfectly visible.
-A partial but recognizable palm inside the box can be Reliable.
-"""
+ROLE_SECTION = """You are an expert reviewer for aerial wild palm detection in UAV orthomosaic imagery.
 
-_IMAGE_OVERLAY_ONLY = """
-The input image is an orthomosaic patch where:
-- the background outside the target region is slightly dimmed
-- a green bounding box highlights the candidate detection to review
+Your task is NOT to detect new palms.
 
-Focus only on the highlighted bounding box. Determine whether it contains a valid wild palm.
-"""
+Your task is to verify whether the highlighted YOLO detection contains a valid wild palm."""
 
-_IMAGE_A4_COMBINED = """
-The input image is a two-panel view:
-- left panel: the full orthomosaic patch with the highlighted detection (dimmed background, green box)
-- right panel: an enlarged crop of the highlighted bounding-box region
+IMPORTANT_INSTRUCTIONS = """Important instructions
 
-Use both panels together. Determine whether the highlighted detection contains a valid wild palm.
-"""
+The highlighted green bounding box indicates the candidate detection.
+
+Focus primarily on the highlighted object.
+
+Use surrounding context only if it provides useful evidence.
+
+The YOLO confidence score is auxiliary information only.
+
+Do NOT base your decision primarily on the confidence score.
+
+Use visual evidence as the primary basis for your judgment."""
+
+PALM_CHARACTERISTICS = """Wild palm characteristics
+
+Wild palms in aerial orthomosaic imagery often exhibit:
+
+• a visible central crown
+• radial or circular crown structure
+• long feather-like fronds extending outward
+• repeated symmetric leaf patterns
+• texture distinguishable from surrounding broadleaf canopy
+• fronds radiating from a central point
+
+A palm may be partially occluded.
+
+A partially visible palm can still be considered Reliable if recognizable palm morphology is present.
+
+Dense vegetation without recognizable palm morphology should NOT be considered a valid palm."""
+
+DECISION_DEFINITIONS = """Decision definitions
+
+Reliable
+The highlighted bounding box clearly contains a valid wild palm.
+
+Uncertain
+Evidence is ambiguous due to occlusion, overlap, low image quality, partial visibility, or confusing vegetation.
+
+Unreliable
+The highlighted object is not a palm or the detection is clearly incorrect."""
+
+REASONING_REQUIREMENTS = """Reasoning requirements
+
+Base your reasoning primarily on:
+
+• crown structure
+• frond pattern
+• texture
+• morphology
+• spatial arrangement
+
+Do not rely mainly on confidence score."""
+
+_IMAGE_OVERLAY = """Input image
+The input is an orthomosaic patch where the background outside the target region is slightly dimmed and a green bounding box highlights the candidate detection."""
+
+_IMAGE_A4_COMBINED = """Input image
+The input is a two-panel image:
+• left panel: full orthomosaic patch with the highlighted detection (dimmed background, green bounding box)
+• right panel: enlarged crop of the highlighted bounding-box region
+
+Use both panels together when judging the detection."""
+
+_IMAGE_A5_CROP_ONLY = """Input image
+The input is an enlarged crop of the candidate detection region only.
+
+There is no surrounding full-image context.
+
+Judge whether this cropped region contains a valid wild palm."""
 
 
 def _metadata_lines(metadata: dict, keys: list[tuple[str, str]]) -> list[str]:
@@ -67,6 +121,12 @@ def _aspect_ratio(metadata: dict) -> float | None:
     return width_f / height_f
 
 
+def _format_metadata_section(lines: list[str]) -> str:
+    if not lines:
+        return ""
+    return "Detection metadata:\n" + "\n".join(lines) + "\n\n"
+
+
 def _base_prompt(
     sample_id: str,
     condition: str,
@@ -74,26 +134,58 @@ def _base_prompt(
     metadata_section: str,
     metadata_instruction: str,
 ) -> str:
-    return f"""You are an expert reviewer for aerial wild palm detection in orthomosaic imagery.
+    parts = [
+        ROLE_SECTION,
+        "",
+        "--------------------------------------------------",
+        "",
+        IMPORTANT_INSTRUCTIONS,
+        "",
+        "--------------------------------------------------",
+        "",
+        PALM_CHARACTERISTICS,
+        "",
+        "--------------------------------------------------",
+        "",
+        image_description,
+        "",
+        "--------------------------------------------------",
+        "",
+        DECISION_DEFINITIONS,
+        "",
+        "--------------------------------------------------",
+        "",
+        REASONING_REQUIREMENTS,
+    ]
 
-Your task is NOT to detect new palms.
-Your task is to verify whether a YOLO-generated detection is valid.
+    if metadata_section or metadata_instruction:
+        parts.extend(
+            [
+                "",
+                "--------------------------------------------------",
+                "",
+            ]
+        )
+        if metadata_section:
+            parts.append(metadata_section.rstrip())
+            parts.append("")
+        if metadata_instruction:
+            parts.append(metadata_instruction)
 
-Ablation condition: {condition}
-Sample ID: {sample_id}
+    parts.extend(
+        [
+            "",
+            "--------------------------------------------------",
+            "",
+            f"Ablation condition: {condition}",
+            f"Sample ID: {sample_id}",
+            "",
+            "Return ONLY valid JSON.",
+            JSON_RESPONSE_TEMPLATE,
+        ]
+    )
 
-{PALM_DOMAIN_GUIDANCE}
-
-{image_description}
-
-{metadata_section}{metadata_instruction}
-
-{DECISION_DEFINITIONS}
-
-Return ONLY valid JSON with no markdown, no code fences, and no extra text.
-Use this exact structure:
-{json_response_template()}
-"""
+    return "\n".join(parts)
 
 
 def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
@@ -102,7 +194,7 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
 
     Args:
         metadata: Verification sample metadata dictionary.
-        condition: One of A1_overlay_only … A4_overlay_crop_confidence.
+        condition: One of A1_overlay_only … A5_crop_only.
     """
     if condition not in ABLATION_CONDITIONS:
         allowed = ", ".join(ABLATION_CONDITIONS)
@@ -114,7 +206,7 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
         return _base_prompt(
             sample_id=sample_id,
             condition=condition,
-            image_description=_IMAGE_OVERLAY_ONLY,
+            image_description=_IMAGE_OVERLAY,
             metadata_section="",
             metadata_instruction=(
                 "Judge only from the highlighted bounding box in the image.\n"
@@ -123,14 +215,13 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
         )
 
     if condition == "A2_overlay_confidence":
-        lines = _metadata_lines(metadata, [("confidence", "YOLO confidence")])
-        metadata_section = ""
-        if lines:
-            metadata_section = "Detection metadata:\n" + "\n".join(lines) + "\n"
+        metadata_section = _format_metadata_section(
+            _metadata_lines(metadata, [("confidence", "YOLO confidence")])
+        )
         return _base_prompt(
             sample_id=sample_id,
             condition=condition,
-            image_description=_IMAGE_OVERLAY_ONLY,
+            image_description=_IMAGE_OVERLAY,
             metadata_section=metadata_section,
             metadata_instruction=(
                 "Use YOLO confidence only as auxiliary context.\n"
@@ -139,11 +230,6 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
         )
 
     if condition == "A3_overlay_confidence_geometry":
-        aspect = _aspect_ratio(metadata)
-        extra: dict[str, float] = {}
-        if aspect is not None:
-            extra["aspect_ratio"] = round(aspect, 4)
-
         lines = _metadata_lines(
             metadata,
             [
@@ -153,14 +239,15 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
                 ("bbox_area", "Bounding box area (px²)"),
             ],
         )
-        if extra.get("aspect_ratio") is not None:
-            lines.append(f"- Aspect ratio (width/height): {extra['aspect_ratio']}")
+        aspect = _aspect_ratio(metadata)
+        if aspect is not None:
+            lines.append(f"- Aspect ratio (width/height): {round(aspect, 4)}")
 
-        metadata_section = "Detection metadata:\n" + "\n".join(lines) + "\n" if lines else ""
+        metadata_section = _format_metadata_section(lines)
         return _base_prompt(
             sample_id=sample_id,
             condition=condition,
-            image_description=_IMAGE_OVERLAY_ONLY,
+            image_description=_IMAGE_OVERLAY,
             metadata_section=metadata_section,
             metadata_instruction=(
                 "Use YOLO confidence and the provided geometry as auxiliary context.\n"
@@ -168,20 +255,23 @@ def build_ablation_verification_prompt(metadata: dict, condition: str) -> str:
             ),
         )
 
-    if condition == "A4_overlay_crop_confidence":
-        lines = _metadata_lines(metadata, [("confidence", "YOLO confidence")])
-        metadata_section = ""
-        if lines:
-            metadata_section = "Detection metadata:\n" + "\n".join(lines) + "\n"
+    if condition in {"A4_overlay_crop_confidence", "A5_crop_only"}:
+        metadata_section = _format_metadata_section(
+            _metadata_lines(metadata, [("confidence", "YOLO confidence")])
+        )
+        image_description = (
+            _IMAGE_A4_COMBINED if condition == "A4_overlay_crop_confidence" else _IMAGE_A5_CROP_ONLY
+        )
+        metadata_instruction = (
+            "Use YOLO confidence only as auxiliary context.\n"
+            "Do not use bounding-box geometry beyond what is visible in the image."
+        )
         return _base_prompt(
             sample_id=sample_id,
             condition=condition,
-            image_description=_IMAGE_A4_COMBINED,
+            image_description=image_description,
             metadata_section=metadata_section,
-            metadata_instruction=(
-                "Use YOLO confidence only as auxiliary context.\n"
-                "Do not use bounding-box geometry beyond what is visible in the panels."
-            ),
+            metadata_instruction=metadata_instruction,
         )
 
     raise ValueError(f"Unhandled ablation condition: {condition}")

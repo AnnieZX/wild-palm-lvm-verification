@@ -61,7 +61,7 @@ flowchart TB
 
     subgraph Abl["Input/prompt ablation"]
         ABLB["build_ablation_verification_prompts.py"]
-        A1["A1–A4 conditions"]
+        A1["A1–A5 conditions"]
     end
 
     subgraph LVM["Qwen2.5-VL verification"]
@@ -113,7 +113,7 @@ flowchart TB
 | LVM | `qwen_verification_adapter.py` | Verification dataset batch inference |
 | LVM | `verification_response_parser.py` | Parse verification JSON responses |
 | Prompts | `verification_prompt.py` | Default verification prompts |
-| Prompts | `ablation_verification_prompts.py` | A1–A4 ablation prompt variants |
+| Prompts | `ablation_verification_prompts.py` | A1–A5 ablation prompt variants |
 | Config | `configs/model.yaml` | Active model path |
 
 ---
@@ -339,17 +339,19 @@ Implementation: `src/lvm/qwen_verifier.py`.
 
 Compare different Qwen2.5-VL **inputs and prompts** on the same 100 YOLO detections from `outputs/verification_dataset/`.
 
-### Conditions (A1–A4)
+### Conditions (A1–A5)
 
 | Condition | Image input | Prompt metadata |
 |-----------|-------------|-----------------|
 | A1_overlay_only | Existing overlay | Visual only (no confidence, no geometry) |
 | A2_overlay_confidence | Existing overlay | YOLO confidence only |
 | A3_overlay_confidence_geometry | Existing overlay | Confidence + width, height, area, aspect ratio |
-| A4_overlay_crop_confidence | Dual panel (small full + enlarged crop) | YOLO confidence only |
+| A4_overlay_crop_confidence | Dual panel (small full overlay + enlarged crop) | YOLO confidence only |
+| A5_crop_only | Enlarged bbox crop only (no full context) | YOLO confidence only |
 
-All conditions share palm domain guidance and return JSON:
-`decision` (Reliable / Uncertain / Unreliable), `confidence_reasoning`, `visual_reasoning`.
+A4 vs A5 isolates whether surrounding image context helps verification.
+
+All conditions share the same frozen prompt template (role, palm characteristics, decision definitions, JSON schema).
 
 ### Build ablation inputs
 
@@ -363,6 +365,7 @@ python scripts/build_ablation_verification_prompts.py
 |------|-------------|
 | `outputs/verification_ablation_100/A1_overlay_only/` | Prompts + prompt_index.csv |
 | `outputs/verification_ablation_100/A4_overlay_crop_confidence/images/` | Combined A4 images |
+| `outputs/verification_ablation_100/A5_crop_only/images/` | Crop-only A5 images |
 | `outputs/verification_ablation_100/ablation_prompt_summary.csv` | Condition summary |
 
 ### Run inference per condition
@@ -373,7 +376,7 @@ python scripts/run_verification_inference.py \
   --results-dir outputs/verification_ablation_results/A1_overlay_only
 ```
 
-Repeat for A2, A3, A4. The old LabelMe E1–E5 × P1–P6 ablation is archived under `archive/old_labelme_ablation/`.
+Repeat for A2–A5. The old LabelMe E1–E5 × P1–P6 ablation is archived under `archive/old_labelme_ablation/`.
 
 ---
 | `outputs/ablation_raw_responses_100/` | Raw model text per condition |

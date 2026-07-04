@@ -13,6 +13,7 @@ Output:
     - outputs/verification_ablation_100/A2_overlay_confidence/
     - outputs/verification_ablation_100/A3_overlay_confidence_geometry/
     - outputs/verification_ablation_100/A4_overlay_crop_confidence/
+    - outputs/verification_ablation_100/A5_crop_only/
     - outputs/verification_ablation_100/ablation_prompt_summary.csv
 """
 
@@ -26,6 +27,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.paths import (
+    RAW_PATCHES_ROOT,
     VERIFICATION_ABLATION_DIR,
     VERIFICATION_DATASET_DIR,
 )
@@ -35,13 +37,19 @@ from src.prompts.ablation_verification_prompts import ABLATION_CONDITIONS
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build verification ablation prompts and A4 combined images.",
+        description="Build verification ablation prompts and condition-specific images.",
     )
     parser.add_argument(
         "--dataset-dir",
         type=Path,
         default=VERIFICATION_DATASET_DIR,
         help="Verification dataset root",
+    )
+    parser.add_argument(
+        "--images-root",
+        type=Path,
+        default=RAW_PATCHES_ROOT,
+        help="Raw patch PNG root (required for A5 crop-only images)",
     )
     parser.add_argument(
         "--output-dir",
@@ -75,6 +83,7 @@ def main() -> None:
 
     print("Verification ablation prompt builder")
     print(f"  Dataset:      {args.dataset_dir}")
+    print(f"  Raw patches:  {args.images_root}")
     print(f"  Output:       {args.output_dir}")
     print(f"  Sample count: {args.sample_count}")
     print(f"  Conditions:   {', '.join(args.conditions)}")
@@ -83,6 +92,7 @@ def main() -> None:
     summary_df = build_ablation_verification_inputs(
         verification_dataset_dir=args.dataset_dir,
         output_root=args.output_dir,
+        raw_patches_root=args.images_root,
         sample_count=args.sample_count,
         conditions=tuple(args.conditions),
     )
@@ -101,8 +111,8 @@ def main() -> None:
     print("Run inference per condition, e.g.:")
     print(
         "  python scripts/run_verification_inference.py "
-        f"--dataset-dir {args.output_dir}/A1_overlay_only "
-        f"--results-dir outputs/verification_ablation_results/A1_overlay_only"
+        f"--prompt-index {args.output_dir}/A1_overlay_only/prompt_index.csv "
+        f"--results-dir {args.output_dir}/A1_overlay_only/results"
     )
 
 
