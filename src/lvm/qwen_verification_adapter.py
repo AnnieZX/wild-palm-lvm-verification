@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -79,6 +80,7 @@ def build_result_record(
     parsed: dict[str, str] | None,
     runtime_seconds: float,
     parse_error: str = "",
+    inference_error: str = "",
 ) -> dict[str, Any]:
     """Build one verification result JSON record."""
     return {
@@ -90,6 +92,7 @@ def build_result_record(
         "visual_reasoning": parsed.get("visual_reasoning", "") if parsed else "",
         "runtime_seconds": round(runtime_seconds, 4),
         "parse_error": parse_error,
+        "inference_error": inference_error,
     }
 
 
@@ -153,65 +156,89 @@ class QwenVerificationAdapter:
                 continue
             pending.append(job)
 
-        for batch_start in range(0, len(pending), self.batch_size):
-            batch_jobs = pending[batch_start : batch_start + self.batch_size]
-            batch_items = [
-                (job.image_path, job.prompt_path.read_text(encoding="utf-8"))
-                for job in batch_jobs
-            ]
-
-            batch_started = time.perf_counter()
-            try:
-                raw_responses = self._verifier.generate_batch_responses(
-                    batch_items,
-                    max_new_tokens=self.max_new_tokens,
+        try:
+            for batch_start in range(0, len(pending), self.batch_size):
+                batch_jobs = pending[batch_start : batch_start + self.batch_size]
+                print(
+                    f"\n--- Batch {batch_start // self.batch_size + 1}: "
+                    f"samples {batch_start + 1}-{batch_start + len(batch_jobs)} of {len(pending)} ---"
                 )
-            except Exception as error:
-                per_sample_runtime = 0.0
+
                 for job in batch_jobs:
-                    record = build_result_record(
-                        sample_id=job.sample_id,
-                        raw_response="",
-                        parsed=None,
-                        runtime_seconds=per_sample_runtime,
-                    )
                     result_path = results_dir / f"{job.sample_id}.json"
-                    save_result_record(result_path, record)
-                    summary_rows.append(
-                        {
-                            "sample_id": job.sample_id,
-                            "result_path": str(result_path.relative_to(results_dir)),
-                            "status": "inference_error",
-                        }
-                    )
-                continue
+                    started_at = time.perf_counter()
 
-            batch_runtime = time.perf_counter() - batch_started
-            per_sample_runtime = batch_runtime / len(batch_jobs)
+                    try:
+                        prompt = job.prompt_path.read_text(encoding="utf-8")
+                        raw_response = self._verifier.generate_response_debugged(
+                            sample_id=job.sample_id,
+                            image_path=job.image_path,
+                            prompt_path=job.prompt_path,
+                            prompt=prompt,
+                            max_new_tokens=self.max_new_tokens,
+                        )
+                        runtime_seconds = time.perf_counter() - started_at
 
-            for job, raw_response in zip(batch_jobs, raw_responses):
-                parsed: dict[str, str] | None = None
-                parse_error = ""
-                try:
-                    parsed = parse_verification_response(raw_response)
-                except ValueError as error:
-                    parse_error = str(error)
+                        parsed: dict[str, str] | None = None
+                        parse_error = ""
+                        try:
+                            parsed = parse_verification_response(raw_response)
+                        except ValueError as error:
+                            parse_error = str(error)
+                            print(
+                                f"PARSE ERROR for {job.sample_id}: {error}\n"
+                                f"{traceback.format_exc()}"
+                            )
 
-                record = build_result_record(
-                    sample_id=job.sample_id,
-                    raw_response=raw_response,
-                    parsed=parsed,
-                    runtime_seconds=per_sample_runtime,
-                    parse_error=parse_error,
-                )
-                result_path = results_dir / f"{job.sample_id}.json"
-                save_result_record(result_path, record)
-                summary_rows.append(
-                    {
-                        "sample_id": job.sample_id,
-                        "result_path": str(result_path.relative_to(results_dir)),
-                        "status": "ok" if not parse_error else "parse_error",
-                    }
-                )
+                        record = build_result_record(
+                            sample_id=job.sample_id,
+                            raw_response=raw_response,
+                            parsed=parsed,
+                            runtime_seconds=runtime_seconds,
+                            parse_error=parse_error,
+                        )
+                        save_result_record(result_path, record)
+                        summary_rows.append(
+                            {
+                                "sample_id": job.sample_id,
+                                "result_path": str(result_path.relative_to(results_dir)),
+                                "status": "ok" if not parse_error else "parse_error",
+                            }
+                        )
+
+                    except Exception as error:
+                        runtime_seconds = time.perf_counter() - started_at
+                        tb = traceback.format_exc()
+                        print(
+                            f"\nINFERENCE ERROR for {job.sample_id}: "
+                            f"{type(error).__name__}: {error}\n{tb}",
+                            flush=True,
+                        )
+                        traceback.print_exc()
+
+                        record = build_result_record(
+                            sample_id=job.sample_id,
+                            raw_response="",
+                            parsed=None,
+                            runtime_seconds=runtime_seconds,
+                            inference_error=tb,
+                        )
+                        save_result_record(result_path, record)
+                        summary_rows.append(
+                            {
+                                "sample_id": job.sample_id,
+                                "result_path": str(result_path.relative_to(results_dir)),
+                                "status": "inference_error",
+                            }
+                        )
+
+        except Exception as error:
+            tb = traceback.format_exc()
+            print(
+                f"\nFATAL ERROR in inference loop: {type(error).__name__}: {error}\n{tb}",
+                flush=True,
+            )
+            traceback.print_exc()
+            raise
 
         return pd.DataFrame(summary_rows)

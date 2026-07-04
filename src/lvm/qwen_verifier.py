@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +69,113 @@ class QwenVerifier(BaseVerifier):
             ) from error
 
         print("Qwen model loaded successfully.")
+
+    @staticmethod
+    def _print_processor_input_shapes(inputs: Any) -> None:
+        """Print tensor shapes produced by the processor."""
+        if hasattr(inputs, "input_ids") and inputs.input_ids is not None:
+            print(f"  input_ids shape:      {tuple(inputs.input_ids.shape)}")
+
+        if hasattr(inputs, "pixel_values") and inputs.pixel_values is not None:
+            print(f"  pixel_values shape:   {tuple(inputs.pixel_values.shape)}")
+        else:
+            print("  pixel_values:         not present")
+
+        if hasattr(inputs, "keys"):
+            for key in inputs.keys():
+                if key in {"input_ids", "pixel_values"}:
+                    continue
+                value = inputs[key]
+                if hasattr(value, "shape"):
+                    print(f"  {key} shape: {tuple(value.shape)}")
+
+    def generate_response_debugged(
+        self,
+        *,
+        sample_id: str,
+        image_path: Path | str,
+        prompt_path: Path | str,
+        prompt: str,
+        max_new_tokens: int = 512,
+    ) -> str:
+        """
+        Run one image + text inference with verbose pre-generation diagnostics.
+
+        Exceptions propagate to the caller after debug context is printed.
+        """
+        from PIL import Image
+        from qwen_vl_utils import process_vision_info
+
+        image_path = Path(image_path).resolve()
+        prompt_path = Path(prompt_path)
+
+        print(f"\n=== Inference debug: {sample_id} ===")
+        print(f"  sample_id:     {sample_id}")
+        print(f"  image_path:    {image_path}")
+        print(f"  image_exists:  {image_path.exists()}")
+        print(f"  prompt_path:   {prompt_path}")
+        print(f"  prompt_exists: {prompt_path.exists()}")
+        print(f"  prompt_length: {len(prompt)}")
+
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+
+        with Image.open(image_path) as loaded_image:
+            print(f"  image_size:    {loaded_image.size} (width, height)")
+
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": str(image_path)},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+        print(f"  messages:      {messages}")
+
+        print("  calling apply_chat_template() ...")
+        text = self.processor.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        print(f"  chat_template length: {len(text)} characters")
+
+        print("  calling process_vision_info() ...")
+        image_inputs, video_inputs = process_vision_info(messages)
+
+        print("  calling processor() ...")
+        inputs = self.processor(
+            text=[text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt",
+        )
+        self._print_processor_input_shapes(inputs)
+
+        print("  moving inputs to model device ...")
+        inputs = inputs.to(self.model.device)
+        self._print_processor_input_shapes(inputs)
+
+        print("  calling model.generate() ...")
+        generated_ids = self.model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+        )
+        generated_ids_trimmed = [
+            output_ids[len(input_ids) :]
+            for input_ids, output_ids in zip(inputs.input_ids, generated_ids)
+        ]
+        output_text = self.processor.batch_decode(
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )
+        print(f"  generation complete for {sample_id}")
+        return output_text[0]
 
     def _generate_response(self, image_path: Path, prompt: str) -> str:
         """Run one image + text inference and return raw model text."""
