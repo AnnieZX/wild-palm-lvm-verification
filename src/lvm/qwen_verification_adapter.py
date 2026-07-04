@@ -24,27 +24,48 @@ class VerificationJob:
     prompt_path: Path
 
 
-def load_verification_jobs(dataset_dir: Path) -> list[VerificationJob]:
-    """Load verification jobs from prompt_index.csv or index.csv."""
-    dataset_dir = dataset_dir.resolve()
-    prompt_index_csv = dataset_dir / "prompt_index.csv"
-    index_csv = dataset_dir / "index.csv"
+def load_verification_jobs(
+    dataset_dir: Path | None = None,
+    prompt_index: Path | None = None,
+) -> list[VerificationJob]:
+    """
+    Load verification jobs from a prompt index CSV.
 
-    if prompt_index_csv.exists():
-        index_df = pd.read_csv(prompt_index_csv)
-    elif index_csv.exists():
-        index_df = pd.read_csv(index_csv)
-        index_df["prompt_path"] = index_df["sample_id"].map(lambda sid: f"prompts/{sid}.txt")
+    Args:
+        dataset_dir: Root directory for resolving relative image/prompt paths.
+            Used when prompt_index is not provided.
+        prompt_index: Explicit path to prompt_index.csv. Paths in the CSV are
+            resolved relative to its parent directory.
+    """
+    if prompt_index is not None:
+        prompt_index = prompt_index.resolve()
+        if not prompt_index.exists():
+            raise FileNotFoundError(f"Prompt index not found: {prompt_index}")
+        dataset_dir = prompt_index.parent
+        index_df = pd.read_csv(prompt_index)
     else:
-        raise FileNotFoundError(
-            f"No index found under {dataset_dir}. Expected prompt_index.csv or index.csv."
-        )
+        if dataset_dir is None:
+            raise ValueError("Either dataset_dir or prompt_index must be provided.")
+
+        dataset_dir = dataset_dir.resolve()
+        prompt_index_csv = dataset_dir / "prompt_index.csv"
+        index_csv = dataset_dir / "index.csv"
+
+        if prompt_index_csv.exists():
+            index_df = pd.read_csv(prompt_index_csv)
+        elif index_csv.exists():
+            index_df = pd.read_csv(index_csv)
+            index_df["prompt_path"] = index_df["sample_id"].map(lambda sid: f"prompts/{sid}.txt")
+        else:
+            raise FileNotFoundError(
+                f"No index found under {dataset_dir}. Expected prompt_index.csv or index.csv."
+            )
 
     jobs: list[VerificationJob] = []
     for _, row in index_df.iterrows():
         sample_id = str(row["sample_id"])
-        image_path = dataset_dir / str(row["image_path"])
-        prompt_path = dataset_dir / str(row["prompt_path"])
+        image_path = (dataset_dir / str(row["image_path"])).resolve()
+        prompt_path = (dataset_dir / str(row["prompt_path"])).resolve()
         jobs.append(
             VerificationJob(
                 sample_id=sample_id,

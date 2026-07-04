@@ -53,22 +53,25 @@ flowchart TB
         STA["experimental/check_prediction_statistics.py"]
     end
 
-    subgraph Prep["LVM input preparation"]
-        PA["palm_analyzer.py"]
-        ABL["ablation_overlay.py<br/>E1–E5 variants"]
-        PREP["prepare_ablation_inputs_100.py"]
+    subgraph Prep["Verification dataset"]
+        GEN["generate_verification_dataset.py"]
+        PRM["build_verification_prompts.py"]
+        VD["verification_dataset/"]
+    end
+
+    subgraph Abl["Input/prompt ablation"]
+        ABLB["build_ablation_verification_prompts.py"]
+        A1["A1–A4 conditions"]
     end
 
     subgraph LVM["Qwen2.5-VL verification"]
         QW["qwen_verifier.py"]
-        PR["ablation_prompts.py P1–P6"]
-        RUN["run_qwen_ablation_100.py"]
+        RUN["run_verification_inference.py"]
     end
 
     subgraph Out["Outputs"]
-        META["ablation_metadata_100.csv"]
-        RES["ablation_results_100_combined.csv"]
-        SUM["ablation_summary_100.csv"]
+        RES["verification_results/"]
+        ABLR["verification_ablation_100/"]
     end
 
     OM --> RP
@@ -83,15 +86,17 @@ flowchart TB
     RP --> STA
     PJ --> STA
 
-    RP --> PREP
-    PA --> PREP
-    ABL --> PREP
-    PREP --> META
-    META --> RUN
+    PJ --> GEN
+    RP --> GEN
+    GEN --> VD
+    VD --> PRM
+    VD --> ABLB
+    ABLB --> A1
+    ABLB --> ABLR
+    VD --> RUN
+    ABLR --> RUN
     QW --> RUN
-    PR --> RUN
     RUN --> RES
-    RES --> SUM
 ```
 
 ### Core modules
@@ -102,11 +107,13 @@ flowchart TB
 | YOLO | `yolo/predictions_io.py` | Load predictions JSON, IoU, NMS, grouping |
 | Preprocessing | `json_parser.py` | Load LabelMe JSON |
 | Preprocessing | `palm_analyzer.py` | Extract per-palm bbox, center, endpoints, stats |
-| Preprocessing | `sequential_dataset.py` | Discover Raw_Patches JSON; deterministic 100-palm sampling |
-| Preprocessing | `ablation_overlay.py` | E1–E5 cropped overlay variants |
+| Preprocessing | `verification_overlay.py` | Single-detection overlay rendering |
+| Preprocessing | `ablation_verification_images.py` | A4 dual-panel ablation images |
 | LVM | `qwen_verifier.py` | Qwen2.5-VL inference via Transformers |
-| LVM | `ablation_response_parser.py` | Parse ablation JSON responses |
-| Prompts | `ablation_prompts.py` | P1–P6 prompt variants |
+| LVM | `qwen_verification_adapter.py` | Verification dataset batch inference |
+| LVM | `verification_response_parser.py` | Parse verification JSON responses |
+| Prompts | `verification_prompt.py` | Default verification prompts |
+| Prompts | `ablation_verification_prompts.py` | A1–A4 ablation prompt variants |
 | Config | `configs/model.yaml` | Active model path |
 
 ---
@@ -123,22 +130,17 @@ wild-palm-lvm-verification/
 │   ├── phase2_plan.md             # Detailed design notes
 │   ├── cluster_deployment.md      # Cluster setup guide
 │   └── REFACTOR_SUMMARY.md        # Cleanup log (July 2026)
-├── jobs/                          # Active SLURM batch scripts
-│   ├── qwen_ablation_100.slurm    # Main 100-palm ablation job
-│   ├── qwen_ablation_smoke_test.slurm
+├── jobs/
 │   └── qwen_download.slurm
 ├── scripts/
-│   ├── prepare_ablation_inputs_100.py   # LVM input prep
-│   ├── run_qwen_ablation_100.py         # Full ablation inference
-│   ├── analyze_ablation_100.py          # Ablation summarization
 │   ├── run_full_inference_and_overlay.py
 │   ├── generate_verification_dataset.py
 │   ├── build_verification_prompts.py
+│   ├── build_ablation_verification_prompts.py
 │   ├── run_verification_inference.py
 │   ├── visualize_yolo_gt_overlap_full.py
 │   ├── check_cluster_environment.py
-│   └── experimental/              # Smoke test + supplementary YOLO QA
-│       ├── run_qwen_ablation_smoke_test.py
+│   └── experimental/              # Supplementary YOLO QA
 │       ├── match_predictions_to_groundtruth.py
 │       └── check_prediction_statistics.py
 ├── src/
@@ -333,53 +335,47 @@ Implementation: `src/lvm/qwen_verifier.py`.
 
 ---
 
-## Experiment pipeline (100-palm ablation)
+## Verification input ablation (100 detections)
 
-The main thesis experiment crosses **visual overlay variants (E1–E5)** with **prompt variants (P1–P6)** for 100 deterministically sampled palms from Raw_Patches.
+Compare different Qwen2.5-VL **inputs and prompts** on the same 100 YOLO detections from `outputs/verification_dataset/`.
 
-### Visual variants (E1–E5)
+### Conditions (A1–A4)
 
-| Variant | Content |
-|---------|---------|
-| E1 | Raw crop only |
-| E2 | Bbox only |
-| E3 | Endpoints only |
-| E4 | Bbox + endpoints |
-| E5 | Full overlay (bbox + center + endpoints + palm ID) |
+| Condition | Image input | Prompt metadata |
+|-----------|-------------|-----------------|
+| A1_overlay_only | Existing overlay | Visual only (no confidence, no geometry) |
+| A2_overlay_confidence | Existing overlay | YOLO confidence only |
+| A3_overlay_confidence_geometry | Existing overlay | Confidence + width, height, area, aspect ratio |
+| A4_overlay_crop_confidence | Dual panel (small full + enlarged crop) | YOLO confidence only |
 
-Generated by `prepare_ablation_inputs_100.py` → `outputs/ablation_inputs_100/`.
+All conditions share palm domain guidance and return JSON:
+`decision` (Reliable / Uncertain / Unreliable), `confidence_reasoning`, `visual_reasoning`.
 
-### Prompt variants (P1–P6)
-
-Defined in `src/prompts/ablation_prompts.py` — from direct reliability scoring to full geometric + YOLO confidence metadata (P4, P6).
-
-### 10 unique conditions
-
-Five E-variants share prompt P2; five additional runs vary prompts on E5 full overlay → **100 palms × 10 conditions = 1,000 inferences**.
-
-### Step-by-step
+### Build ablation inputs
 
 ```bash
-# 1. Prepare visual inputs + metadata
-python scripts/prepare_ablation_inputs_100.py
-
-# 2. Smoke test (2 palms × 10 conditions)
-python scripts/experimental/run_qwen_ablation_smoke_test.py
-
-# 3. Full ablation run
-python scripts/run_qwen_ablation_100.py
-
-# 4. Summarize results
-python scripts/analyze_ablation_100.py
+python scripts/build_ablation_verification_prompts.py
 ```
 
-**Key outputs:**
+**Outputs:**
 
-| File | Description |
+| Path | Description |
 |------|-------------|
-| `outputs/ablation_metadata_100.csv` | Palm geometry, paths to E1–E5 images |
-| `outputs/ablation_results_100_combined.csv` | All 1,000 parsed Qwen responses |
-| `outputs/ablation_summary_100.csv` | Aggregated condition-level stats |
+| `outputs/verification_ablation_100/A1_overlay_only/` | Prompts + prompt_index.csv |
+| `outputs/verification_ablation_100/A4_overlay_crop_confidence/images/` | Combined A4 images |
+| `outputs/verification_ablation_100/ablation_prompt_summary.csv` | Condition summary |
+
+### Run inference per condition
+
+```bash
+python scripts/run_verification_inference.py \
+  --dataset-dir outputs/verification_ablation_100/A1_overlay_only \
+  --results-dir outputs/verification_ablation_results/A1_overlay_only
+```
+
+Repeat for A2, A3, A4. The old LabelMe E1–E5 × P1–P6 ablation is archived under `archive/old_labelme_ablation/`.
+
+---
 | `outputs/ablation_raw_responses_100/` | Raw model text per condition |
 
 > **Note:** Ablation overlays currently use **LabelMe palm geometry** for bbox/endpoints. YOLO predictions are validated separately via the overlap scripts above. Wiring YOLO boxes into LVM overlay generation is the next integration step.
@@ -403,17 +399,16 @@ Download the Qwen model (once):
 sbatch jobs/qwen_download.slurm
 ```
 
-### Submit ablation job
+### Submit verification inference
 
-From the project root on the cluster:
+From the project root on the cluster (after building the verification dataset and ablation prompts):
 
 ```bash
-mkdir -p logs outputs/ablation_inputs_100 outputs/ablation_results_100 \
-         outputs/ablation_raw_responses_100
-sbatch jobs/qwen_ablation_100.slurm
+python scripts/run_verification_inference.py \
+  --dataset-dir outputs/verification_ablation_100/A1_overlay_only \
+  --results-dir outputs/verification_ablation_results/A1_overlay_only \
+  --batch-size 4
 ```
-
-This SLURM job runs prepare → infer → analyze in one submission.
 
 See `docs/cluster_deployment.md` for additional cluster notes.
 

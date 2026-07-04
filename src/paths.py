@@ -31,20 +31,9 @@ YOLO_ANALYSIS_DIR = OUTPUTS_DIR / "yolo_analysis"
 PREDICTION_STATISTICS_CSV = YOLO_ANALYSIS_DIR / "prediction_statistics.csv"
 GT_MATCHES_CSV = YOLO_ANALYSIS_DIR / "gt_matches.csv"
 
-# LVM ablation (100 palms)
-ABLATION_INPUTS_DIR = OUTPUTS_DIR / "ablation_inputs_100"
-ABLATION_METADATA_CSV = OUTPUTS_DIR / "ablation_metadata_100.csv"
-ABLATION_RESULTS_DIR = OUTPUTS_DIR / "ablation_results_100"
-ABLATION_RAW_RESPONSES_DIR = OUTPUTS_DIR / "ablation_raw_responses_100"
-ABLATION_COMBINED_CSV = OUTPUTS_DIR / "ablation_results_100_combined.csv"
-ABLATION_SUMMARY_CSV = OUTPUTS_DIR / "ablation_summary_100.csv"
-ABLATION_ENDPOINT_SUMMARY_CSV = OUTPUTS_DIR / "ablation_endpoint_summary_100.csv"
-ABLATION_ANCHORING_SUMMARY_CSV = OUTPUTS_DIR / "ablation_anchoring_summary_100.csv"
-
-# Ablation smoke test
-SMOKE_TEST_RESULTS_DIR = OUTPUTS_DIR / "smoke_test_results"
-SMOKE_TEST_RAW_RESPONSES_DIR = OUTPUTS_DIR / "smoke_test_raw_responses"
-SMOKE_TEST_COMBINED_CSV = OUTPUTS_DIR / "smoke_test_combined.csv"
+# Verification ablation (100 YOLO detections × input/prompt conditions)
+VERIFICATION_ABLATION_DIR = OUTPUTS_DIR / "verification_ablation_100"
+VERIFICATION_ABLATION_SUMMARY_CSV = VERIFICATION_ABLATION_DIR / "ablation_prompt_summary.csv"
 
 # YOLO → LVM verification dataset (one sample per detection)
 VERIFICATION_DATASET_DIR = OUTPUTS_DIR / "verification_dataset"

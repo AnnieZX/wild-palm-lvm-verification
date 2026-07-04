@@ -34,6 +34,11 @@ Archived scripts set `PROJECT_ROOT` to the repo root (not `archive/`).
 - `src/lvm/`, `src/preprocessing/`, `src/prompts/`
 - `jobs/` (SLURM jobs unchanged)
 
+## Old LabelMe ablation (superseded)
+
+The original E1–E5 × P1–P6 LabelMe ablation pipeline was removed from active scripts.
+Archived under `archive/old_labelme_ablation/`.
+
 ## Stale SLURM references
 
 These jobs were moved to `archive/jobs/` because they reference archived scripts:
@@ -43,7 +48,7 @@ These jobs were moved to `archive/jobs/` because they reference archived scripts
 | `archive/jobs/qwen_batch_sample.slurm` | `archive/prototype/scripts/` |
 | `archive/jobs/qwen_100_sequential.slurm` | `archive/experiments/scripts/` |
 
-Active smoke test job: `jobs/qwen_ablation_smoke_test.slurm` → `scripts/experimental/run_qwen_ablation_smoke_test.py`
+Old ablation jobs: `archive/old_labelme_ablation/jobs/`
 
 ## Deleted (empty only)
 

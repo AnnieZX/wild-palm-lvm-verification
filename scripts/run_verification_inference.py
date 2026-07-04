@@ -5,11 +5,12 @@ Purpose:
 
 Input:
     - Verification dataset (images/, prompts/, index.csv or prompt_index.csv)
+    - Or an explicit --prompt-index CSV (e.g. ablation condition prompt_index.csv)
     - Model path from configs/model.yaml (override with --model-path)
 
 Output:
-    - outputs/verification_results/sample_XXXXXX.json (one per sample)
-    - outputs/verification_results/results_index.csv
+    - Per-sample JSON under --results-dir (default: outputs/verification_results/)
+    - results_index.csv under --results-dir
 """
 
 from __future__ import annotations
@@ -38,7 +39,13 @@ def parse_args() -> argparse.Namespace:
         "--dataset-dir",
         type=Path,
         default=VERIFICATION_DATASET_DIR,
-        help="Verification dataset root",
+        help="Verification dataset root (default when --prompt-index is not set)",
+    )
+    parser.add_argument(
+        "--prompt-index",
+        type=Path,
+        default=None,
+        help="Path to prompt_index.csv; image/prompt paths resolve relative to its parent",
     )
     parser.add_argument(
         "--results-dir",
@@ -99,10 +106,19 @@ def resolve_model_path(args: argparse.Namespace) -> str:
 def main() -> None:
     args = parse_args()
 
-    if not args.dataset_dir.exists():
-        print(f"Verification dataset not found: {args.dataset_dir}")
-        print("Run generate_verification_dataset.py and build_verification_prompts.py first.")
-        sys.exit(1)
+    if args.prompt_index is not None:
+        if not args.prompt_index.exists():
+            print(f"Prompt index not found: {args.prompt_index}")
+            sys.exit(1)
+        dataset_dir = args.prompt_index.parent
+        prompt_index = args.prompt_index
+    else:
+        if not args.dataset_dir.exists():
+            print(f"Verification dataset not found: {args.dataset_dir}")
+            print("Run generate_verification_dataset.py and build_verification_prompts.py first.")
+            sys.exit(1)
+        dataset_dir = args.dataset_dir
+        prompt_index = None
 
     try:
         model_path = resolve_model_path(args)
@@ -111,7 +127,10 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        jobs = load_verification_jobs(args.dataset_dir)
+        jobs = load_verification_jobs(
+            dataset_dir=dataset_dir if prompt_index is None else None,
+            prompt_index=prompt_index,
+        )
     except FileNotFoundError as error:
         print(error)
         sys.exit(1)
@@ -126,8 +145,10 @@ def main() -> None:
         sys.exit(1)
 
     print("Qwen2.5-VL verification inference")
-    print(f"  Dataset:    {args.dataset_dir}")
-    print(f"  Results:    {args.results_dir}")
+    print(f"  Dataset:      {dataset_dir}")
+    if prompt_index is not None:
+        print(f"  Prompt index: {prompt_index}")
+    print(f"  Results:      {args.results_dir}")
     print(f"  Model:      {model_path}")
     print(f"  Batch size: {args.batch_size}")
     print(f"  Samples:    {len(jobs)}")
