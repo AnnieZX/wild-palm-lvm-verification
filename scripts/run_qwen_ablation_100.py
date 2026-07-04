@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Run the 100-palm Qwen2.5-VL ablation matrix."""
+"""
+Purpose:
+    Run the 100-palm Qwen2.5-VL ablation matrix (10 conditions × 100 palms).
+
+Input:
+    - outputs/ablation_metadata_100.csv
+    - outputs/ablation_inputs_100/ overlay images
+
+Output:
+    - outputs/ablation_results_100/{condition}.csv
+    - outputs/ablation_results_100_combined.csv
+    - outputs/ablation_raw_responses_100/
+"""
 
 from __future__ import annotations
 
@@ -14,14 +26,21 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.lvm.ablation_response_parser import parse_ablation_response
 from src.lvm.qwen_verifier import QwenVerifier
+from src.paths import (
+    ABLATION_COMBINED_CSV,
+    ABLATION_METADATA_CSV,
+    ABLATION_RAW_RESPONSES_DIR,
+    ABLATION_RESULTS_DIR,
+    QWEN_MODEL_PATH,
+)
 from src.prompts.ablation_prompts import build_ablation_prompt
 
-METADATA_CSV = PROJECT_ROOT / "outputs" / "ablation_metadata_100.csv"
-RESULTS_DIR = PROJECT_ROOT / "outputs" / "ablation_results_100"
-RAW_RESPONSE_ROOT = PROJECT_ROOT / "outputs" / "ablation_raw_responses_100"
-COMBINED_CSV = PROJECT_ROOT / "outputs" / "ablation_results_100_combined.csv"
+METADATA_CSV = ABLATION_METADATA_CSV
+RESULTS_DIR = ABLATION_RESULTS_DIR
+RAW_RESPONSE_ROOT = ABLATION_RAW_RESPONSES_DIR
+COMBINED_CSV = ABLATION_COMBINED_CSV
 
-MODEL_PATH = "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct"
+MODEL_PATH = str(QWEN_MODEL_PATH)
 EXPECTED_PALMS = 100
 EXPECTED_CONDITIONS = 10
 EXPECTED_COMBINED_ROWS = EXPECTED_PALMS * EXPECTED_CONDITIONS

@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Prepare 100-palm ablation visual inputs for E1-E5 overlay variants."""
+"""
+Purpose:
+    Prepare 100-palm ablation visual inputs (E1–E5 overlay variants).
+
+Input:
+    - Raw_Patches PNG + LabelMe JSON
+
+Output:
+    - outputs/ablation_inputs_100/E1_raw_crop/ … E5_full_overlay/
+    - outputs/ablation_metadata_100.csv
+"""
 
 from __future__ import annotations
 
@@ -12,6 +22,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.paths import ABLATION_INPUTS_DIR, ABLATION_METADATA_CSV, RAW_PATCHES_ROOT
 from src.preprocessing.ablation_overlay import (
     VISUAL_VARIANTS,
     crop_palm_region,
@@ -26,9 +37,9 @@ from src.preprocessing.sequential_dataset import (
     resolve_image_path,
 )
 
-DATASET_ROOT = Path("/deac/csc/yangGrp/cuij/palm/Raw_Patches")
-OUTPUT_ROOT = PROJECT_ROOT / "outputs" / "ablation_inputs_100"
-METADATA_CSV = PROJECT_ROOT / "outputs" / "ablation_metadata_100.csv"
+DATASET_ROOT = RAW_PATCHES_ROOT
+OUTPUT_ROOT = ABLATION_INPUTS_DIR
+METADATA_CSV = ABLATION_METADATA_CSV
 
 
 def output_dir_for_variant(visual_variant: str) -> Path:

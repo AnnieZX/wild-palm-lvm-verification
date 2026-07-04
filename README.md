@@ -1,250 +1,434 @@
-# 🌴 LVM-Assisted Verification for Wild Palm Detection
-### *Reducing manual review burden in large-scale orthomosaic imagery using Large Vision Models*
+# LVM-Assisted Verification for Wild Palm Detection
 
-> **CS Honors Thesis** · Annie Luo · Mentor: Fan Yang · Wake Forest University · 2026
+**CS Honors Thesis** · Annie Luo · Mentor: Fan Yang · Wake Forest University · 2026
+
+Large Vision Model (LVM)-assisted verification for wild palm detections in orthomosaic imagery. The system sits between a YOLO detector and a human reviewer: it flags uncertain detections and produces structured reliability assessments so experts can focus review where it matters most.
 
 ---
 
-## 📌 Overview
+## Overview
 
-Monitoring wild palm populations across large geographic regions is a critical but labor-intensive task. This project builds a **Large Vision Model (LVM)-assisted verification framework** that sits between a YOLO detector and a human reviewer — flagging uncertain predictions and providing interpretable natural-language explanations so experts can focus their attention where it matters most.
+Wild palm monitoring over large orthomosaic areas is labor-intensive. This project implements a **human-in-the-loop verification pipeline** that combines:
 
-Rather than replacing human reviewers, this system **supports them**:
+- **LabelMe ground truth** — human palm annotations (bbox, center, endpoints)
+- **YOLO11x detection** — trained candidate boxes and confidence scores
+- **Overlay visualization** — cropped inputs with geometric cues for the LVM
+- **Qwen2.5-VL-7B-Instruct** — structured reliability assessment via Hugging Face Transformers on a GPU cluster
+
+The high-level workflow:
 
 ```
-Orthomosaic Image → YOLO Detection → LVM Verification → Ranked Review Queue → Human Expert
+Orthomosaic
+  → cropped Raw_Patches (PNG tiles)
+  → LabelMe annotations (JSON)
+  → YOLO detection (predictions JSON)
+  → overlay generation (per-palm visual inputs)
+  → Qwen2.5-VL verification
+  → reliability assessment
 ```
 
----
-
-## 🏗️ System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        INPUT LAYER                                      │
-│  ┌────────────────────┐        ┌─────────────────────────────────────┐  │
-│  │  21 Full           │        │  JSON Annotations                   │  │
-│  │  Orthomosaics      │───────▶│  (Bounding boxes + Seg. masks)      │  │
-│  │  (multi-GB each)   │        │  YOLO confidence scores             │  │
-│  └────────────────────┘        └─────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     PREPROCESSING PIPELINE                              │
-│                                                                         │
-│   Tile-based parsing → Extract image patches → Render overlay           │
-│   (original imagery + bounding box/mask overlay per prediction)         │
-└─────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    LVM VERIFICATION MODULE                              │
-│                   (Qwen2.5-VL-7B-Instruct)                              │
-│                                                                         │
-│   Zero-shot / Few-shot prompting                                        │
-│   ↓                                                                     │
-│   Output per patch:                                                     │
-│     • Reliability label:  ✅ reliable │ ⚠️ uncertain │ ❌ unreliable     │
-│     • Plain-language explanation (shape, overlap, background context)   │
-│     • Verification score (0–1)                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        OUTPUT LAYER                                     │
-│                                                                         │
-│   1. Color-coded bounding box overlays (green / amber / red)            │
-│   2. Ranked prediction list ordered by verification score               │
-│   3. Natural-language explanation for each flagged instance             │
-└─────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-                            👤 Human Expert Review
-```
+Rather than replacing reviewers, the system **supports** them by ranking and explaining detections that need attention.
 
 ---
 
-## 📊 Dataset
+## Current Architecture
 
-| Subset | Images | Palm Instances | Additional Annotations |
-|--------|--------|----------------|------------------------|
-| Core dataset | 1,500 | 1,952 | 8,842 bounding boxes (multi-class) |
-| New subset | 880 | 5,850 | 5,430 center points · 21,718 endpoints |
+```mermaid
+flowchart TB
+    subgraph Sources["Data sources (cluster)"]
+        OM["Orthomosaic TIFFs"]
+        RP["Raw_Patches<br/>PNG + LabelMe JSON"]
+    end
 
-- **Ground truth format:** LabelMe JSON (human-labeled)
-- **Model predictions:** YOLO-generated candidate detections with confidence scores
-- **Source imagery:** 21 full orthomosaics (gigabyte-scale aerial/UAV)
+    subgraph YOLO["YOLO inference"]
+        YM["YOLO11x best.pt"]
+        INF["run_full_inference_and_overlay.py"]
+        PJ["predictions_full.json"]
+        YOV["full_inference/overlays/"]
+    end
 
----
+    subgraph QA["YOLO ↔ GT analysis"]
+        OVL["visualize_yolo_gt_overlap_full.py"]
+        MAT["experimental/match_predictions_to_groundtruth.py"]
+        STA["experimental/check_prediction_statistics.py"]
+    end
 
-## 🔍 Methodology
+    subgraph Prep["LVM input preparation"]
+        PA["palm_analyzer.py"]
+        ABL["ablation_overlay.py<br/>E1–E5 variants"]
+        PREP["prepare_ablation_inputs_100.py"]
+    end
 
-### 1 · Data Preparation & Preprocessing
-Build a tile-based pipeline that parses JSON annotations, extracts image patches centered on each predicted label, and renders overlays combining the original imagery with its corresponding bounding box or segmentation mask.
+    subgraph LVM["Qwen2.5-VL verification"]
+        QW["qwen_verifier.py"]
+        PR["ablation_prompts.py P1–P6"]
+        RUN["run_qwen_ablation_100.py"]
+    end
 
-### 2 · LVM Verification Module
-Each patch is submitted to **Qwen2.5-VL-7B-Instruct** via API. The model evaluates:
-- Does this region correspond to a valid palm instance?
-- What visual cues support or undermine this classification?
+    subgraph Out["Outputs"]
+        META["ablation_metadata_100.csv"]
+        RES["ablation_results_100_combined.csv"]
+        SUM["ablation_summary_100.csv"]
+    end
 
-Prompting strategies explored: **zero-shot** and **few-shot** (3–5 labeled palm examples).
+    OM --> RP
+    RP --> INF
+    YM --> INF
+    INF --> PJ
+    INF --> YOV
+    RP --> OVL
+    PJ --> OVL
+    RP --> MAT
+    PJ --> MAT
+    RP --> STA
+    PJ --> STA
 
-### 3 · Output Design
-Three reviewer-facing outputs:
-- **Color-coded overlays** — green (reliable), amber (uncertain), red (unreliable)
-- **Ranked list** — predictions sorted by verification score, lowest first
-- **Explanations** — natural-language reasoning per flagged instance
-
-### 4 · Evaluation
-
-| Data availability | Approach |
-|-------------------|----------|
-| Annotated subsets | Quantitative: IoU vs. ground truth · LVM score vs. YOLO confidence |
-| Full dataset (no GT) | Qualitative: expert usefulness ratings · consistency testing across repeated queries |
-
----
-
-## 🤖 Model Choice
-
-**Primary:** [Qwen2.5-VL-7B-Instruct](https://github.com/QwenLM/Qwen2.5-VL) (Apache 2.0)
-
-Chosen for:
-- Native bounding-box grounding with structured JSON output
-- Strong performance on aerial/UAV imagery tasks
-- Runs on single GPU via vLLM; AWQ-quantized variants available
-- Active fine-tuning ecosystem (proven for remote-sensing wildfire detection)
-- Available in 3B / 7B / 72B — 7B hits the sweet spot for thesis-scale compute
-
-**Backup options considered:**
-- InternVL2 / RSCoVLM (remote-sensing specialized)
-- GLM-4.1V-9B-Thinking (chain-of-thought reasoning for richer explanations)
-
----
-
-## 🗓️ Timeline
-
-```
-MAY 2026
-  Weeks 1–2 ████  Acquire dataset · Dev environment · API access · Preprocessing pipeline
-
-  Weeks 3–5 ████  Integrate Qwen2.5-VL API · Experiment with zero-shot & few-shot prompting
-
-JUNE–JULY 2026
-  Weeks 6–8 ████  Overlay rendering · Patch extraction · Prompt engineering refinement
-
-JULY–AUGUST 2026
-  Weeks 9–10 ███  Stability & consistency testing (repeated queries, same inputs)
-
-AUGUST 2026
-  Weeks 11–12 ██  Module fusion · Confidence scoring system · Reviewer output interface
-
-FALL 2026
-  Sep  (Wks 1–4)  Debug & refine based on early expert feedback
-  Oct  (Wks 5–8)  Human-centered evaluation · Structured reviewer feedback collection
-  Nov–Dec (Wks 9–12)  Write thesis report · Prepare final presentation
+    RP --> PREP
+    PA --> PREP
+    ABL --> PREP
+    PREP --> META
+    META --> RUN
+    QW --> RUN
+    PR --> RUN
+    RUN --> RES
+    RES --> SUM
 ```
 
-**Expected workload:** ~10–15 hrs/week (summer) · ~6–8 hrs/week (fall semester)
+### Core modules
+
+| Layer | Module | Role |
+|-------|--------|------|
+| Paths | `paths.py` | Central cluster paths and `outputs/` layout |
+| YOLO | `yolo/predictions_io.py` | Load predictions JSON, IoU, NMS, grouping |
+| Preprocessing | `json_parser.py` | Load LabelMe JSON |
+| Preprocessing | `palm_analyzer.py` | Extract per-palm bbox, center, endpoints, stats |
+| Preprocessing | `sequential_dataset.py` | Discover Raw_Patches JSON; deterministic 100-palm sampling |
+| Preprocessing | `ablation_overlay.py` | E1–E5 cropped overlay variants |
+| LVM | `qwen_verifier.py` | Qwen2.5-VL inference via Transformers |
+| LVM | `ablation_response_parser.py` | Parse ablation JSON responses |
+| Prompts | `ablation_prompts.py` | P1–P6 prompt variants |
+| Config | `configs/model.yaml` | Active model path |
 
 ---
 
-## 🛠️ Tech Stack
+## Repository structure
+
+```
+wild-palm-lvm-verification/
+├── configs/
+│   └── model.yaml                 # Qwen model path
+├── data/
+│   └── samples/                   # Local dev tiles (5 PNG + LabelMe JSON)
+├── docs/
+│   ├── phase2_plan.md             # Detailed design notes
+│   ├── cluster_deployment.md      # Cluster setup guide
+│   └── REFACTOR_SUMMARY.md        # Cleanup log (July 2026)
+├── jobs/                          # Active SLURM batch scripts
+│   ├── qwen_ablation_100.slurm    # Main 100-palm ablation job
+│   ├── qwen_ablation_smoke_test.slurm
+│   └── qwen_download.slurm
+├── scripts/
+│   ├── prepare_ablation_inputs_100.py   # LVM input prep
+│   ├── run_qwen_ablation_100.py         # Full ablation inference
+│   ├── analyze_ablation_100.py          # Ablation summarization
+│   ├── run_full_inference_and_overlay.py
+│   ├── visualize_yolo_gt_overlap_full.py
+│   ├── check_cluster_environment.py
+│   └── experimental/              # Smoke test + supplementary YOLO QA
+│       ├── run_qwen_ablation_smoke_test.py
+│       ├── match_predictions_to_groundtruth.py
+│       └── check_prediction_statistics.py
+├── src/
+│   ├── paths.py                   # Shared path constants
+│   ├── yolo/predictions_io.py     # YOLO JSON utilities
+│   ├── preprocessing/             # LabelMe parsing, palm stats, overlays
+│   ├── lvm/                       # Qwen verifier, response parsing
+│   └── prompts/                   # Ablation prompt templates
+├── archive/                       # Superseded scripts, jobs, data
+├── requirements.txt               # Local development
+├── requirements_cluster.txt       # GPU cluster (Transformers, torch)
+└── outputs/                       # Generated artifacts (gitignored)
+    ├── full_inference/            # YOLO predictions + overlays
+    ├── yolo_gt_overlap_full/      # GT vs YOLO overlap images
+    ├── yolo_analysis/             # GT match + count CSVs
+    └── ablation_*                 # LVM ablation artifacts
+```
+
+Legacy prototype scripts live under `archive/`. See `archive/README.md` and `docs/REFACTOR_SUMMARY.md`.
+
+---
+
+## Data sources
+
+### Raw_Patches (primary thesis dataset)
+
+On the DEAC cluster:
+
+```
+/deac/csc/yangGrp/cuij/palm/Raw_Patches/
+```
+
+Each patch is a cropped orthomosaic tile (~912×912 px) with paired files:
+
+| File | Description |
+|------|-------------|
+| `{id}.png` | Orthomosaic patch image |
+| `{id}.json` | LabelMe annotation |
+
+### LabelMe annotations
+
+Each JSON file contains grouped shapes per palm instance (`group_id`):
+
+| Label | Meaning |
+|-------|---------|
+| `palm` | Rotated bounding box (4 corner points) |
+| `center` | Crown center point |
+| `end` | Frond endpoint(s) |
+
+`palm_analyzer.py` extracts one `PalmInstance` per group with bbox area, endpoint count, and optional confidence fields.
+
+### Local samples
+
+`data/samples/` holds five tiles for lightweight local testing. This is **not** the full thesis dataset.
+
+### Orthomosaics
+
+Full orthomosaic TIFFs are stored on the cluster and are not committed to this repository. Patches in Raw_Patches are pre-cut from those mosaics.
+
+---
+
+## YOLO inference
+
+Detection uses a trained **YOLO11x** model:
+
+```
+/deac/csc/yangGrp/cuij/palm/training/yolonew/results/yolo11x_palm_new/weights/best.pt
+```
+
+### Full-dataset inference
+
+```bash
+python scripts/run_full_inference_and_overlay.py
+```
+
+Runs inference on every `*.png` under Raw_Patches with:
+
+- `conf=0.001`
+- `max_det=300`
+
+**Outputs:**
+
+| Path | Content |
+|------|---------|
+| `outputs/full_inference/predictions_full.json` | COCO-style detections: `image_id`, `category_id`, `bbox` [x,y,w,h], `score` |
+| `outputs/full_inference/overlays/{image_id}_overlay.png` | Green boxes + confidence labels |
+
+Requires `ultralytics` (install on cluster as needed).
+
+---
+
+## YOLO overlap visualization and GT analysis
+
+After full inference, use these scripts to validate detector quality against LabelMe ground truth.
+
+### GT vs YOLO overlap (all images)
+
+```bash
+python scripts/visualize_yolo_gt_overlap_full.py
+```
+
+Reads `outputs/full_inference/predictions_full.json` and Raw_Patches LabelMe JSON. Filters YOLO boxes (`score ≥ 0.5`, NMS IoU 0.5). Draws GT (green) and YOLO (red) in original pixel coordinates.
+
+**Outputs:**
+
+- `outputs/yolo_gt_overlap_full/{image_id}_overlap.png`
+- `outputs/yolo_gt_overlap_full/overlap_summary.csv` — per-image IoU stats
+- `outputs/yolo_gt_overlap_full/contact_sheet.png` — 5×5 preview grid
+
+### IoU matching (per GT palm)
+
+```bash
+python scripts/experimental/match_predictions_to_groundtruth.py
+```
+
+Assigns each GT palm to its best YOLO match (IoU ≥ 0.5). Writes `outputs/yolo_analysis/gt_matches.csv`.
+
+### Count summary
+
+```bash
+python scripts/experimental/check_prediction_statistics.py
+```
+
+Compares GT palm counts vs YOLO prediction counts per image. Writes `outputs/yolo_analysis/prediction_statistics.csv`.
+
+---
+
+## Qwen2.5-VL verification
+
+Verification uses **Qwen2.5-VL-7B-Instruct** loaded locally via Hugging Face Transformers (not a remote API):
+
+```
+/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct
+```
+
+Configured in `configs/model.yaml` (`active_model`).
+
+### Verifier interface
+
+`QwenVerifier.verify_image(image_path, metadata, prompt=...)` sends a cropped overlay image plus a structured prompt and returns parsed JSON fields such as:
+
+- `detection_quality` — reliable / uncertain / unreliable
+- `is_palm`, `palm_confidence`
+- `bbox_alignment`, `palm_structure`, `occlusion_level`
+- `reasoning`
+
+Implementation: `src/lvm/qwen_verifier.py`.
+
+---
+
+## Experiment pipeline (100-palm ablation)
+
+The main thesis experiment crosses **visual overlay variants (E1–E5)** with **prompt variants (P1–P6)** for 100 deterministically sampled palms from Raw_Patches.
+
+### Visual variants (E1–E5)
+
+| Variant | Content |
+|---------|---------|
+| E1 | Raw crop only |
+| E2 | Bbox only |
+| E3 | Endpoints only |
+| E4 | Bbox + endpoints |
+| E5 | Full overlay (bbox + center + endpoints + palm ID) |
+
+Generated by `prepare_ablation_inputs_100.py` → `outputs/ablation_inputs_100/`.
+
+### Prompt variants (P1–P6)
+
+Defined in `src/prompts/ablation_prompts.py` — from direct reliability scoring to full geometric + YOLO confidence metadata (P4, P6).
+
+### 10 unique conditions
+
+Five E-variants share prompt P2; five additional runs vary prompts on E5 full overlay → **100 palms × 10 conditions = 1,000 inferences**.
+
+### Step-by-step
+
+```bash
+# 1. Prepare visual inputs + metadata
+python scripts/prepare_ablation_inputs_100.py
+
+# 2. Smoke test (2 palms × 10 conditions)
+python scripts/experimental/run_qwen_ablation_smoke_test.py
+
+# 3. Full ablation run
+python scripts/run_qwen_ablation_100.py
+
+# 4. Summarize results
+python scripts/analyze_ablation_100.py
+```
+
+**Key outputs:**
+
+| File | Description |
+|------|-------------|
+| `outputs/ablation_metadata_100.csv` | Palm geometry, paths to E1–E5 images |
+| `outputs/ablation_results_100_combined.csv` | All 1,000 parsed Qwen responses |
+| `outputs/ablation_summary_100.csv` | Aggregated condition-level stats |
+| `outputs/ablation_raw_responses_100/` | Raw model text per condition |
+
+> **Note:** Ablation overlays currently use **LabelMe palm geometry** for bbox/endpoints. YOLO predictions are validated separately via the overlap scripts above. Wiring YOLO boxes into LVM overlay generation is the next integration step.
+
+---
+
+## Cluster execution
+
+### Environment setup
+
+```bash
+conda create -n palm-lvm python=3.11
+conda activate palm-lvm
+pip install -r requirements_cluster.txt
+python scripts/check_cluster_environment.py
+```
+
+Download the Qwen model (once):
+
+```bash
+sbatch jobs/qwen_download.slurm
+```
+
+### Submit ablation job
+
+From the project root on the cluster:
+
+```bash
+mkdir -p logs outputs/ablation_inputs_100 outputs/ablation_results_100 \
+         outputs/ablation_raw_responses_100
+sbatch jobs/qwen_ablation_100.slurm
+```
+
+This SLURM job runs prepare → infer → analyze in one submission.
+
+See `docs/cluster_deployment.md` for additional cluster notes.
+
+---
+
+## Tech stack
 
 | Component | Tool |
 |-----------|------|
-| Object detection | YOLOv8 (pre-trained predictions) |
-| LVM inference | Qwen2.5-VL-7B-Instruct |
-| Inference serving | vLLM |
-| Image processing | Python · OpenCV · Pillow |
-| Annotation format | LabelMe JSON |
-| Evaluation | IoU (spatial) · Human ratings (qualitative) |
-| IDE | VS Code + Jupyter extension |
+| Object detection | YOLO11x (`ultralytics`, custom `best.pt`) |
+| LVM | Qwen2.5-VL-7B-Instruct |
+| LVM runtime | Hugging Face Transformers + `qwen-vl-utils` |
+| Image I/O | OpenCV, Pillow, Matplotlib (overlap viz) |
+| Annotations | LabelMe JSON |
+| Evaluation | IoU matching, ablation summaries |
+| Batch jobs | SLURM (DEAC cluster) |
 
 ---
 
-## 📁 Project Structure
-
-```
-palm-lvm-verification/
-├── data/
-│   ├── raw/                  # Original orthomosaics (symlinked, not committed)
-│   ├── annotations/          # LabelMe JSON ground truth
-│   └── yolo_predictions/     # YOLO candidate detections + confidence scores
-├── src/
-│   ├── preprocessing/
-│   │   ├── tile_extractor.py     # Tile-based patch extraction pipeline
-│   │   └── overlay_renderer.py   # Bounding box / mask overlay rendering
-│   ├── verification/
-│   │   ├── lvm_client.py         # Qwen2.5-VL API wrapper
-│   │   ├── prompt_strategies.py  # Zero-shot & few-shot prompt templates
-│   │   └── scorer.py             # Reliability label + score aggregation
-│   └── output/
-│       ├── reviewer_interface.py # Ranked list + color-coded export
-│       └── visualizer.py         # Overlay visualization tools
-├── evaluation/
-│   ├── iou_eval.py           # Quantitative IoU evaluation
-│   ├── consistency_test.py   # Repeated-query stability testing
-│   └── expert_feedback/      # Structured reviewer rating collection
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_prompt_experiments.ipynb
-│   └── 03_evaluation_results.ipynb
-├── tests/
-├── requirements.txt
-└── README.md
-```
-
----
-
-## ⚡ Quick Start
+## Quick start (cluster)
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/annieluo/palm-lvm-verification.git
-cd palm-lvm-verification
+git clone <repo-url>
+cd wild-palm-lvm-verification
 
-# 2. Create environment
-python -m venv .venv
-source .venv/bin/activate
+# Cluster environment
+pip install -r requirements_cluster.txt
+python scripts/check_cluster_environment.py
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# Optional: YOLO full inference + GT overlap check
+python scripts/run_full_inference_and_overlay.py
+python scripts/visualize_yolo_gt_overlap_full.py
 
-# 4. Configure model access (Qwen2.5-VL via vLLM or API)
-cp .env.example .env
-# Edit .env with your API endpoint / local model path
-
-# 5. Run preprocessing on a sample
-python src/preprocessing/tile_extractor.py \
-  --annotation data/annotations/sample.json \
-  --output data/patches/
-
-# 6. Run LVM verification on extracted patches
-python src/verification/lvm_client.py \
-  --patches data/patches/ \
-  --strategy few_shot \
-  --output results/verification_output.json
-
-# 7. Generate reviewer output
-python src/output/reviewer_interface.py \
-  --input results/verification_output.json \
-  --output results/review_queue/
+# Main experiment
+sbatch jobs/qwen_ablation_100.slurm
 ```
+
+For local development (CPU, no GPU), use `requirements.txt` and the small sample tiles under `data/samples/`. Full Qwen inference requires a GPU.
 
 ---
 
-## 📖 References
+## Dataset summary
+
+| Subset | Images | Palm instances | Notes |
+|--------|--------|----------------|-------|
+| Core dataset | 1,500 | 1,952 | Multi-class bboxes |
+| New subset (Raw_Patches) | 880 | 5,850 | Center + endpoint annotations |
+| Local samples | 5 | — | Dev tiles in `data/samples/` |
+
+---
+
+## References
 
 1. Kuckreja et al. (2024). *GeoChat: Grounded Large Vision-Language Model for Remote Sensing.* CVPR 2024.
-2. Hu et al. (2023). *Vision-Language Models in Remote Sensing: Current Progress and Future Trends.* arXiv:2305.05726.
-3. Syetiawan et al. (2025). *Deep Learning-Based Palm Tree Detection in UAV Imagery with Mask RCNN.* TELKOMNIKA, 23(1).
-4. Mazzia et al. (2021). *Deep-Learning-Based Automated Palm Tree Counting and Geolocation.* Agronomy, 11(8).
+2. Hu et al. (2023). *Vision-Language Models in Remote Sensing.* arXiv:2305.05726.
+3. Syetiawan et al. (2025). *Deep Learning-Based Palm Tree Detection in UAV Imagery with Mask RCNN.* TELKOMNIKA.
+4. Mazzia et al. (2021). *Deep-Learning-Based Automated Palm Tree Counting and Geolocation.* Agronomy.
 5. Bai et al. (2025). *Qwen2.5-VL Technical Report.* arXiv:2502.13923.
 
 ---
 
-## 👤 Author
+## Author
 
 **Annie Luo** · CS Honors Thesis  
 Mentor: **Fan Yang**  
@@ -252,4 +436,4 @@ Wake Forest University · May 2026
 
 ---
 
-*This project is part of ongoing research into scalable, human-in-the-loop ecological monitoring using large vision models.*
+*Human-in-the-loop ecological monitoring using large vision models for wild palm verification in orthomosaic imagery.*

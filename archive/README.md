@@ -36,10 +36,14 @@ Archived scripts set `PROJECT_ROOT` to the repo root (not `archive/`).
 
 ## Stale SLURM references
 
-These jobs still point at old `scripts/` paths and need path updates if re-run:
+These jobs were moved to `archive/jobs/` because they reference archived scripts:
 
-- `jobs/qwen_batch_sample.slurm` → use `archive/prototype/scripts/`
-- `jobs/qwen_100_sequential.slurm` → use `archive/experiments/scripts/`
+| Job | Archived script target |
+|-----|------------------------|
+| `archive/jobs/qwen_batch_sample.slurm` | `archive/prototype/scripts/` |
+| `archive/jobs/qwen_100_sequential.slurm` | `archive/experiments/scripts/` |
+
+Active smoke test job: `jobs/qwen_ablation_smoke_test.slurm` → `scripts/experimental/run_qwen_ablation_smoke_test.py`
 
 ## Deleted (empty only)
 

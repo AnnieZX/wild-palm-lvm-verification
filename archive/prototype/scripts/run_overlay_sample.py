@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # Allow imports from the project root when running this script directly.
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.preprocessing.json_parser import parse_annotation_file

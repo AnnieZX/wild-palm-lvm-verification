@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Check Python, PyTorch, and CUDA availability for cluster deployment."""
+"""
+Purpose:
+    Check Python, PyTorch, and CUDA availability on the cluster.
+
+Input:
+    - Local Python environment
+
+Output:
+    - Printed environment report (stdout)
+"""
 
 from __future__ import annotations
 

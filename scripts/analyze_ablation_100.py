@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Summarize 100-palm ablation results."""
+"""
+Purpose:
+    Summarize 100-palm ablation Qwen results into aggregate CSV reports.
+
+Input:
+    - outputs/ablation_results_100_combined.csv
+    - outputs/ablation_metadata_100.csv
+
+Output:
+    - outputs/ablation_summary_100.csv
+    - outputs/ablation_endpoint_summary_100.csv
+    - outputs/ablation_anchoring_summary_100.csv
+"""
 
 from __future__ import annotations
 
@@ -12,11 +24,19 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-COMBINED_CSV = PROJECT_ROOT / "outputs" / "ablation_results_100_combined.csv"
-METADATA_CSV = PROJECT_ROOT / "outputs" / "ablation_metadata_100.csv"
-SUMMARY_CSV = PROJECT_ROOT / "outputs" / "ablation_summary_100.csv"
-ENDPOINT_SUMMARY_CSV = PROJECT_ROOT / "outputs" / "ablation_endpoint_summary_100.csv"
-ANCHORING_SUMMARY_CSV = PROJECT_ROOT / "outputs" / "ablation_anchoring_summary_100.csv"
+from src.paths import (
+    ABLATION_ANCHORING_SUMMARY_CSV,
+    ABLATION_COMBINED_CSV,
+    ABLATION_ENDPOINT_SUMMARY_CSV,
+    ABLATION_METADATA_CSV,
+    ABLATION_SUMMARY_CSV,
+)
+
+COMBINED_CSV = ABLATION_COMBINED_CSV
+METADATA_CSV = ABLATION_METADATA_CSV
+SUMMARY_CSV = ABLATION_SUMMARY_CSV
+ENDPOINT_SUMMARY_CSV = ABLATION_ENDPOINT_SUMMARY_CSV
+ANCHORING_SUMMARY_CSV = ABLATION_ANCHORING_SUMMARY_CSV
 
 EXPECTED_COMBINED_ROWS = 1000
 

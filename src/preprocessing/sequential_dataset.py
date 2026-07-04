@@ -12,9 +12,14 @@ IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"]
 
 def find_json_files(dataset_root: Path) -> list[Path]:
     """Return all JSON files under the dataset root, sorted alphabetically."""
+    return find_labelme_json_files(dataset_root)
+
+
+def find_labelme_json_files(dataset_root: Path) -> list[Path]:
+    """Return all LabelMe JSON files under the dataset root, sorted by path."""
     if not dataset_root.exists():
         raise FileNotFoundError(f"Dataset root not found: {dataset_root}")
-    return sorted(dataset_root.rglob("*.json"))
+    return sorted(path for path in dataset_root.rglob("*.json") if path.is_file())
 
 
 def resolve_image_path(json_path: Path, data: dict) -> Path | None:

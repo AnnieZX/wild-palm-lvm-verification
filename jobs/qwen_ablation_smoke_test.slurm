@@ -69,7 +69,7 @@ echo "Metadata available: ${ROW_COUNT} rows (smoke test uses first 2)"
 
 echo
 echo "=== Running ablation smoke test ==="
-python scripts/run_qwen_ablation_smoke_test.py
+python scripts/experimental/run_qwen_ablation_smoke_test.py
 
 COMBINED_ROWS=$(python - <<'PY'
 import pandas as pd

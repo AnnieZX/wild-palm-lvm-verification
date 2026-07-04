@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Smoke test for the 100-palm Qwen2.5-VL ablation pipeline (2 palms x 10 conditions)."""
+"""
+Purpose:
+    Smoke test for the 100-palm Qwen ablation pipeline (2 palms × 10 conditions).
+
+Input:
+    - outputs/ablation_metadata_100.csv (first 2 rows)
+    - outputs/ablation_inputs_100/ overlay images
+
+Output:
+    - outputs/smoke_test_results/
+    - outputs/smoke_test_raw_responses/
+    - outputs/smoke_test_combined.csv
+"""
 
 from __future__ import annotations
 
@@ -9,19 +21,26 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.lvm.ablation_response_parser import parse_ablation_response
 from src.lvm.qwen_verifier import QwenVerifier
+from src.paths import (
+    ABLATION_METADATA_CSV,
+    QWEN_MODEL_PATH,
+    SMOKE_TEST_COMBINED_CSV,
+    SMOKE_TEST_RAW_RESPONSES_DIR,
+    SMOKE_TEST_RESULTS_DIR,
+)
 from src.prompts.ablation_prompts import build_ablation_prompt
 
-METADATA_CSV = PROJECT_ROOT / "outputs" / "ablation_metadata_100.csv"
-RESULTS_DIR = PROJECT_ROOT / "outputs" / "smoke_test_results"
-RAW_RESPONSE_ROOT = PROJECT_ROOT / "outputs" / "smoke_test_raw_responses"
-COMBINED_CSV = PROJECT_ROOT / "outputs" / "smoke_test_combined.csv"
+METADATA_CSV = ABLATION_METADATA_CSV
+RESULTS_DIR = SMOKE_TEST_RESULTS_DIR
+RAW_RESPONSE_ROOT = SMOKE_TEST_RAW_RESPONSES_DIR
+COMBINED_CSV = SMOKE_TEST_COMBINED_CSV
 
-MODEL_PATH = "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct"
+MODEL_PATH = str(QWEN_MODEL_PATH)
 EXPECTED_PALMS = 2
 EXPECTED_CONDITIONS = 10
 EXPECTED_COMBINED_ROWS = EXPECTED_PALMS * EXPECTED_CONDITIONS
