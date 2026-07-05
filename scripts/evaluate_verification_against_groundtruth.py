@@ -35,6 +35,7 @@ from src.paths import (
     VERIFICATION_DATASET_INDEX_CSV,
 )
 from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
+from src.yolo.gt_matching import GreedyGtMatch, greedy_match_bboxes_to_gt
 from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
 
 IOU_THRESHOLD = 0.5
@@ -164,24 +165,52 @@ def find_yolo_prediction(
     return best_bbox, best_score
 
 
-def match_yolo_to_gt(
-    yolo_bbox: tuple[float, float, float, float],
-    gt_bboxes: list[tuple[float, float, float, float]],
+def compute_greedy_matches_for_index(
+    index_df: pd.DataFrame,
+    predictions_by_image: dict[str, list[dict[str, Any]]],
+    annotations_root: Path,
+    gt_cache: dict[str, list[tuple[float, float, float, float]]],
     iou_threshold: float,
-) -> tuple[tuple[float, float, float, float] | None, float, bool]:
-    """Return best GT match (xywh), max IoU, and whether IoU >= threshold."""
-    if not gt_bboxes:
-        return None, 0.0, False
+) -> dict[str, GreedyGtMatch]:
+    """
+    Greedy one-to-one GT assignment for every verification sample.
 
-    best_iou = 0.0
-    best_gt: tuple[float, float, float, float] | None = None
-    for gt_bbox in gt_bboxes:
-        overlap = iou_xywh(yolo_bbox, gt_bbox)
-        if overlap > best_iou:
-            best_iou = overlap
-            best_gt = gt_bbox
+    Detections on the same image compete for GT boxes; each GT may be matched
+    at most once (Pascal VOC / COCO style).
+    """
+    matches_by_sample_id: dict[str, GreedyGtMatch] = {}
 
-    return best_gt, best_iou, best_iou >= iou_threshold
+    for image_name, group in index_df.groupby("image_name", sort=False):
+        json_path = resolve_labelme_json(annotations_root, str(image_name))
+        if json_path is None:
+            gt_bboxes: list[tuple[float, float, float, float]] = []
+        elif str(image_name) not in gt_cache:
+            gt_cache[str(image_name)] = extract_gt_palm_bboxes(json_path)
+            gt_bboxes = gt_cache[str(image_name)]
+        else:
+            gt_bboxes = gt_cache[str(image_name)]
+
+        sample_ids: list[str] = []
+        yolo_bboxes: list[tuple[float, float, float, float]] = []
+        for _, sample in group.iterrows():
+            sample_id = str(sample["sample_id"])
+            index_bbox = index_bbox_from_row(sample)
+            yolo_bbox, _ = find_yolo_prediction(
+                str(image_name),
+                index_bbox,
+                predictions_by_image,
+            )
+            if yolo_bbox is None:
+                yolo_bbox = index_bbox
+
+            sample_ids.append(sample_id)
+            yolo_bboxes.append(yolo_bbox)
+
+        match_results = greedy_match_bboxes_to_gt(yolo_bboxes, gt_bboxes, iou_threshold)
+        for sample_id, match in zip(sample_ids, match_results, strict=True):
+            matches_by_sample_id[sample_id] = match
+
+    return matches_by_sample_id
 
 
 def load_verification_labels(condition_dir: Path) -> dict[str, str]:
@@ -212,9 +241,7 @@ def evaluate_ablation_condition(
     condition_dir: Path,
     index_df: pd.DataFrame,
     predictions_by_image: dict[str, list[dict[str, Any]]],
-    annotations_root: Path,
-    gt_cache: dict[str, list[tuple[float, float, float, float]]],
-    iou_threshold: float,
+    greedy_matches: dict[str, GreedyGtMatch],
 ) -> pd.DataFrame:
     """Build evaluation rows for one ablation condition."""
     ablation_name = condition_dir.name
@@ -236,16 +263,15 @@ def evaluate_ablation_condition(
             yolo_bbox = index_bbox
             yolo_confidence = float(sample["confidence"]) if pd.notna(sample.get("confidence")) else None
 
-        json_path = resolve_labelme_json(annotations_root, image_name)
-        if json_path is None:
-            gt_bboxes: list[tuple[float, float, float, float]] = []
-        elif image_name not in gt_cache:
-            gt_cache[image_name] = extract_gt_palm_bboxes(json_path)
-            gt_bboxes = gt_cache[image_name]
+        match = greedy_matches.get(sample_id)
+        if match is None:
+            gt_bbox = None
+            max_iou = 0.0
+            matched_gt = False
         else:
-            gt_bboxes = gt_cache[image_name]
-
-        gt_bbox, max_iou, matched_gt = match_yolo_to_gt(yolo_bbox, gt_bboxes, iou_threshold)
+            gt_bbox = match.gt_bbox
+            max_iou = match.max_iou
+            matched_gt = match.matched_gt
 
         rows.append(
             {
@@ -305,6 +331,13 @@ def main() -> None:
     index_df = pd.read_csv(args.index_csv)
     predictions_by_image = group_predictions_by_image(load_predictions(args.predictions))
     gt_cache: dict[str, list[tuple[float, float, float, float]]] = {}
+    greedy_matches = compute_greedy_matches_for_index(
+        index_df,
+        predictions_by_image,
+        args.annotations_root,
+        gt_cache,
+        args.iou_threshold,
+    )
 
     print("Verification vs ground-truth evaluation")
     print(f"  Results:      {args.results_dir}")
@@ -320,9 +353,7 @@ def main() -> None:
             condition_dir=condition_dir,
             index_df=index_df,
             predictions_by_image=predictions_by_image,
-            annotations_root=args.annotations_root,
-            gt_cache=gt_cache,
-            iou_threshold=args.iou_threshold,
+            greedy_matches=greedy_matches,
         )
 
         output_path = args.output_dir / f"{code}_evaluation.csv"

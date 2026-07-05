@@ -34,6 +34,8 @@ from src.paths import (
 )
 from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
 from src.preprocessing.verification_dataset import resolve_patch_image
+from src.preprocessing.verification_matching_debug import render_sample_matching_debug
+from src.yolo.gt_matching import greedy_match_bboxes_to_gt
 from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
 
 IOU_THRESHOLD = 0.5
@@ -58,6 +60,19 @@ def index_bbox_from_row(row: pd.Series) -> tuple[float, float, float, float]:
         float(row["bbox_width"]),
         float(row["bbox_height"]),
     )
+
+
+def resolve_yolo_bbox_for_sample(
+    row: pd.Series,
+    predictions_by_image: dict[str, list],
+) -> tuple[tuple[float, float, float, float], float | None]:
+    image_name = str(row["image_name"])
+    index_bbox = index_bbox_from_row(row)
+    yolo_bbox, yolo_confidence = find_yolo_prediction(image_name, index_bbox, predictions_by_image)
+    if yolo_bbox is None:
+        yolo_bbox = index_bbox
+        yolo_confidence = float(row["confidence"]) if pd.notna(row.get("confidence")) else None
+    return yolo_bbox, yolo_confidence
 
 
 def find_yolo_prediction(
@@ -143,30 +158,6 @@ def format_bbox(bbox: tuple[float, float, float, float]) -> str:
     return f"[x={x:.2f}, y={y:.2f}, w={width:.2f}, h={height:.2f}]"
 
 
-def match_yolo_to_gt_with_index(
-    yolo_bbox: tuple[float, float, float, float],
-    gt_bboxes: list[tuple[float, float, float, float]],
-    iou_threshold: float,
-) -> tuple[int | None, float, bool, list[float]]:
-    """Return matched GT index, max IoU, matched flag, and per-GT IoU list."""
-    if not gt_bboxes:
-        return None, 0.0, False, []
-
-    per_gt_iou: list[float] = []
-    best_iou = 0.0
-    best_index: int | None = None
-
-    for index, gt_bbox in enumerate(gt_bboxes):
-        overlap = iou_xywh(yolo_bbox, gt_bbox)
-        per_gt_iou.append(overlap)
-        if overlap > best_iou:
-            best_iou = overlap
-            best_index = index
-
-    matched = best_iou >= iou_threshold
-    return best_index, best_iou, matched, per_gt_iou
-
-
 def main() -> None:
     args = parse_args()
 
@@ -185,19 +176,26 @@ def main() -> None:
     index_bbox = index_bbox_from_row(row)
 
     predictions_by_image = group_predictions_by_image(load_predictions(args.predictions))
-    yolo_bbox, yolo_confidence = find_yolo_prediction(image_name, index_bbox, predictions_by_image)
-    if yolo_bbox is None:
-        yolo_bbox = index_bbox
-        yolo_confidence = float(row["confidence"]) if pd.notna(row.get("confidence")) else None
+    yolo_bbox, yolo_confidence = resolve_yolo_bbox_for_sample(row, predictions_by_image)
 
     json_path = resolve_labelme_json(args.annotations_root, image_name)
     gt_bboxes = extract_gt_palm_bboxes(json_path) if json_path is not None else []
 
-    matched_index, max_iou, matched_gt, per_gt_iou = match_yolo_to_gt_with_index(
-        yolo_bbox,
-        gt_bboxes,
-        args.iou_threshold,
-    )
+    image_samples = index_df[index_df["image_name"].astype(str) == image_name]
+    sample_ids: list[str] = []
+    yolo_bboxes: list[tuple[float, float, float, float]] = []
+    for _, sample_row in image_samples.iterrows():
+        sample_bbox, _ = resolve_yolo_bbox_for_sample(sample_row, predictions_by_image)
+        sample_ids.append(str(sample_row["sample_id"]))
+        yolo_bboxes.append(sample_bbox)
+
+    greedy_matches = greedy_match_bboxes_to_gt(yolo_bboxes, gt_bboxes, args.iou_threshold)
+    sample_index = sample_ids.index(args.sample_id)
+    match = greedy_matches[sample_index]
+    matched_index = match.gt_index if match.matched_gt else match.gt_index
+    max_iou = match.max_iou
+    matched_gt = match.matched_gt
+    per_gt_iou = [iou_xywh(yolo_bbox, gt_bbox) for gt_bbox in gt_bboxes]
 
     print("Sample matching debug")
     print("=" * 60)
@@ -213,12 +211,13 @@ def main() -> None:
     else:
         for index, gt_bbox in enumerate(gt_bboxes):
             iou_text = f"{per_gt_iou[index]:.4f}" if index < len(per_gt_iou) else "n/a"
-            marker = "  <-- best match" if index == matched_index else ""
+            marker = "  <-- greedy match" if match.matched_gt and index == matched_index else ""
             print(f"   [{index}] {format_bbox(gt_bbox)}  IoU={iou_text}{marker}")
     print(f"5. max IoU:               {max_iou:.4f}")
-    print(f"6. matched GT index:      {matched_index if matched_index is not None else 'none'}")
+    print(f"6. matched GT index:      {matched_index if matched_gt else 'none (greedy one-to-one)'}")
     print(f"7. matched_gt:            {matched_gt}")
     print(f"   IoU threshold:          {args.iou_threshold}")
+    print(f"   image detections:       {len(sample_ids)} (greedy matching across image)")
 
     if args.save_image:
         image_path = resolve_patch_image(args.images_root, image_name)
