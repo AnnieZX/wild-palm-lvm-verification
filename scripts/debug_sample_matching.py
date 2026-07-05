@@ -32,9 +32,8 @@ from src.paths import (
     VERIFICATION_DATASET_INDEX_CSV,
     VISUALIZATION_DIR,
 )
+from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
 from src.preprocessing.verification_dataset import resolve_patch_image
-from src.preprocessing.verification_matching_debug import render_sample_matching_debug
-from src.preprocessing.verification_visualization import extract_gt_palm_bboxes
 from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
 
 IOU_THRESHOLD = 0.5

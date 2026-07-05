@@ -34,7 +34,7 @@ from src.paths import (
     VERIFICATION_ABLATION_RESULTS_DIR,
     VERIFICATION_DATASET_INDEX_CSV,
 )
-from src.preprocessing.json_parser import load_json
+from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
 from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
 
 IOU_THRESHOLD = 0.5
@@ -134,53 +134,6 @@ def resolve_labelme_json(annotations_root: Path, image_name: str) -> Path | None
 
     matches = sorted(annotations_root.rglob(f"{image_name}.json"))
     return matches[0] if matches else None
-
-
-def extract_gt_palm_bboxes(json_path: Path) -> list[tuple[float, float, float, float]]:
-    """
-    Extract axis-aligned GT palm bboxes from rotation palm shapes.
-
-    Uses label == palm and shape_type == rotation; ignores center/end annotations.
-    Returns list of (x, y, width, height).
-    """
-    data = load_json(json_path)
-    grouped: dict[int, list[dict[str, Any]]] = {}
-
-    for shape in data.get("shapes", []):
-        if not isinstance(shape, dict):
-            continue
-        group_id = shape.get("group_id")
-        if group_id is None:
-            continue
-        grouped.setdefault(int(group_id), []).append(shape)
-
-    bboxes: list[tuple[float, float, float, float]] = []
-    for group_id in sorted(grouped):
-        palm_shapes = [
-            shape
-            for shape in grouped[group_id]
-            if shape.get("label") == "palm" and shape.get("shape_type") == "rotation"
-        ]
-        if not palm_shapes:
-            continue
-
-        points = palm_shapes[0].get("points", [])
-        xs: list[float] = []
-        ys: list[float] = []
-        for point in points:
-            if isinstance(point, (list, tuple)) and len(point) >= 2:
-                xs.append(float(point[0]))
-                ys.append(float(point[1]))
-        if not xs or not ys:
-            continue
-
-        xmin = min(xs)
-        ymin = min(ys)
-        xmax = max(xs)
-        ymax = max(ys)
-        bboxes.append((xmin, ymin, xmax - xmin, ymax - ymin))
-
-    return bboxes
 
 
 def find_yolo_prediction(

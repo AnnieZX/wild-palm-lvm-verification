@@ -10,6 +10,7 @@ from typing import Any
 import cv2
 import numpy as np
 
+from src.preprocessing.gt_palm_bboxes import axis_aligned_bbox_from_points
 from src.preprocessing.json_parser import load_json
 from src.yolo.predictions_io import iou_xywh
 
@@ -41,41 +42,6 @@ def xywh_to_xyxy(bbox: tuple[float, float, float, float]) -> tuple[int, int, int
     return int(round(x)), int(round(y)), int(round(x + width)), int(round(y + height))
 
 
-def extract_gt_palm_bboxes(json_path: Path) -> list[tuple[float, float, float, float]]:
-    """Extract rotation palm GT bboxes as xywh."""
-    data = load_json(json_path)
-    grouped: dict[int, list[dict[str, Any]]] = {}
-    for shape in data.get("shapes", []):
-        if not isinstance(shape, dict):
-            continue
-        group_id = shape.get("group_id")
-        if group_id is None:
-            continue
-        grouped.setdefault(int(group_id), []).append(shape)
-
-    bboxes: list[tuple[float, float, float, float]] = []
-    for group_id in sorted(grouped):
-        palm_shapes = [
-            shape
-            for shape in grouped[group_id]
-            if shape.get("label") == "palm" and shape.get("shape_type") == "rotation"
-        ]
-        if not palm_shapes:
-            continue
-        points = palm_shapes[0].get("points", [])
-        xs, ys = [], []
-        for point in points:
-            if isinstance(point, (list, tuple)) and len(point) >= 2:
-                xs.append(float(point[0]))
-                ys.append(float(point[1]))
-        if not xs:
-            continue
-        xmin, xmax = min(xs), max(xs)
-        ymin, ymax = min(ys), max(ys)
-        bboxes.append((xmin, ymin, xmax - xmin, ymax - ymin))
-    return bboxes
-
-
 def find_gt_center_for_bbox(
     json_path: Path,
     reference_bbox: tuple[float, float, float, float] | None,
@@ -99,26 +65,14 @@ def find_gt_center_for_bbox(
 
     for group_id in sorted(grouped):
         shapes = grouped[group_id]
-        palm_shapes = [
-            shape
-            for shape in shapes
-            if shape.get("label") == "palm" and shape.get("shape_type") == "rotation"
-        ]
+        palm_shapes = [shape for shape in shapes if shape.get("label") == "palm"]
         if not palm_shapes:
             continue
 
-        points = palm_shapes[0].get("points", [])
-        xs, ys = [], []
-        for point in points:
-            if isinstance(point, (list, tuple)) and len(point) >= 2:
-                xs.append(float(point[0]))
-                ys.append(float(point[1]))
-        if not xs:
+        palm_bbox = axis_aligned_bbox_from_points(palm_shapes[0].get("points", []))
+        if palm_bbox is None:
             continue
 
-        xmin, xmax = min(xs), max(xs)
-        ymin, ymax = min(ys), max(ys)
-        palm_bbox = (xmin, ymin, xmax - xmin, ymax - ymin)
         overlap = iou_xywh(reference_bbox, palm_bbox)
         if overlap <= best_iou:
             continue
