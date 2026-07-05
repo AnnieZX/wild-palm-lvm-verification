@@ -48,3 +48,10 @@ VERIFICATION_RESULTS_DIR = OUTPUTS_DIR / "verification_results"
 VERIFICATION_ABLATION_RESULTS_DIR = OUTPUTS_DIR / "verification_ablation_results"
 VERIFICATION_ABLATION_ANALYSIS_CSV = VERIFICATION_ABLATION_RESULTS_DIR / "ablation_summary.csv"
 VERIFICATION_ABLATION_ANALYSIS_MD = VERIFICATION_ABLATION_RESULTS_DIR / "ablation_summary.md"
+
+# Verification vs LabelMe GT evaluation
+EVALUATION_DIR = OUTPUTS_DIR / "evaluation"
+EVALUATION_SUMMARY_CSV = EVALUATION_DIR / "summary.csv"
+
+# Publication visualization examples
+VISUALIZATION_DIR = OUTPUTS_DIR / "visualization"
