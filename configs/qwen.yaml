@@ -1,0 +1,4 @@
+# Qwen2.5-VL verification (placeholder)
+model_type: qwen
+model_path: /path/to/Qwen2.5-VL-7B-Instruct
+adapter: src.lvm.qwen_verification_adapter.QwenVerificationAdapter

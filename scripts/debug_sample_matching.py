@@ -16,7 +16,6 @@ Example:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -34,32 +33,13 @@ from src.paths import (
 )
 from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
 from src.preprocessing.verification_dataset import resolve_patch_image
-from src.preprocessing.verification_matching_debug import render_sample_matching_debug
+from src.utils.labelme_paths import resolve_labelme_json
+from src.utils.verification_index import find_yolo_prediction, index_bbox_from_row
+from src.visualization.verification_matching_debug import render_sample_matching_debug
 from src.yolo.gt_matching import greedy_match_bboxes_to_gt
-from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
+from src.yolo.predictions_io import group_predictions_by_image, iou_xywh, load_predictions
 
 IOU_THRESHOLD = 0.5
-
-
-def resolve_labelme_json(annotations_root: Path, image_name: str) -> Path | None:
-    candidates = [
-        annotations_root / f"{image_name}.json",
-        annotations_root / image_name,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    matches = sorted(annotations_root.rglob(f"{image_name}.json"))
-    return matches[0] if matches else None
-
-
-def index_bbox_from_row(row: pd.Series) -> tuple[float, float, float, float]:
-    return (
-        float(row["bbox_x"]),
-        float(row["bbox_y"]),
-        float(row["bbox_width"]),
-        float(row["bbox_height"]),
-    )
 
 
 def resolve_yolo_bbox_for_sample(
@@ -73,31 +53,6 @@ def resolve_yolo_bbox_for_sample(
         yolo_bbox = index_bbox
         yolo_confidence = float(row["confidence"]) if pd.notna(row.get("confidence")) else None
     return yolo_bbox, yolo_confidence
-
-
-def find_yolo_prediction(
-    image_name: str,
-    target_bbox: tuple[float, float, float, float],
-    predictions_by_image: dict[str, list],
-) -> tuple[tuple[float, float, float, float] | None, float | None]:
-    predictions = predictions_by_image.get(image_name, [])
-    if not predictions:
-        return None, None
-
-    best_iou = -1.0
-    best_bbox = None
-    best_score = None
-    for prediction in predictions:
-        bbox = prediction.get("bbox")
-        if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
-            continue
-        pred_bbox = tuple(float(v) for v in bbox)
-        overlap = iou_xywh(target_bbox, pred_bbox)
-        if overlap > best_iou:
-            best_iou = overlap
-            best_bbox = pred_bbox
-            best_score = extract_score(prediction)
-    return best_bbox, best_score
 
 
 def parse_args() -> argparse.Namespace:

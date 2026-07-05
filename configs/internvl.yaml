@@ -1,0 +1,4 @@
+# InternVL verification (placeholder)
+model_type: internvl
+model_path: /path/to/InternVL
+adapter: null

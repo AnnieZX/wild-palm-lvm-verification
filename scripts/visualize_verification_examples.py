@@ -26,7 +26,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.paths import EVALUATION_DIR, RAW_PATCHES_ROOT, VISUALIZATION_DIR
 from src.preprocessing.verification_dataset import resolve_patch_image
-from src.preprocessing.verification_visualization import (
+from src.utils.labelme_paths import resolve_labelme_json
+from src.visualization.verification_visualization import (
     find_gt_center_for_bbox,
     parse_bbox_json,
     render_verification_example,
@@ -92,18 +93,6 @@ def discover_evaluation_csvs(evaluation_dir: Path) -> list[Path]:
         for path in evaluation_dir.glob("*_evaluation.csv")
         if EVALUATION_CSV_PATTERN.match(path.name)
     )
-
-
-def resolve_labelme_json(annotations_root: Path, image_name: str) -> Path | None:
-    candidates = [
-        annotations_root / f"{image_name}.json",
-        annotations_root / image_name,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    matches = sorted(annotations_root.rglob(f"{image_name}.json"))
-    return matches[0] if matches else None
 
 
 def load_evaluation_pool(evaluation_dir: Path, ablation: str | None) -> pd.DataFrame:

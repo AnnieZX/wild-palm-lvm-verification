@@ -58,7 +58,7 @@ def main() -> None:
 
     if not index_csv.exists():
         print(f"Index CSV not found: {index_csv}")
-        print("Run scripts/generate_verification_dataset.py first.")
+        print("Run scripts/pipeline/generate_verification_dataset.py first.")
         sys.exit(1)
 
     print("Verification prompt builder")

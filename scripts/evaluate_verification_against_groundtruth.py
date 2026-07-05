@@ -35,8 +35,10 @@ from src.paths import (
     VERIFICATION_DATASET_INDEX_CSV,
 )
 from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
+from src.utils.labelme_paths import resolve_labelme_json
+from src.utils.verification_index import find_yolo_prediction, index_bbox_from_row
 from src.yolo.gt_matching import GreedyGtMatch, greedy_match_bboxes_to_gt
-from src.yolo.predictions_io import extract_score, group_predictions_by_image, iou_xywh, load_predictions
+from src.yolo.predictions_io import group_predictions_by_image, load_predictions
 
 IOU_THRESHOLD = 0.5
 CONDITION_CODE_PATTERN = re.compile(r"^(A\d+)")
@@ -123,48 +125,6 @@ def bbox_to_json(bbox: tuple[float, float, float, float] | None) -> str:
     return json.dumps([round(x, 4), round(y, 4), round(width, 4), round(height, 4)])
 
 
-def resolve_labelme_json(annotations_root: Path, image_name: str) -> Path | None:
-    """Find LabelMe JSON for an image stem."""
-    candidates = [
-        annotations_root / f"{image_name}.json",
-        annotations_root / image_name,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-
-    matches = sorted(annotations_root.rglob(f"{image_name}.json"))
-    return matches[0] if matches else None
-
-
-def find_yolo_prediction(
-    image_name: str,
-    target_bbox: tuple[float, float, float, float],
-    predictions_by_image: dict[str, list[dict[str, Any]]],
-) -> tuple[tuple[float, float, float, float] | None, float | None]:
-    """Locate the YOLO prediction that best matches the verification sample bbox."""
-    predictions = predictions_by_image.get(image_name, [])
-    if not predictions:
-        return None, None
-
-    best_iou = -1.0
-    best_bbox: tuple[float, float, float, float] | None = None
-    best_score: float | None = None
-
-    for prediction in predictions:
-        bbox = prediction.get("bbox")
-        if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
-            continue
-        pred_bbox = tuple(float(v) for v in bbox)
-        overlap = iou_xywh(target_bbox, pred_bbox)
-        if overlap > best_iou:
-            best_iou = overlap
-            best_bbox = pred_bbox
-            best_score = extract_score(prediction)
-
-    return best_bbox, best_score
-
-
 def compute_greedy_matches_for_index(
     index_df: pd.DataFrame,
     predictions_by_image: dict[str, list[dict[str, Any]]],
@@ -225,15 +185,6 @@ def load_verification_labels(condition_dir: Path) -> dict[str, str]:
         decision = str(record.get("decision", "") or "").strip()
         labels[sample_id] = decision
     return labels
-
-
-def index_bbox_from_row(row: pd.Series) -> tuple[float, float, float, float]:
-    return (
-        float(row["bbox_x"]),
-        float(row["bbox_y"]),
-        float(row["bbox_width"]),
-        float(row["bbox_height"]),
-    )
 
 
 def evaluate_ablation_condition(

@@ -78,7 +78,7 @@ def main() -> None:
 
     if not args.dataset_dir.exists():
         print(f"Verification dataset not found: {args.dataset_dir}")
-        print("Run scripts/generate_verification_dataset.py first.")
+        print("Run scripts/pipeline/generate_verification_dataset.py first.")
         sys.exit(1)
 
     print("Verification ablation prompt builder")
@@ -110,9 +110,7 @@ def main() -> None:
     print()
     print("Run inference per condition, e.g.:")
     print(
-        "  python scripts/run_verification_inference.py "
-        f"--prompt-index {args.output_dir}/A1_overlay_only/prompt_index.csv "
-        f"--results-dir {args.output_dir}/A1_overlay_only/results"
+        "  python scripts/run_ablation_verification.py --condition A1_overlay_only"
     )
 
 

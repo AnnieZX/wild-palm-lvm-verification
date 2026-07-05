@@ -115,7 +115,7 @@ def main() -> None:
     else:
         if not args.dataset_dir.exists():
             print(f"Verification dataset not found: {args.dataset_dir}")
-            print("Run generate_verification_dataset.py and build_verification_prompts.py first.")
+            print("Run scripts/pipeline/generate_verification_dataset.py and scripts/pipeline/build_verification_prompts.py first.")
             sys.exit(1)
         dataset_dir = args.dataset_dir
         prompt_index = None

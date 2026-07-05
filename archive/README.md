@@ -11,7 +11,8 @@ History is preserved via `git mv`.
 | `experiments/scripts/` | Intermediate 100-palm sequential LVM run (pre-ablation) |
 | `deprecated_scripts/` | YOLO val-export debug and analysis utilities |
 | `old_docs/` | Superseded documentation |
-| `unused_data/` | Data not referenced by active code |
+| `scripts/` | July 2026 cleanup: experimental visualization, YOLO QA, deprecated entry-point redirects |
+| `src/preprocessing/` | Empty stubs (e.g. `patch_extractor.py`) |
 
 ## Running archived scripts
 
@@ -27,12 +28,10 @@ Archived scripts set `PROJECT_ROOT` to the repo root (not `archive/`).
 
 ## Active pipeline (not archived)
 
-- `scripts/prepare_ablation_inputs_100.py`
-- `scripts/run_qwen_ablation_100.py`
-- `scripts/run_full_inference_and_overlay.py`
-- `scripts/visualize_yolo_gt_overlap_full.py`
-- `src/lvm/`, `src/preprocessing/`, `src/prompts/`
-- `jobs/` (SLURM jobs unchanged)
+See `docs/REPOSITORY_CLEANUP_REPORT.md` for the current layout.
+
+Production entry points live under `scripts/` and `scripts/pipeline/`.
+Deprecated names forward from `archive/scripts/` (e.g. `run_full_inference_and_overlay.py` → `scripts/run_full_inference.py`).
 
 ## Old LabelMe ablation (superseded)
 

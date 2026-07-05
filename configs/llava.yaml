@@ -1,0 +1,4 @@
+# LLaVA verification (placeholder)
+model_type: llava
+model_path: /path/to/LLaVA
+adapter: null

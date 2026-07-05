@@ -55,3 +55,6 @@ EVALUATION_SUMMARY_CSV = EVALUATION_DIR / "summary.csv"
 
 # Publication visualization examples
 VISUALIZATION_DIR = OUTPUTS_DIR / "visualization"
+
+# Run logs (cluster and local)
+LOGS_DIR = PROJECT_ROOT / "logs"

@@ -221,7 +221,8 @@ __marimo__/
 # Thesis data
 data/raw/
 data/processed/
-outputs/
+outputs/*
+!outputs/README.md
 
 # Large imagery
 *.tif
