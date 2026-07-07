@@ -29,6 +29,8 @@ fi
 JOB_ID="$(
     sbatch \
         "${SBATCH_EXPORTS[@]}" \
+        --mail-user=luoz23@wfu.edu \
+        --mail-type=BEGIN,END,FAIL \
         --output="${LOG_OUT}" \
         --error="${LOG_ERR}" \
         jobs/run_qwen_ablation.slurm \
@@ -41,6 +43,16 @@ echo "  Sample size:  ${SAMPLE_SIZE:-300} (default 300 if unset)"
 echo "  Experiment:   ${EXPERIMENT_ID:-<auto timestamp at job start>}"
 echo "  Stdout log:   ${LOG_OUT}"
 echo "  Stderr log:   ${LOG_ERR}"
+echo
+echo "--------------------------------------------------"
+echo
+echo "Email notifications:"
+echo
+echo "BEGIN -> luoz23@wfu.edu"
+echo "END   -> luoz23@wfu.edu"
+echo "FAIL  -> luoz23@wfu.edu"
+echo
+echo "--------------------------------------------------"
 echo
 echo "Monitor with:"
 echo "  squeue -u \$USER"
