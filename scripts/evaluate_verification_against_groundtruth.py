@@ -96,6 +96,12 @@ def parse_args() -> argparse.Namespace:
         default=IOU_THRESHOLD,
         help="IoU threshold for GT match (default: 0.5)",
     )
+    parser.add_argument(
+        "--condition-code",
+        type=str,
+        default=None,
+        help="Override ablation code (e.g. A1) for output filenames when evaluating one folder",
+    )
     return parser.parse_args()
 
 
@@ -103,6 +109,8 @@ def discover_ablation_dirs(results_root: Path) -> list[Path]:
     """Return ablation condition directories containing sample result JSON files."""
     if not results_root.exists():
         return []
+    if any(results_root.glob("sample_*.json")):
+        return [results_root]
     return sorted(
         path
         for path in results_root.iterdir()
@@ -299,7 +307,7 @@ def main() -> None:
     print(f"  IoU threshold:{args.iou_threshold}")
 
     for condition_dir in ablation_dirs:
-        code = condition_code(condition_dir)
+        code = args.condition_code or condition_code(condition_dir)
         eval_df = evaluate_ablation_condition(
             condition_dir=condition_dir,
             index_df=index_df,

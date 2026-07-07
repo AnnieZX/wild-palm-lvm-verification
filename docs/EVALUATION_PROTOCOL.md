@@ -58,13 +58,27 @@ The model predicts one of:
 
 For binary evaluation:
 
-| Model prediction | Binary label |
-|------------------|--------------|
-| Reliable         | Positive     |
-| Uncertain        | Negative     |
-| Unreliable       | Negative     |
+| Model prediction | Evaluation role |
+|------------------|-----------------|
+| Reliable | Positive prediction |
+| Unreliable | Negative prediction |
+| Uncertain | Excluded from binary evaluation (requires human verification) |
 
-Ground-truth polarity for verification is determined by detection matching: a detection is **positive** if it was matched to a GT palm box (IoU ≥ 0.5); otherwise it is **negative**.
+Binary verification metrics are computed only from definitive model decisions.
+
+Predictions labeled "Uncertain" are intentionally excluded from Precision, Recall, F1-score, and Accuracy because they indicate that the vision-language model cannot make a reliable automatic decision.
+
+These detections are considered candidates for manual human verification rather than automatic acceptance or rejection.
+
+Ground-truth polarity is determined by greedy one-to-one IoU matching.
+
+A matched detection (IoU >= 0.5) is considered a ground-truth positive.
+
+An unmatched detection is considered a ground-truth negative.
+
+Binary evaluation is then performed only for detections receiving a definitive model decision (Reliable or Unreliable).
+
+Detections predicted as Uncertain are excluded from binary metrics and reported separately.
 
 ## 4. Metrics
 
@@ -83,22 +97,37 @@ Report:
 
 ### Verification
 
-Report:
+The following metrics are computed using only definitive predictions (Reliable and Unreliable):
 
-- TP
-- FP
-- FN
+- True Positive
+- False Positive
+- False Negative
+- True Negative
 - Precision
 - Recall
-- F1
+- F1-score
 - Accuracy
+
+Also report separately:
+
+- Number of Uncertain predictions
+- Percentage of Uncertain predictions
+
+The Uncertain rate reflects the proportion of detections requiring manual verification.
+
+Additionally report the distribution of all model predictions:
+
 - Reliable %
 - Uncertain %
 - Unreliable %
 
 ## 5. Experimental Consistency
 
-The same evaluation protocol is used for all VLMs.
+The same evaluation protocol is applied consistently across all evaluated vision-language models.
+
+Only definitive predictions (Reliable and Unreliable) participate in binary evaluation.
+
+Predictions labeled Uncertain are excluded from binary metrics and instead represent cases requiring human review.
 
 Only the verification model changes.
 

@@ -58,3 +58,57 @@ VISUALIZATION_DIR = OUTPUTS_DIR / "visualization"
 
 # Run logs (cluster and local)
 LOGS_DIR = PROJECT_ROOT / "logs"
+SLURM_LOG_DIR = LOGS_DIR / "slurm"
+
+# Production Qwen ablation experiment layout
+QWEN_VERIFICATION_ROOT = OUTPUTS_DIR / "verification" / "qwen"
+QWEN_EVALUATION_ROOT = OUTPUTS_DIR / "evaluation" / "qwen"
+
+# Ablation condition names (full folder names under ablation inputs root)
+ABLATION_CONDITION_NAMES = (
+    "A1_overlay_only",
+    "A2_overlay_confidence",
+    "A3_overlay_confidence_geometry",
+    "A4_overlay_crop_confidence",
+    "A5_crop_only",
+)
+
+# Short codes used in production output folders (A1 … A5)
+ABLATION_CODES = tuple(name.split("_", 1)[0] for name in ABLATION_CONDITION_NAMES)
+
+ABLATION_CODE_TO_CONDITION = {
+    code: name for code, name in zip(ABLATION_CODES, ABLATION_CONDITION_NAMES, strict=True)
+}
+
+
+def qwen_verification_condition_dir(
+    condition_code: str,
+    experiment_id: str | None = None,
+) -> Path:
+    """Return inference results directory for one ablation code (e.g. A1)."""
+    root = QWEN_VERIFICATION_ROOT if not experiment_id else QWEN_VERIFICATION_ROOT / experiment_id
+    return root / condition_code
+
+
+def qwen_evaluation_condition_dir(
+    condition_code: str,
+    experiment_id: str | None = None,
+) -> Path:
+    """Return evaluation output directory for one ablation code (e.g. A1)."""
+    root = QWEN_EVALUATION_ROOT if not experiment_id else QWEN_EVALUATION_ROOT / experiment_id
+    return root / condition_code
+
+
+def resolve_ablation_condition_name(condition: str) -> str:
+    """Map A1 or A1_overlay_only to the full ablation condition folder name."""
+    if condition in ABLATION_CONDITION_NAMES:
+        return condition
+    if condition in ABLATION_CODE_TO_CONDITION:
+        return ABLATION_CODE_TO_CONDITION[condition]
+    allowed = ", ".join([*ABLATION_CODES, *ABLATION_CONDITION_NAMES])
+    raise ValueError(f"Unknown ablation condition {condition!r}. Expected one of: {allowed}")
+
+
+def ablation_code_from_condition(condition: str) -> str:
+    """Return short code (A1) for a full or short condition name."""
+    return resolve_ablation_condition_name(condition).split("_", 1)[0]
