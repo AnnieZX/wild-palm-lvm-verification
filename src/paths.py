@@ -76,6 +76,8 @@ ABLATION_CONDITION_NAMES = (
 # Short codes used in production output folders (A1 … A5)
 ABLATION_CODES = tuple(name.split("_", 1)[0] for name in ABLATION_CONDITION_NAMES)
 
+assert len(ABLATION_CODES) == len(ABLATION_CONDITION_NAMES), \
+    "zip inputs have different lengths"
 ABLATION_CODE_TO_CONDITION = {
     code: name for code, name in zip(ABLATION_CODES, ABLATION_CONDITION_NAMES)
 }

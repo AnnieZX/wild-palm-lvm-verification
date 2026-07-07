@@ -175,7 +175,9 @@ def compute_greedy_matches_for_index(
             yolo_bboxes.append(yolo_bbox)
 
         match_results = greedy_match_bboxes_to_gt(yolo_bboxes, gt_bboxes, iou_threshold)
-        for sample_id, match in zip(sample_ids, match_results, strict=True):
+        assert len(sample_ids) == len(match_results), \
+            "zip inputs have different lengths"
+        for sample_id, match in zip(sample_ids, match_results):
             matches_by_sample_id[sample_id] = match
 
     return matches_by_sample_id
