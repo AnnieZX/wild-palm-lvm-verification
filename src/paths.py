@@ -56,6 +56,31 @@ EVALUATION_SUMMARY_CSV = EVALUATION_DIR / "summary.csv"
 # Publication visualization examples
 VISUALIZATION_DIR = OUTPUTS_DIR / "visualization"
 
+
+def qwen_experiment_visualization_dir(experiment_id: str) -> Path:
+    """Return visualization output root for one Qwen experiment run."""
+    return VISUALIZATION_DIR / experiment_id
+
+
+def discover_ablation_inputs_dir(sample_size: int | None = None) -> Path:
+    """
+    Locate ablation prompt/image inputs.
+
+    Prefers outputs/verification_ablation_{sample_size} when sample_size is set,
+    otherwise falls back to VERIFICATION_ABLATION_DIR.
+    """
+    if sample_size is not None:
+        candidate = OUTPUTS_DIR / f"verification_ablation_{sample_size}"
+        if (candidate / "A1_overlay_only" / "prompt_index.csv").exists():
+            return candidate
+    if (VERIFICATION_ABLATION_DIR / "A1_overlay_only" / "prompt_index.csv").exists():
+        return VERIFICATION_ABLATION_DIR
+    matches = sorted(OUTPUTS_DIR.glob("verification_ablation_*"))
+    for path in reversed(matches):
+        if (path / "A1_overlay_only" / "prompt_index.csv").exists():
+            return path
+    return VERIFICATION_ABLATION_DIR
+
 # Run logs (cluster and local)
 LOGS_DIR = PROJECT_ROOT / "logs"
 SLURM_LOG_DIR = LOGS_DIR / "slurm"
