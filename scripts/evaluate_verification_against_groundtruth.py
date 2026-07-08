@@ -251,8 +251,14 @@ def evaluate_ablation_condition(
     return pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
 
 
-def print_condition_summary(df: pd.DataFrame, condition_code_name: str) -> None:
+def print_condition_summary(
+    df: pd.DataFrame,
+    condition_code_name: str,
+    *,
+    dataset_size: int,
+) -> None:
     total = len(df)
+    evaluated = int((df["verification_label"].astype(str).str.strip() != "").sum())
     matched = int(df["matched_gt"].sum()) if total else 0
     unmatched = total - matched
     avg_iou = float(df["max_iou"].mean()) if total else 0.0
@@ -260,7 +266,9 @@ def print_condition_summary(df: pd.DataFrame, condition_code_name: str) -> None:
     avg_conf = float(confidence.mean()) if not confidence.dropna().empty else 0.0
 
     print(f"\n{condition_code_name} ({df['ablation'].iloc[0] if total else 'n/a'})")
-    print(f"  samples:             {total}")
+    print(f"  dataset size:        {dataset_size}")
+    print(f"  evaluated samples:   {evaluated}")
+    print(f"  evaluation rows:     {total}")
     print(f"  matched detections:  {matched}")
     print(f"  unmatched detections:{unmatched}")
     print(f"  average IoU:         {avg_iou:.4f}")
@@ -319,7 +327,11 @@ def main() -> None:
 
         output_path = args.output_dir / f"{code}_evaluation.csv"
         eval_df.to_csv(output_path, index=False)
-        print_condition_summary(eval_df, code)
+        print_condition_summary(
+            eval_df,
+            code,
+            dataset_size=len(index_df),
+        )
         print(f"  saved: {output_path}")
 
 

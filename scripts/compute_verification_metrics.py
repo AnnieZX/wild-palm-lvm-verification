@@ -35,7 +35,8 @@ NEGATIVE_LABEL = "Unreliable"
 
 SUMMARY_COLUMNS = [
     "Ablation",
-    "Samples",
+    "Dataset_Size",
+    "Evaluated_Samples",
     "Precision",
     "Recall",
     "F1",
@@ -97,9 +98,17 @@ def safe_divide(numerator: float, denominator: float) -> float:
     return numerator / denominator
 
 
+def count_evaluated_samples(df: pd.DataFrame) -> int:
+    """Count rows with a non-empty verification decision from Qwen."""
+    labels = df["verification_label"].map(normalize_verification_label)
+    return int((labels != "").sum())
+
+
 def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
     """Compute verification metrics for one ablation evaluation CSV."""
-    total_samples = len(df)
+    dataset_size = len(df)
+    evaluated_samples = count_evaluated_samples(df)
+    total_samples = dataset_size
 
     labels = df["verification_label"].map(normalize_verification_label)
     gt_positive = df["matched_gt"].map(normalize_matched_gt)
@@ -139,6 +148,8 @@ def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
     return {
         "ablation": ablation,
         "samples": total_samples,
+        "dataset_size": dataset_size,
+        "evaluated_samples": evaluated_samples,
         "true_positive": tp,
         "false_positive": fp,
         "false_negative": fn,
@@ -167,7 +178,8 @@ def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
 def metrics_to_summary_row(metrics: dict[str, Any]) -> dict[str, Any]:
     return {
         "Ablation": metrics["ablation"],
-        "Samples": metrics["samples"],
+        "Dataset_Size": metrics["dataset_size"],
+        "Evaluated_Samples": metrics["evaluated_samples"],
         "Precision": metrics["precision"],
         "Recall": metrics["recall"],
         "F1": metrics["f1"],
