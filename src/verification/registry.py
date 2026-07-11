@@ -22,12 +22,12 @@ def get_registered_models() -> tuple[str, ...]:
     return tuple(sorted(_REGISTRY))
 
 
-def create_adapter(model_name: str, **kwargs: Any) -> BaseVerificationAdapter:
+def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
     """Instantiate a registered verification adapter."""
-    key = model_name.strip().lower()
+    key = model.strip().lower()
     if key not in _REGISTRY:
         allowed = ", ".join(get_registered_models()) or "none"
-        raise ValueError(f"Unknown verification model {model_name!r}. Registered: {allowed}")
+        raise ValueError(f"Unknown verification model {model!r}. Registered: {allowed}")
     return _REGISTRY[key](**kwargs)
 
 
