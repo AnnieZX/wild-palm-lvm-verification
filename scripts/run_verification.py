@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Purpose:
-    Run batched Qwen2.5-VL inference on a verification dataset.
+    Run batched VLM verification inference on a verification dataset.
 
 Input:
     - Verification dataset (images/, prompts/, index.csv or prompt_index.csv)
@@ -23,17 +23,24 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config.model_config import DEFAULT_MODEL_CONFIG, get_active_model_path
-from src.lvm.qwen_verification_adapter import (
-    QwenVerificationAdapter,
-    load_verification_jobs,
-    validate_jobs,
-)
 from src.paths import VERIFICATION_DATASET_DIR, VERIFICATION_RESULTS_DIR
+from src.utils.verification_resume import RESULTS_INDEX_FILENAME
+from src.verification.jobs import load_verification_jobs
+from src.verification.output_manager import VerificationOutputManager
+from src.verification.registry import create_adapter, get_registered_models
+from src.verification.runner import RunnerConfig, VerificationRunner
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run Qwen2.5-VL verification inference on a verification dataset.",
+        description="Run VLM verification inference on a verification dataset.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="qwen",
+        choices=get_registered_models(),
+        help="Verification model adapter (default: qwen)",
     )
     parser.add_argument(
         "--dataset-dir",
@@ -94,6 +101,23 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Process only the first N samples (for debugging)",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip samples already present in results_index.csv or as result JSON files",
+    )
+    parser.add_argument(
+        "--experiment-id",
+        type=str,
+        default=None,
+        help="Experiment id for resume logging (optional)",
+    )
+    parser.add_argument(
+        "--condition",
+        type=str,
+        default=None,
+        help="Ablation condition code for resume logging (optional)",
+    )
     return parser.parse_args()
 
 
@@ -115,7 +139,10 @@ def main() -> None:
     else:
         if not args.dataset_dir.exists():
             print(f"Verification dataset not found: {args.dataset_dir}")
-            print("Run scripts/pipeline/generate_verification_dataset.py and scripts/pipeline/build_verification_prompts.py first.")
+            print(
+                "Run scripts/pipeline/generate_verification_dataset.py and "
+                "scripts/pipeline/build_verification_prompts.py first."
+            )
             sys.exit(1)
         dataset_dir = args.dataset_dir
         prompt_index = None
@@ -138,42 +165,45 @@ def main() -> None:
     if args.limit is not None:
         jobs = jobs[: args.limit]
 
-    try:
-        validate_jobs(jobs)
-    except FileNotFoundError as error:
-        print(error)
-        sys.exit(1)
-
-    print("Qwen2.5-VL verification inference")
-    print(f"  Dataset:      {dataset_dir}")
-    if prompt_index is not None:
-        print(f"  Prompt index: {prompt_index}")
-    print(f"  Results:      {args.results_dir}")
-    print(f"  Model:      {model_path}")
-    print(f"  Batch size: {args.batch_size}")
-    print(f"  Samples:    {len(jobs)}")
-    print()
+    results_dir = args.results_dir.resolve()
+    output_manager = VerificationOutputManager(results_dir)
+    results_index_path = results_dir / RESULTS_INDEX_FILENAME
 
     try:
-        adapter = QwenVerificationAdapter(
+        adapter = create_adapter(
+            args.model,
             model_name=model_path,
             batch_size=args.batch_size,
             device_map=args.device_map,
             max_new_tokens=args.max_new_tokens,
         )
-    except (RuntimeError, FileNotFoundError) as error:
+    except (RuntimeError, FileNotFoundError, ValueError) as error:
         print(error)
         sys.exit(1)
 
-    summary_df = adapter.run_jobs(
-        jobs=jobs,
-        results_dir=args.results_dir,
-        skip_existing=args.skip_existing,
-    )
+    runner = VerificationRunner(adapter, output_manager)
 
-    results_index_path = args.results_dir / "results_index.csv"
-    args.results_dir.mkdir(parents=True, exist_ok=True)
-    summary_df.to_csv(results_index_path, index=False)
+    print(f"{adapter.model_label} verification inference")
+    print(f"  Model key:    {args.model}")
+    print(f"  Dataset:      {dataset_dir}")
+    if prompt_index is not None:
+        print(f"  Prompt index: {prompt_index}")
+    print(f"  Results:      {results_dir}")
+    print(f"  Model path:   {model_path}")
+    print(f"  Batch size:   {args.batch_size}")
+    print(f"  Samples:      {len(jobs)}")
+    print()
+
+    summary_df = runner.run(
+        jobs,
+        RunnerConfig(
+            resume=args.resume,
+            skip_existing=args.skip_existing,
+            experiment_id=args.experiment_id,
+            condition=args.condition,
+            batch_size=args.batch_size,
+        ),
+    )
 
     print()
     print("=" * 60)
@@ -184,7 +214,7 @@ def main() -> None:
     else:
         print(summary_df["status"].value_counts().to_string())
     print()
-    print(f"Saved results: {args.results_dir}/")
+    print(f"Saved results: {results_dir}/")
     print(f"Saved index:     {results_index_path}")
 
 

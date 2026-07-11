@@ -3,6 +3,7 @@
 #
 # Called by jobs/run_qwen_ablation.slurm or directly from the project root:
 #   SAMPLE_SIZE=500 EXPERIMENT_ID=20260707_0100 bash scripts/run_qwen_ablation_experiment.sh
+#   EXPERIMENT_ID=20260708_0020 bash scripts/run_qwen_ablation_experiment.sh --ablation A5 --resume
 #
 set -euo pipefail
 
@@ -10,8 +11,29 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${PROJECT_DIR}"
 
 # ---------------------------------------------------------------------------
-# Configuration (override via environment)
+# CLI / environment configuration
 # ---------------------------------------------------------------------------
+ABLATION="${ABLATION:-}"
+RESUME="${RESUME:-0}"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ablation)
+            ABLATION="$2"
+            shift 2
+            ;;
+        --resume)
+            RESUME=1
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            echo "Usage: $0 [--ablation A1|A2|A3|A4|A5] [--resume]" >&2
+            exit 1
+            ;;
+    esac
+done
+
 SAMPLE_SIZE="${SAMPLE_SIZE:-300}"
 EXPERIMENT_ID="${EXPERIMENT_ID:-$(date +%Y%m%d_%H%M)}"
 BATCH_SIZE="${BATCH_SIZE:-4}"
@@ -23,7 +45,25 @@ ABLATION_INPUTS_DIR="${ABLATION_INPUTS_DIR:-${PROJECT_DIR}/outputs/verification_
 VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/qwen/${EXPERIMENT_ID}"
 EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/qwen/${EXPERIMENT_ID}"
 
-ABLATION_CODES=(A1 A2 A3 A4 A5)
+ALL_ABLATION_CODES=(A1 A2 A3 A4 A5)
+if [[ -n "${ABLATION}" ]]; then
+    case "${ABLATION}" in
+        A1|A2|A3|A4|A5)
+            ABLATION_CODES=("${ABLATION}")
+            ;;
+        *)
+            echo "Invalid --ablation value: ${ABLATION} (expected A1, A2, A3, A4, or A5)" >&2
+            exit 1
+            ;;
+    esac
+else
+    ABLATION_CODES=("${ALL_ABLATION_CODES[@]}")
+fi
+
+RESUME_ARGS=()
+if [[ "${RESUME}" == "1" ]]; then
+    RESUME_ARGS=(--resume)
+fi
 
 EXPERIMENT_START=$(date +%s)
 EXPERIMENT_START_DISPLAY=$(date)
@@ -32,6 +72,8 @@ echo "Qwen2.5-VL ablation experiment"
 echo "  Project:          ${PROJECT_DIR}"
 echo "  Sample size:      ${SAMPLE_SIZE}"
 echo "  Experiment ID:    ${EXPERIMENT_ID}"
+echo "  Ablation:         ${ABLATION:-all (A1–A5)}"
+echo "  Resume:           ${RESUME}"
 echo "  Verification out: ${VERIFICATION_ROOT}"
 echo "  Evaluation out:   ${EVALUATION_ROOT}"
 echo "  Started:          ${EXPERIMENT_START_DISPLAY}"
@@ -81,7 +123,9 @@ for CODE in "${ABLATION_CODES[@]}"; do
         --results-dir "${RESULTS_DIR}" \
         --limit "${SAMPLE_SIZE}" \
         --batch-size "${BATCH_SIZE}" \
-        --model-config "${MODEL_CONFIG}"
+        --model-config "${MODEL_CONFIG}" \
+        --experiment-id "${EXPERIMENT_ID}" \
+        "${RESUME_ARGS[@]}"
 
     python scripts/evaluate_verification_against_groundtruth.py \
         --results-dir "${RESULTS_DIR}" \

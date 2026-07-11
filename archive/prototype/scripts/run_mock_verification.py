@@ -10,9 +10,11 @@ import pandas as pd
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+ARCHIVE_SRC = Path(__file__).resolve().parents[2] / "src"
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(ARCHIVE_SRC))
 
-from src.lvm.mock_verifier import MockVerifier
+from lvm.mock_verifier import MockVerifier
 
 METADATA_CSV = PROJECT_ROOT / "outputs" / "lvm_inputs_metadata.csv"
 RESULTS_CSV = PROJECT_ROOT / "outputs" / "mock_verification_results.csv"

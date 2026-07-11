@@ -70,6 +70,17 @@ def parse_args() -> argparse.Namespace:
         help="Skip samples whose result JSON already exists",
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip completed samples and append to results_index.csv",
+    )
+    parser.add_argument(
+        "--experiment-id",
+        type=str,
+        default=None,
+        help="Experiment id for resume logging (optional)",
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=None,
@@ -118,6 +129,11 @@ def main() -> None:
         command.extend(["--limit", str(args.limit)])
     if args.skip_existing:
         command.append("--skip-existing")
+    if args.resume:
+        command.append("--resume")
+    if args.experiment_id is not None:
+        command.extend(["--experiment-id", args.experiment_id])
+    command.extend(["--condition", args.condition])
     if args.batch_size is not None:
         command.extend(["--batch-size", str(args.batch_size)])
     if args.model_config is not None:

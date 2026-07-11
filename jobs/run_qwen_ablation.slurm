@@ -53,9 +53,17 @@ echo "=== nvidia-smi ==="
 nvidia-smi
 echo
 
-export SAMPLE_SIZE EXPERIMENT_ID BATCH_SIZE SKIP_DATASET_PREP
+export SAMPLE_SIZE EXPERIMENT_ID BATCH_SIZE SKIP_DATASET_PREP ABLATION RESUME
 
-bash scripts/run_qwen_ablation_experiment.sh
+EXPERIMENT_ARGS=()
+if [[ -n "${ABLATION:-}" ]]; then
+    EXPERIMENT_ARGS+=(--ablation "${ABLATION}")
+fi
+if [[ "${RESUME:-0}" == "1" ]]; then
+    EXPERIMENT_ARGS+=(--resume)
+fi
+
+bash scripts/run_qwen_ablation_experiment.sh "${EXPERIMENT_ARGS[@]}"
 
 echo
 echo "End time: $(date)"

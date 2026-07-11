@@ -8,10 +8,12 @@ from pathlib import Path
 
 # Allow imports from the project root when running this script directly.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+ARCHIVE_SRC = Path(__file__).resolve().parents[2] / "src"
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(ARCHIVE_SRC))
 
 from src.preprocessing.json_parser import parse_annotation_file
-from src.preprocessing.overlay_renderer import render_overlay, save_overlay
+from preprocessing.overlay_renderer import render_overlay, save_overlay
 
 IMAGE_DIR = PROJECT_ROOT / "data" / "samples" / "images"
 JSON_DIR = PROJECT_ROOT / "data" / "samples" / "json"
