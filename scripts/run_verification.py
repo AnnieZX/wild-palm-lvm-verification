@@ -6,7 +6,7 @@ Purpose:
 Input:
     - Verification dataset (images/, prompts/, index.csv or prompt_index.csv)
     - Or an explicit --prompt-index CSV (e.g. ablation condition prompt_index.csv)
-    - Model path from configs/model.yaml (override with --model-path)
+    - Model checkpoint from configs/models/<model>.yaml (override with --model-path)
 
 Output:
     - Per-sample JSON under --results-dir (default: outputs/verification_results/)
@@ -22,12 +22,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.config.model_config import DEFAULT_MODEL_CONFIG, get_active_model_path
+from src.config.model_config import (
+    normalize_model_key,
+    resolve_model_checkpoint,
+    resolve_model_config_path,
+)
 from src.paths import VERIFICATION_DATASET_DIR, VERIFICATION_RESULTS_DIR
 from src.utils.verification_resume import RESULTS_INDEX_FILENAME
 from src.verification.jobs import load_verification_jobs
 from src.verification.output_manager import VerificationOutputManager
-from src.verification.registry import create_adapter, get_registered_models
+from src.verification.registry import create_adapter, get_registered_models, resolve_registry_key
 from src.verification.runner import RunnerConfig, VerificationRunner
 
 
@@ -38,9 +42,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         type=str,
-        default="qwen",
+        default="qwen2_5_vl",
         choices=get_registered_models(),
-        help="Verification model adapter (default: qwen)",
+        help="Verification model adapter (default: qwen2_5_vl; alias: qwen)",
     )
     parser.add_argument(
         "--dataset-dir",
@@ -63,14 +67,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model-config",
         type=Path,
-        default=DEFAULT_MODEL_CONFIG,
-        help="YAML config file containing active_model",
+        default=None,
+        help="Model YAML config (default: configs/models/<model>.yaml)",
     )
     parser.add_argument(
         "--model-path",
         type=str,
         default=None,
-        help="Override active_model from config",
+        help="Override checkpoint path from config",
     )
     parser.add_argument(
         "--batch-size",
@@ -121,14 +125,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_model_path(args: argparse.Namespace) -> str:
-    if args.model_path:
-        return args.model_path
-    return get_active_model_path(args.model_config)
-
-
 def main() -> None:
     args = parse_args()
+    registry_key = resolve_registry_key(args.model)
+    model_key = normalize_model_key(args.model)
 
     if args.prompt_index is not None:
         if not args.prompt_index.exists():
@@ -148,7 +148,12 @@ def main() -> None:
         prompt_index = None
 
     try:
-        model_path = resolve_model_path(args)
+        config_path = resolve_model_config_path(args.model, args.model_config)
+        model_path = resolve_model_checkpoint(
+            args.model,
+            config_path=config_path,
+            model_path_override=args.model_path,
+        )
     except (FileNotFoundError, ValueError) as error:
         print(error)
         sys.exit(1)
@@ -176,6 +181,9 @@ def main() -> None:
             batch_size=args.batch_size,
             device_map=args.device_map,
             max_new_tokens=args.max_new_tokens,
+            model_key=model_key,
+            condition=args.condition or "",
+            experiment_id=args.experiment_id or "",
         )
     except (RuntimeError, FileNotFoundError, ValueError) as error:
         print(error)
@@ -184,11 +192,12 @@ def main() -> None:
     runner = VerificationRunner(adapter, output_manager)
 
     print(f"{adapter.model_label} verification inference")
-    print(f"  Model key:    {args.model}")
+    print(f"  Model key:    {model_key} (registry: {registry_key})")
     print(f"  Dataset:      {dataset_dir}")
     if prompt_index is not None:
         print(f"  Prompt index: {prompt_index}")
     print(f"  Results:      {results_dir}")
+    print(f"  Model config: {config_path}")
     print(f"  Model path:   {model_path}")
     print(f"  Batch size:   {args.batch_size}")
     print(f"  Samples:      {len(jobs)}")

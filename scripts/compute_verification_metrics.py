@@ -99,7 +99,7 @@ def safe_divide(numerator: float, denominator: float) -> float:
 
 
 def count_evaluated_samples(df: pd.DataFrame) -> int:
-    """Count rows with a non-empty verification decision from Qwen."""
+    """Count rows with a non-empty verification decision."""
     labels = df["verification_label"].map(normalize_verification_label)
     return int((labels != "").sum())
 

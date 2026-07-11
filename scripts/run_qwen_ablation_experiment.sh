@@ -5,6 +5,10 @@
 #   SAMPLE_SIZE=500 EXPERIMENT_ID=20260707_0100 bash scripts/run_qwen_ablation_experiment.sh
 #   EXPERIMENT_ID=20260708_0020 bash scripts/run_qwen_ablation_experiment.sh --ablation A5 --resume
 #
+# Multi-model note: set MODEL=llava (etc.) to run other adapters once implemented.
+# Default MODEL=qwen2_5_vl. Legacy experiments under outputs/verification/qwen/ are
+# detected automatically when resuming qwen2_5_vl runs.
+#
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,12 +42,26 @@ SAMPLE_SIZE="${SAMPLE_SIZE:-300}"
 EXPERIMENT_ID="${EXPERIMENT_ID:-$(date +%Y%m%d_%H%M)}"
 BATCH_SIZE="${BATCH_SIZE:-4}"
 SKIP_DATASET_PREP="${SKIP_DATASET_PREP:-0}"
-MODEL_CONFIG="${MODEL_CONFIG:-configs/model.yaml}"
+MODEL="${MODEL:-qwen2_5_vl}"
+MODEL_CONFIG="${MODEL_CONFIG:-}"
 
 DATASET_DIR="${DATASET_DIR:-${PROJECT_DIR}/outputs/verification_dataset}"
 ABLATION_INPUTS_DIR="${ABLATION_INPUTS_DIR:-${PROJECT_DIR}/outputs/verification_ablation_${SAMPLE_SIZE}}"
-VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/qwen/${EXPERIMENT_ID}"
-EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/qwen/${EXPERIMENT_ID}"
+
+PREFERRED_VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/${MODEL}/${EXPERIMENT_ID}"
+PREFERRED_EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/${MODEL}/${EXPERIMENT_ID}"
+LEGACY_VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/qwen/${EXPERIMENT_ID}"
+LEGACY_EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/qwen/${EXPERIMENT_ID}"
+
+if [[ "${MODEL}" == "qwen2_5_vl" ]] \
+    && [[ -d "${LEGACY_VERIFICATION_ROOT}" ]] \
+    && [[ ! -d "${PREFERRED_VERIFICATION_ROOT}" ]]; then
+    VERIFICATION_ROOT="${LEGACY_VERIFICATION_ROOT}"
+    EVALUATION_ROOT="${LEGACY_EVALUATION_ROOT}"
+else
+    VERIFICATION_ROOT="${PREFERRED_VERIFICATION_ROOT}"
+    EVALUATION_ROOT="${PREFERRED_EVALUATION_ROOT}"
+fi
 
 ALL_ABLATION_CODES=(A1 A2 A3 A4 A5)
 if [[ -n "${ABLATION}" ]]; then
@@ -65,11 +83,17 @@ if [[ "${RESUME}" == "1" ]]; then
     RESUME_ARGS=(--resume)
 fi
 
+MODEL_CONFIG_ARGS=()
+if [[ -n "${MODEL_CONFIG}" ]]; then
+    MODEL_CONFIG_ARGS=(--model-config "${MODEL_CONFIG}")
+fi
+
 EXPERIMENT_START=$(date +%s)
 EXPERIMENT_START_DISPLAY=$(date)
 
-echo "Qwen2.5-VL ablation experiment"
+echo "Verification ablation experiment"
 echo "  Project:          ${PROJECT_DIR}"
+echo "  Model:            ${MODEL}"
 echo "  Sample size:      ${SAMPLE_SIZE}"
 echo "  Experiment ID:    ${EXPERIMENT_ID}"
 echo "  Ablation:         ${ABLATION:-all (A1–A5)}"
@@ -118,12 +142,13 @@ for CODE in "${ABLATION_CODES[@]}"; do
     mkdir -p "${RESULTS_DIR}" "${EVAL_DIR}"
 
     python scripts/run_ablation_verification.py \
+        --model "${MODEL}" \
         --condition "${CODE}" \
         --ablation-dir "${ABLATION_INPUTS_DIR}" \
         --results-dir "${RESULTS_DIR}" \
         --limit "${SAMPLE_SIZE}" \
         --batch-size "${BATCH_SIZE}" \
-        --model-config "${MODEL_CONFIG}" \
+        "${MODEL_CONFIG_ARGS[@]}" \
         --experiment-id "${EXPERIMENT_ID}" \
         "${RESUME_ARGS[@]}"
 
@@ -165,6 +190,7 @@ for CODE in "${COMPLETED_CODES[@]}"; do
 done
 echo
 echo "Experiment ID:  ${EXPERIMENT_ID}"
+echo "Model:          ${MODEL}"
 echo "Sample size:    ${SAMPLE_SIZE}"
 echo "Total runtime:  ${TOTAL_MIN}m ${TOTAL_SEC}s"
 echo "Verification:   ${VERIFICATION_ROOT}"

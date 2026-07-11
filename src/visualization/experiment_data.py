@@ -15,15 +15,15 @@ from src.paths import (
     ABLATION_CODES,
     ABLATION_CODE_TO_CONDITION,
     PREDICTIONS_FULL_JSON,
-    QWEN_EVALUATION_ROOT,
-    QWEN_VERIFICATION_ROOT,
     RAW_PATCHES_ROOT,
     VERIFICATION_DATASET_DIR,
     VERIFICATION_DATASET_INDEX_CSV,
     discover_ablation_inputs_dir,
-    qwen_evaluation_condition_dir,
-    qwen_experiment_visualization_dir,
-    qwen_verification_condition_dir,
+    evaluation_condition_dir,
+    evaluation_experiment_dir,
+    experiment_visualization_dir,
+    verification_condition_dir,
+    verification_experiment_dir,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,9 +33,11 @@ EVALUATION_CSV_PATTERN = re.compile(r"^(A\d+)_evaluation\.csv$")
 
 @dataclass(frozen=True)
 class ExperimentContext:
-    """Resolved paths for one Qwen ablation experiment."""
+    """Resolved paths for one model ablation experiment."""
 
     experiment_id: str
+    model_key: str
+    model_label: str
     output_dir: Path
     verification_root: Path
     evaluation_root: Path
@@ -71,15 +73,17 @@ def build_experiment_context(
     experiment_id: str,
     output_dir: Path | None = None,
     *,
+    model_key: str = "qwen2_5_vl",
+    model_label: str = "Qwen2.5-VL",
     dataset_dir: Path | None = None,
     sample_size: int | None = None,
     primary_ablation: str = "A3",
 ) -> ExperimentContext:
-    """Resolve all paths for a Qwen experiment visualization run."""
+    """Resolve all paths for a model experiment visualization run."""
     if primary_ablation not in ABLATION_CODE_TO_CONDITION:
         raise ValueError(f"Unknown primary ablation {primary_ablation!r}")
 
-    resolved_output = output_dir or qwen_experiment_visualization_dir(experiment_id)
+    resolved_output = output_dir or experiment_visualization_dir(model_key, experiment_id)
     resolved_dataset = dataset_dir or VERIFICATION_DATASET_DIR
     index_csv = resolved_dataset / "index.csv"
     if not index_csv.exists():
@@ -87,9 +91,11 @@ def build_experiment_context(
 
     return ExperimentContext(
         experiment_id=experiment_id,
+        model_key=model_key,
+        model_label=model_label,
         output_dir=resolved_output,
-        verification_root=QWEN_VERIFICATION_ROOT / experiment_id,
-        evaluation_root=QWEN_EVALUATION_ROOT / experiment_id,
+        verification_root=verification_experiment_dir(model_key, experiment_id),
+        evaluation_root=evaluation_experiment_dir(model_key, experiment_id),
         dataset_dir=resolved_dataset,
         dataset_index_csv=index_csv,
         images_root=RAW_PATCHES_ROOT,
@@ -101,11 +107,11 @@ def build_experiment_context(
 
 
 def verification_results_dir(context: ExperimentContext, ablation_code: str) -> Path:
-    return qwen_verification_condition_dir(ablation_code, context.experiment_id)
+    return verification_condition_dir(context.model_key, ablation_code, context.experiment_id)
 
 
 def evaluation_dir_for_ablation(context: ExperimentContext, ablation_code: str) -> Path:
-    return qwen_evaluation_condition_dir(ablation_code, context.experiment_id)
+    return evaluation_condition_dir(context.model_key, ablation_code, context.experiment_id)
 
 
 def ablation_image_path(

@@ -22,7 +22,6 @@ from src.visualization.experiment_data import (
 )
 from src.visualization.publication_style import (
     DPI,
-    MODEL_DISPLAY_NAME,
     apply_publication_style,
     wrap_text,
 )
@@ -82,7 +81,7 @@ def save_verification_comparison(
     )
     panel_text = (
         f"Decision:\n{record.decision or 'n/a'}\n\n"
-        f"Model:\n{MODEL_DISPLAY_NAME}\n\n"
+        f"Model:\n{context.model_label}\n\n"
         f"Confidence:\n{confidence}\n\n"
         f"Reasoning:\n{reasoning}"
     )

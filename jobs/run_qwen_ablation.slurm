@@ -32,10 +32,11 @@ SAMPLE_SIZE="${SAMPLE_SIZE:-300}"
 EXPERIMENT_ID="${EXPERIMENT_ID:-$(date +%Y%m%d_%H%M)}"
 BATCH_SIZE="${BATCH_SIZE:-4}"
 SKIP_DATASET_PREP="${SKIP_DATASET_PREP:-0}"
+MODEL="${MODEL:-qwen2_5_vl}"
 
 mkdir -p logs/slurm
-mkdir -p "outputs/verification/qwen/${EXPERIMENT_ID}"
-mkdir -p "outputs/evaluation/qwen/${EXPERIMENT_ID}"
+mkdir -p "outputs/verification/${MODEL}/${EXPERIMENT_ID}"
+mkdir -p "outputs/evaluation/${MODEL}/${EXPERIMENT_ID}"
 
 echo "Job ID:      ${SLURM_JOB_ID:-local}"
 echo "Node:        ${SLURMD_NODENAME:-unknown}"
@@ -53,7 +54,7 @@ echo "=== nvidia-smi ==="
 nvidia-smi
 echo
 
-export SAMPLE_SIZE EXPERIMENT_ID BATCH_SIZE SKIP_DATASET_PREP ABLATION RESUME
+export SAMPLE_SIZE EXPERIMENT_ID BATCH_SIZE SKIP_DATASET_PREP ABLATION RESUME MODEL MODEL_CONFIG
 
 EXPERIMENT_ARGS=()
 if [[ -n "${ABLATION:-}" ]]; then

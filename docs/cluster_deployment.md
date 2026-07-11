@@ -2,8 +2,12 @@
 
 This project separates **local development** (MacBook) from **GPU inference** (Linux cluster).
 
-Local machines are used for preprocessing, prompt design, and mock verification.
-Qwen2.5-VL inference should run on a Linux GPU cluster.
+Local machines are used for preprocessing, prompt design, and lightweight testing.
+VLM verification inference runs on a Linux GPU cluster (SLURM).
+
+Current production model: **Qwen2.5-VL** (`--model qwen2_5_vl`). See [`SUPPORTED_MODELS.md`](SUPPORTED_MODELS.md).
+
+---
 
 ## Step 1: Clone the repository
 
@@ -25,98 +29,88 @@ conda activate palm-lvm
 pip install -r requirements_cluster.txt
 ```
 
-This installs only the packages needed for GPU inference:
+This installs GPU inference packages: `torch`, `transformers`, `qwen-vl-utils`, etc.
 
-- `torch`, `torchvision`
-- `transformers`, `accelerate`, `safetensors`
-- `qwen-vl-utils`
-- `numpy`, `pandas`, `Pillow`, `pyyaml`, `tqdm`
-
-It does **not** include local-only tools such as `jupyter`, `openai`, or `matplotlib`.
+Local-only tools (`jupyter`, `matplotlib`) are in `requirements.txt`.
 
 ## Step 4: Check the cluster environment
 
 ```bash
-python scripts/check_cluster_environment.py
+python scripts/pipeline/check_cluster_environment.py
 ```
 
-Expected output includes:
+Expected output: Python version, Torch version, CUDA availability, GPU names.
 
-- Python version
-- Torch version
-- CUDA availability
-- CUDA device count
-- GPU names (if available)
-
-## Step 5: Run the single-image Qwen test skeleton
-
-First, prepare LVM inputs on your local machine or copy them to the cluster:
+## Step 5: Download model weights (one-time)
 
 ```bash
-python scripts/prepare_lvm_inputs.py
+sbatch jobs/qwen_download.slurm
 ```
 
-Then on the cluster:
+Checkpoint path is configured in `configs/models/qwen2_5_vl.yaml` (legacy fallback: `configs/model.yaml`).
+
+## Step 6: Run verification
+
+### Single condition
 
 ```bash
-python scripts/run_qwen_single.py
+python scripts/run_verification.py \
+  --model qwen2_5_vl \
+  --prompt-index outputs/verification_ablation_1000/A1_overlay_only/prompt_index.csv \
+  --results-dir outputs/verification/qwen2_5_vl/my_run/A1 \
+  --batch-size 4
 ```
 
-At this stage the script will:
+### Full A1–A5 experiment
 
-- load the first row from `outputs/lvm_inputs_metadata.csv`
-- build the verification prompt
-- print image path, palm ID, and prompt length
-- attempt to instantiate `QwenVerifier`
-
-Until real inference is enabled, it prints:
-
-```text
-Qwen inference has not been enabled yet.
+```bash
+SAMPLE_SIZE=1000 bash jobs/submit_qwen_ablation.sh
 ```
+
+Set `MODEL=qwen2_5_vl` (default) or a future registry key when additional adapters are implemented.
+
+---
 
 ## Transferring data to the cluster
 
-Copy these folders/files from local development to the cluster:
+Copy or generate on the cluster:
 
 ```text
-data/samples/
-outputs/lvm_inputs/
-outputs/lvm_inputs_metadata.csv
-configs/model.yaml
+outputs/full_inference/predictions_full.json
+outputs/verification_dataset/
+outputs/verification_ablation_<N>/
+configs/models/qwen2_5_vl.yaml
 ```
 
-## Enabling real Qwen inference
+Raw patches on the DEAC cluster: `/deac/csc/yangGrp/cuij/palm/Raw_Patches/`
 
-When ready on the cluster, edit:
+---
 
-```text
-src/lvm/qwen_verifier.py
+## Output layout
+
+```
+outputs/verification/<model_key>/<experiment_id>/A1/
+outputs/evaluation/<model_key>/<experiment_id>/A1/
 ```
 
-Set:
+Legacy pre-freeze paths under `outputs/verification/qwen/` remain readable.
 
-```python
-ENABLE_QWEN_INFERENCE = True
-```
+See [`outputs/README.md`](../outputs/README.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-Then implement model loading and generation inside `_load_model()` and `verify_image()`.
+---
 
 ## Future models
 
-The project is designed to support multiple open-source vision-language models:
+Adding LLaVA, Gemma 4, or Qwen3-VL requires only verifier + adapter + config + registry entry.
 
-| Model | Notes |
-|-------|-------|
-| `Qwen/Qwen2.5-VL-3B-Instruct` | Recommended first cluster model (lighter) |
-| `Qwen/Qwen2.5-VL-7B-Instruct` | Higher quality, more GPU memory |
-| LLaVA | General-purpose VLM baseline |
-| GeoChat | Remote sensing / geospatial specialist |
+Integration design: [`MULTI_MODEL_INTEGRATION_PLAN.md`](MULTI_MODEL_INTEGRATION_PLAN.md)
 
-Update `active_model` in `configs/model.yaml` to switch models once adapters are implemented.
+---
 
 ## Recommended workflow
 
-1. **Local MacBook:** preprocessing, overlays, metadata, mock verification
-2. **Cluster:** environment check, Qwen single-image test, then batch inference
-3. **Local or cluster:** evaluation against human labels (future phase)
+1. **Local:** dataset prep, ablation prompt generation, evaluation scripts
+2. **Cluster:** model download, A1–A5 verification via SLURM
+3. **Either:** evaluation, metrics, visualization
+
+Main README: [`../README.md`](../README.md)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Purpose:
-    Build Qwen2.5-VL text prompts for every verification dataset sample.
+    Build default verification prompts for every verification dataset sample.
 
 Input:
     - Verification dataset with images/, metadata/, and index.csv
@@ -27,7 +27,7 @@ from src.prompts.verification_prompt_builder import build_prompts_for_dataset
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build Qwen verification prompts from a verification dataset.",
+        description="Build verification prompts from a verification dataset.",
     )
     parser.add_argument(
         "--dataset-dir",

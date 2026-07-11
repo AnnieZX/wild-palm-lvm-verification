@@ -78,37 +78,29 @@ Evaluate whether detector confidence improves verification performance.
 
 Evaluate whether explicit geometric information helps the VLM distinguish reliable detections. This is the richest metadata configuration.
 
-### A4 — Overlay + Raw Crop + Confidence
+### A4 — Dual Panel (Overlay + Crop) + Confidence
 
 **Input:**
 
-- Overlay image
-- Original cropped palm image
-- YOLO confidence
+- Combined dual-panel image (full overlay + enlarged bbox crop)
+- YOLO confidence in prompt metadata
 
 **Purpose:**
 
-Evaluate whether simultaneously providing local appearance and overlay context improves verification.
+Evaluate whether local crop detail helps when full overlay context is also available.
 
-### A5 — Raw Crop Only
+### A5 — Crop Only + Confidence
 
 **Input:**
 
-- Original cropped palm image
+- Enlarged bbox crop only (no surrounding context)
+- YOLO confidence in prompt metadata
 
-No overlay.
-
-No bounding box visualization.
-
-No geometry.
-
-No confidence.
+No overlay visualization. No geometry metadata in the prompt.
 
 **Purpose:**
 
-Measure the verification capability using only image appearance.
-
-This serves as the visual-only baseline.
+Measure verification using crop appearance alone. Compare with A4 to test whether full-image context is necessary.
 
 ## Expected Findings
 
@@ -138,4 +130,6 @@ All ablation experiments use the evaluation protocol defined in:
 
 [EVALUATION_PROTOCOL.md](EVALUATION_PROTOCOL.md)
 
-The same protocol is shared across all evaluated VLMs (Qwen, InternVL, LLaVA, etc.), ensuring fair comparison between both ablation conditions and models.
+The same protocol is shared across all evaluated VLMs (`qwen2_5_vl`, LLaVA, Gemma 4, Qwen3-VL, etc.), ensuring fair comparison between ablation conditions and models.
+
+See also: [ARCHITECTURE.md](ARCHITECTURE.md) · [FRAMEWORK_FREEZE.md](FRAMEWORK_FREEZE.md)

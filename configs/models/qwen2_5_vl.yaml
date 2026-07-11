@@ -1,0 +1,11 @@
+# Qwen2.5-VL verification (production baseline)
+registry_key: qwen2_5_vl
+model_label: Qwen2.5-VL
+# When null, resolve_model_checkpoint falls back to configs/model.yaml active_model
+model_id: null
+dtype: auto
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+dependencies:
+  - qwen-vl-utils

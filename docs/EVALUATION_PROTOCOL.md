@@ -132,3 +132,17 @@ Predictions labeled Uncertain are excluded from binary metrics and instead repre
 Only the verification model changes.
 
 The dataset, matching algorithm, IoU threshold, and evaluation metrics remain identical across experiments.
+
+## 6. Output Locations
+
+Verification results and evaluation outputs are organized by model registry key:
+
+```
+outputs/verification/<model_key>/<experiment_id>/<A1..A5>/sample_*.json
+outputs/evaluation/<model_key>/<experiment_id>/<A1..A5>/<code>_evaluation.csv
+outputs/evaluation/<model_key>/<experiment_id>/<A1..A5>/<code>_metrics.json
+```
+
+Legacy pre-freeze Qwen2.5 paths under `outputs/verification/qwen/` remain valid for evaluation.
+
+Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)

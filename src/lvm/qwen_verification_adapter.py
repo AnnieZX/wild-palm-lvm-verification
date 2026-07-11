@@ -43,6 +43,9 @@ def build_qwen_adapter(
     batch_size: int = 4,
     device_map: str = "auto",
     max_new_tokens: int = 512,
+    model_key: str = "qwen2_5_vl",
+    condition: str = "",
+    experiment_id: str = "",
 ) -> "QwenVerificationAdapter":
     """Factory used by the verification adapter registry."""
     return QwenVerificationAdapter(
@@ -50,6 +53,9 @@ def build_qwen_adapter(
         batch_size=batch_size,
         device_map=device_map,
         max_new_tokens=max_new_tokens,
+        model_key=model_key,
+        condition=condition,
+        experiment_id=experiment_id,
     )
 
 
@@ -67,6 +73,9 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
         batch_size: int = 4,
         device_map: str = "auto",
         max_new_tokens: int = 512,
+        model_key: str = "qwen2_5_vl",
+        condition: str = "",
+        experiment_id: str = "",
     ) -> None:
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1, got {batch_size}")
@@ -74,6 +83,9 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
         self.model_name = model_name
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
+        self.model_key = model_key
+        self.condition = condition
+        self.experiment_id = experiment_id
         self._verifier = QwenVerifier(model_name=model_name, device_map=device_map)
 
     @property
@@ -83,6 +95,12 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
     def verify(self, job: VerificationJob) -> VerificationOutcome:
         """Run Qwen inference for one verification sample."""
         started_at = time.perf_counter()
+        metadata = {
+            "model_key": self.model_key,
+            "model_name": self.model_name,
+            "condition": self.condition,
+            "experiment_id": self.experiment_id,
+        }
         try:
             prompt = job.prompt_path.read_text(encoding="utf-8")
             raw_response = self._verifier.generate_response_debugged(
@@ -97,7 +115,7 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
             parsed: dict[str, str] | None = None
             parse_error = ""
             try:
-                parsed = parse_verification_response(raw_response)
+                parsed = parse_verification_response(raw_response, model_key=self.model_key)
             except ValueError as error:
                 parse_error = str(error)
                 print(
@@ -111,6 +129,7 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
                 parsed=parsed,
                 runtime_seconds=runtime_seconds,
                 parse_error=parse_error,
+                **metadata,
             )
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)
@@ -131,6 +150,7 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
                 parsed=None,
                 runtime_seconds=runtime_seconds,
                 inference_error=tb,
+                **metadata,
             )
             return VerificationOutcome(record=record, status="inference_error")
 

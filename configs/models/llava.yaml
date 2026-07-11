@@ -1,0 +1,11 @@
+# LLaVA-NeXT verification (planned — not yet implemented)
+registry_key: llava
+model_label: LLaVA-NeXT
+model_id: llava-hf/llava-v1.6-mistral-7b-hf
+dtype: float16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+generation:
+  attn_implementation: sdpa

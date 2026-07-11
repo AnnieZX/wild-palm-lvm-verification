@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate publication-quality qualitative figures for Qwen verification experiments.
+Generate publication-quality qualitative figures for verification experiments.
 
 Input:
-    - outputs/verification/qwen/<experiment_id>/A1..A5 inference results
-    - outputs/evaluation/qwen/<experiment_id>/A1..A5 evaluation CSVs
+    - outputs/verification/<model_key>/<experiment_id>/A1..A5 inference results
+    - outputs/evaluation/<model_key>/<experiment_id>/A1..A5 evaluation CSVs
     - outputs/verification_dataset/ images and index
     - Raw_Patches PNGs and LabelMe JSON
 
@@ -30,7 +30,8 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.paths import qwen_experiment_visualization_dir
+from src.config.model_config import get_model_label
+from src.paths import experiment_visualization_dir
 from src.visualization.experiment_data import (
     build_experiment_context,
     classify_failure_case,
@@ -56,9 +57,15 @@ def parse_args() -> argparse.Namespace:
         description="Generate publication-quality verification visualization figures.",
     )
     parser.add_argument(
+        "--model",
+        type=str,
+        default="qwen2_5_vl",
+        help="Model registry key (default: qwen2_5_vl; alias: qwen)",
+    )
+    parser.add_argument(
         "--experiment-id",
         required=True,
-        help="Qwen experiment run id (e.g. 20260706_2214)",
+        help="Experiment run id (e.g. 20260706_2214)",
     )
     parser.add_argument(
         "--sample-count",
@@ -117,12 +124,14 @@ def main() -> None:
     apply_publication_style()
 
     started = time.perf_counter()
-    output_dir = args.output_dir or qwen_experiment_visualization_dir(args.experiment_id)
+    output_dir = args.output_dir or experiment_visualization_dir(args.model, args.experiment_id)
 
     try:
         context = build_experiment_context(
             args.experiment_id,
             output_dir=output_dir,
+            model_key=args.model,
+            model_label=get_model_label(args.model),
             primary_ablation=args.primary_ablation,
         )
         pool = load_primary_evaluation_pool(context)

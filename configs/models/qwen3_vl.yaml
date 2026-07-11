@@ -1,0 +1,11 @@
+# Qwen3-VL verification (planned — not yet implemented)
+registry_key: qwen3_vl
+model_label: Qwen3-VL
+model_id: Qwen/Qwen3-VL-8B-Instruct
+dtype: auto
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+generation:
+  attn_implementation: sdpa

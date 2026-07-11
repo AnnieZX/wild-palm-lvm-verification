@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Purpose:
-    Convert YOLO detections into per-detection verification samples for Qwen2.5-VL.
+    Convert YOLO detections into per-detection verification samples (model-agnostic).
 
 Input:
     - Raw patch PNGs (Raw_Patches or --images-root)
@@ -33,7 +33,7 @@ from src.preprocessing.verification_dataset import build_verification_dataset
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate one Qwen verification sample per YOLO detection.",
+        description="Generate one verification sample per YOLO detection.",
     )
     parser.add_argument(
         "--predictions",

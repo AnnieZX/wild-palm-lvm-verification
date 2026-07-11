@@ -25,6 +25,8 @@ from src.paths import (
 )
 from src.prompts.ablation_verification_prompts import ABLATION_CONDITIONS
 
+from src.verification.registry import get_registered_models
+
 RUN_VERIFICATION = PROJECT_ROOT / "scripts" / "run_verification.py"
 
 CONDITION_CHOICES = sorted({*ABLATION_CONDITIONS, *ABLATION_CODES})
@@ -87,6 +89,13 @@ def parse_args() -> argparse.Namespace:
         help="Inference batch size (forwarded to run_verification.py)",
     )
     parser.add_argument(
+        "--model",
+        type=str,
+        default="qwen2_5_vl",
+        choices=get_registered_models(),
+        help="Verification model adapter (forwarded to run_verification.py)",
+    )
+    parser.add_argument(
         "--model-config",
         type=Path,
         default=None,
@@ -120,6 +129,8 @@ def main() -> None:
     command = [
         sys.executable,
         str(RUN_VERIFICATION),
+        "--model",
+        args.model,
         "--prompt-index",
         str(prompt_index),
         "--results-dir",
@@ -142,6 +153,7 @@ def main() -> None:
         command.extend(["--model-path", args.model_path])
 
     print("Ablation verification inference")
+    print(f"  Model:        {args.model}")
     print(f"  Condition:    {condition_name}")
     print(f"  Prompt index: {prompt_index}")
     print(f"  Results:      {results_dir}")

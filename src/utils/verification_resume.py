@@ -1,4 +1,16 @@
-"""Resume helpers for verification inference runs."""
+"""Resume helpers for verification inference runs.
+
+Resume identity is logically ``(model_key, condition, sample_id)`` but is
+implemented via directory isolation:
+
+- Each model uses ``outputs/verification/<model_key>/<experiment_id>/<condition>/``
+- Each condition has its own ``results_index.csv`` and ``sample_*.json`` set
+- ``sample_id`` is unique within the verification dataset index
+
+Therefore ``load_completed_sample_ids(results_dir)`` is safe as long as callers
+pass the correct per-model, per-condition results directory. No cross-model
+resume collision occurs when this convention is followed.
+"""
 
 from __future__ import annotations
 

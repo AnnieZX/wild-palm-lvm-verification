@@ -1,0 +1,13 @@
+# Gemma 4 multimodal verification (planned — not yet implemented)
+registry_key: gemma4
+model_label: Gemma 4
+model_id: google/gemma-4-E4B-it
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+thinking:
+  enabled: false
+generation:
+  attn_implementation: sdpa

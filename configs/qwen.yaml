@@ -1,4 +1,4 @@
-# Qwen2.5-VL verification (placeholder)
-model_type: qwen
+# Qwen2.5-VL verification (legacy placeholder — use configs/models/qwen2_5_vl.yaml)
+model_type: qwen2_5_vl
 model_path: /path/to/Qwen2.5-VL-7B-Instruct
 adapter: src.lvm.qwen_verification_adapter.QwenVerificationAdapter

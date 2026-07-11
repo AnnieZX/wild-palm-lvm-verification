@@ -10,6 +10,11 @@ AdapterFactory = Callable[..., BaseVerificationAdapter]
 
 _REGISTRY: dict[str, AdapterFactory] = {}
 
+# Primary production keys. Aliases map to the same canonical key for lookup.
+_REGISTRY_ALIASES: dict[str, str] = {
+    "qwen": "qwen2_5_vl",
+}
+
 
 def register_adapter(model_name: str, factory: AdapterFactory) -> None:
     """Register a factory that builds one verification adapter."""
@@ -17,14 +22,20 @@ def register_adapter(model_name: str, factory: AdapterFactory) -> None:
     _REGISTRY[key] = factory
 
 
+def resolve_registry_key(model: str) -> str:
+    """Map CLI/registry input to a registered adapter key."""
+    key = model.strip().lower()
+    return _REGISTRY_ALIASES.get(key, key)
+
+
 def get_registered_models() -> tuple[str, ...]:
-    """Return sorted registered model keys."""
+    """Return sorted registered model keys (includes aliases)."""
     return tuple(sorted(_REGISTRY))
 
 
 def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
     """Instantiate a registered verification adapter."""
-    key = model.strip().lower()
+    key = resolve_registry_key(model)
     if key not in _REGISTRY:
         allowed = ", ".join(get_registered_models()) or "none"
         raise ValueError(f"Unknown verification model {model!r}. Registered: {allowed}")
@@ -34,6 +45,7 @@ def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
 def _register_builtin_adapters() -> None:
     from src.lvm.qwen_verification_adapter import build_qwen_adapter
 
+    register_adapter("qwen2_5_vl", build_qwen_adapter)
     register_adapter("qwen", build_qwen_adapter)
 
 

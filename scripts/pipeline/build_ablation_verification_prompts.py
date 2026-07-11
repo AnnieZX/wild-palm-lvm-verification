@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Purpose:
-    Build prompt/input ablation conditions for Qwen2.5-VL verification on 100 YOLO detections.
+    Build A1–A5 prompt/input ablation conditions for VLM verification.
 
 Input:
     - outputs/verification_dataset/index.csv (first 100 samples)
