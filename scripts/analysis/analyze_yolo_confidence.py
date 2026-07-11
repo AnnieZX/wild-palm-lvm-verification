@@ -189,7 +189,7 @@ def compute_percentiles(confidences: np.ndarray) -> dict[str, float]:
         return {f"p{p:02d}": float("nan") for p in PERCENTILES}
 
     values = np.percentile(confidences, PERCENTILES)
-    return {f"p{p:02d}": float(v) for p, v in zip(PERCENTILES, values, strict=True)}
+    return {f"p{p:02d}": float(v) for p, v in zip(PERCENTILES, values)}
 
 
 def kde_is_appropriate(confidences: np.ndarray) -> bool:
@@ -394,10 +394,10 @@ def plot_tp_fp_comparison(
 
     bp = axes[1].boxplot(
         data,
-        tick_labels=["TP", "FP"],
+        labels=["TP", "FP"],
         patch_artist=True,
     )
-    for patch, color in zip(bp["boxes"], colors[: len(bp["boxes"])], strict=False):
+    for patch, color in zip(bp["boxes"], colors[: len(bp["boxes"])]):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
     axes[1].set_ylabel("YOLO confidence")
