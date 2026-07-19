@@ -1,11 +1,12 @@
-# LLaVA-NeXT verification (planned — not yet implemented)
+# LLaVA-OneVision verification (production)
 registry_key: llava
-model_label: LLaVA-NeXT
-model_id: llava-hf/llava-v1.6-mistral-7b-hf
-dtype: float16
+model_label: LLaVA-OneVision
+# Official HF repo (download / reference): llava-hf/llava-onevision-qwen2-7b-ov-hf
+# Cluster resolution uses model_path (model_id left null so local checkpoint wins).
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/llava_onevision
+dtype: bfloat16
 device_map: auto
 max_new_tokens: 512
 do_sample: false
 trust_remote_code: false
-generation:
-  attn_implementation: sdpa

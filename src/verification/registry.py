@@ -43,10 +43,12 @@ def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
 
 
 def _register_builtin_adapters() -> None:
+    from src.lvm.llava_verification_adapter import build_llava_adapter
     from src.lvm.qwen_verification_adapter import build_qwen_adapter
 
     register_adapter("qwen2_5_vl", build_qwen_adapter)
     register_adapter("qwen", build_qwen_adapter)
+    register_adapter("llava", build_llava_adapter)
 
 
 _register_builtin_adapters()
