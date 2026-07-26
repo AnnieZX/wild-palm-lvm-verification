@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.services import mock_data
+from app.services import get_repository
 from shared.models import ModelsResponse
 
 router = APIRouter()
@@ -10,4 +10,4 @@ router = APIRouter()
 
 @router.get("/models", response_model=ModelsResponse)
 def list_models() -> ModelsResponse:
-    return ModelsResponse(models=mock_data.list_models())
+    return ModelsResponse(models=get_repository().list_models())

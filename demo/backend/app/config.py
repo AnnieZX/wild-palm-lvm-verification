@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     demo_outputs_root: Optional[str] = None
 
     @property
+    def outputs_root(self):
+        from pathlib import Path
+
+        if self.demo_outputs_root:
+            return Path(self.demo_outputs_root).resolve()
+        project_root = Path(__file__).resolve().parents[3]
+        return project_root / "outputs"
+
+    @property
     def cors_origin_list(self) -> List[str]:
         return [origin.strip() for origin in self.demo_cors_origins.split(",") if origin.strip()]
 

@@ -1,8 +1,10 @@
 """Overlay image routes."""
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query, Response
 
-from app.services import mock_data
+from app.services import get_repository
 from shared.models import AblationCode
 
 router = APIRouter()
@@ -19,37 +21,61 @@ router = APIRouter()
 )
 def get_sample_image(
     sample_id: str,
-    model_key: str = Query(default=mock_data.DEFAULT_MODEL_KEY),
-    experiment_id: str = Query(default=mock_data.DEFAULT_EXPERIMENT_ID),
-    ablation: AblationCode = Query(default=mock_data.DEFAULT_ABLATION),
+    model_key: Optional[str] = Query(default=None),
+    experiment_id: Optional[str] = Query(default=None),
+    ablation: Optional[AblationCode] = Query(default=None),
 ) -> Response:
-    model = mock_data.resolve_model(model_key)
+    repository = get_repository()
+    resolved_model_key = model_key or repository.default_model_key
+    resolved_experiment_id = experiment_id or repository.default_experiment_id
+    resolved_ablation = ablation or repository.default_ablation
+
+    model = repository.resolve_model(resolved_model_key)
     if model is None:
-        raise HTTPException(status_code=404, detail=f"Unknown model_key: {model_key!r}")
+        raise HTTPException(status_code=404, detail=f"Unknown model_key: {resolved_model_key!r}")
 
-    experiment = mock_data.resolve_experiment(model, experiment_id)
+    experiment = repository.resolve_experiment(model, resolved_experiment_id)
     if experiment is None:
-        raise HTTPException(status_code=404, detail=f"Unknown experiment_id: {experiment_id!r}")
+        raise HTTPException(status_code=404, detail=f"Unknown experiment_id: {resolved_experiment_id!r}")
 
-    if ablation not in experiment.ablations:
+    if resolved_ablation not in experiment.ablations:
         raise HTTPException(
             status_code=404,
-            detail=f"Ablation {ablation.value!r} not available for experiment {experiment_id!r}",
+            detail=(
+                f"Ablation {resolved_ablation.value!r} not available "
+                f"for experiment {resolved_experiment_id!r}"
+            ),
         )
 
-    record = mock_data.get_sample_record(sample_id)
-    if record is None:
+    sample = repository.get_sample_detail(
+        sample_id,
+        model_key=resolved_model_key,
+        experiment_id=resolved_experiment_id,
+        ablation=resolved_ablation,
+    )
+    if sample is None:
         raise HTTPException(status_code=404, detail=f"Unknown sample_id: {sample_id!r}")
+
+    image_path = repository.get_overlay_image_path(
+        sample_id,
+        model_key=resolved_model_key,
+        experiment_id=resolved_experiment_id,
+        ablation=resolved_ablation,
+    )
+    if image_path is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Overlay image not found for sample_id: {sample_id!r}",
+        )
 
     headers = {
         "X-Sample-Id": sample_id,
-        "X-Model-Key": model_key,
-        "X-Experiment-Id": experiment_id,
-        "X-Ablation": ablation.value,
-        "X-Mock-Image": "true",
+        "X-Model-Key": resolved_model_key,
+        "X-Experiment-Id": resolved_experiment_id,
+        "X-Ablation": resolved_ablation.value,
     }
     return Response(
-        content=mock_data.MOCK_OVERLAY_PNG_BYTES,
+        content=image_path.read_bytes(),
         media_type="image/png",
         headers=headers,
     )

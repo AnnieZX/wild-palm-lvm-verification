@@ -1,8 +1,10 @@
 """Aggregate statistics routes."""
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 
-from app.services import mock_data
+from app.services import get_repository
 from shared.models import AblationCode, StatisticsResponse
 
 router = APIRouter()
@@ -10,14 +12,22 @@ router = APIRouter()
 
 @router.get("/statistics", response_model=StatisticsResponse)
 def get_statistics(
-    model_key: str = Query(default=mock_data.DEFAULT_MODEL_KEY),
-    experiment_id: str = Query(default=mock_data.DEFAULT_EXPERIMENT_ID),
-    ablation: AblationCode = Query(default=mock_data.DEFAULT_ABLATION),
+    model_key: Optional[str] = Query(default=None),
+    experiment_id: Optional[str] = Query(default=None),
+    ablation: Optional[AblationCode] = Query(default=None),
 ) -> StatisticsResponse:
-    payload = mock_data.get_statistics(model_key, experiment_id, ablation)
+    repository = get_repository()
+    resolved_model_key = model_key or repository.default_model_key
+    resolved_experiment_id = experiment_id or repository.default_experiment_id
+    resolved_ablation = ablation or repository.default_ablation
+
+    payload = repository.get_statistics(resolved_model_key, resolved_experiment_id, resolved_ablation)
     if payload is None:
         raise HTTPException(
             status_code=404,
-            detail=f"No statistics for model={model_key!r}, experiment_id={experiment_id!r}, ablation={ablation.value!r}",
+            detail=(
+                f"No statistics for model={resolved_model_key!r}, "
+                f"experiment_id={resolved_experiment_id!r}, ablation={resolved_ablation.value!r}"
+            ),
         )
     return payload
