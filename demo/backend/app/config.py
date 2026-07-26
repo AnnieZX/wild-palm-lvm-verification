@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     demo_api_port: int = 8000
     # Comma-separated browser origins for CORS. Override in production via DEMO_CORS_ORIGINS.
     demo_cors_origins: str = (
-        "http://localhost:3000,http://localhost:3001,http://localhost:3002"
+        "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
     )
     demo_outputs_root: Optional[str] = None
 
