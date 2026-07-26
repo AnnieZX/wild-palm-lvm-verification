@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,5 +40,5 @@ app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+def root() -> Dict[str, str]:
     return {"message": "Wild Palm Verification Demo API"}

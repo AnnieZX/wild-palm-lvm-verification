@@ -1,5 +1,7 @@
 """Sample listing and detail routes."""
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import mock_data
@@ -21,9 +23,9 @@ def list_samples(
     ablation: AblationCode = Query(default=mock_data.DEFAULT_ABLATION),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200),
-    decision: VerificationDecision | None = Query(default=None),
-    matched_gt: bool | None = Query(default=None),
-    gt_label: GroundTruthLabel | None = Query(default=None),
+    decision: Optional[VerificationDecision] = Query(default=None),
+    matched_gt: Optional[bool] = Query(default=None),
+    gt_label: Optional[GroundTruthLabel] = Query(default=None),
 ) -> SampleListResponse:
     model = mock_data.resolve_model(model_key)
     if model is None:

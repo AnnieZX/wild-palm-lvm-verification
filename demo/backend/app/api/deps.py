@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict, Union
+
 from fastapi import Query
 
 from shared.models import AblationCode
@@ -20,7 +22,7 @@ def experiment_query_params(
         default=AblationCode.A1,
         description="Ablation code (A1–A5)",
     ),
-) -> dict[str, str | AblationCode]:
+) -> Dict[str, Union[str, AblationCode]]:
     return {
         "model_key": model_key,
         "experiment_id": experiment_id,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,10 +17,10 @@ class Settings(BaseSettings):
     demo_api_host: str = "0.0.0.0"
     demo_api_port: int = 8000
     demo_cors_origins: str = "http://localhost:3000"
-    demo_outputs_root: str | None = None
+    demo_outputs_root: Optional[str] = None
 
     @property
-    def cors_origin_list(self) -> list[str]:
+    def cors_origin_list(self) -> List[str]:
         return [origin.strip() for origin in self.demo_cors_origins.split(",") if origin.strip()]
 
 

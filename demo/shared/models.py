@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -63,7 +64,7 @@ class ApiError(BaseModel):
 class ExperimentSummary(BaseModel):
     experiment_id: str = Field(..., examples=["20250726_1200"])
     sample_count: int = Field(..., ge=0)
-    ablations: list[AblationCode]
+    ablations: List[AblationCode]
     primary_ablation: AblationCode = Field(
         default=AblationCode.A1,
         description="Default ablation shown in the demo UI",
@@ -78,11 +79,11 @@ class ModelInfo(BaseModel):
         default="",
         description="Short model description for the demo catalog",
     )
-    experiments: list[ExperimentSummary]
+    experiments: List[ExperimentSummary]
 
 
 class ModelsResponse(BaseModel):
-    models: list[ModelInfo]
+    models: List[ModelInfo]
 
 
 # ---------------------------------------------------------------------------
@@ -113,10 +114,10 @@ class AblationStatistics(BaseModel):
     )
     dataset_size: int = Field(..., ge=0)
     evaluated_samples: int = Field(..., ge=0)
-    precision: float | None = Field(None, ge=0, le=1)
-    recall: float | None = Field(None, ge=0, le=1)
-    f1: float | None = Field(None, ge=0, le=1)
-    accuracy: float | None = Field(None, ge=0, le=1)
+    precision: Optional[float] = Field(None, ge=0, le=1)
+    recall: Optional[float] = Field(None, ge=0, le=1)
+    f1: Optional[float] = Field(None, ge=0, le=1)
+    accuracy: Optional[float] = Field(None, ge=0, le=1)
     average_iou: float = Field(..., ge=0, le=1)
     average_confidence: float = Field(..., ge=0, le=1)
     matched_gt_count: int = Field(..., ge=0)
@@ -140,13 +141,13 @@ class SampleSummary(BaseModel):
     sample_id: str = Field(..., examples=["sample_000042"])
     image_name: str = Field(..., examples=["100_0003_0001_1.png"])
     ablation: AblationCode
-    decision: VerificationDecision | None = Field(
+    decision: Optional[VerificationDecision] = Field(
         None,
         description="VLM verification decision; null if not yet evaluated",
     )
     matched_gt: bool
     max_iou: float = Field(..., ge=0, le=1)
-    yolo_confidence: float | None = Field(None, ge=0, le=1)
+    yolo_confidence: Optional[float] = Field(None, ge=0, le=1)
     gt_label: GroundTruthLabel
 
 
@@ -157,12 +158,12 @@ class SampleListResponse(BaseModel):
     total: int = Field(..., ge=0)
     page: int = Field(..., ge=1)
     page_size: int = Field(..., ge=1, le=200)
-    samples: list[SampleSummary]
+    samples: List[SampleSummary]
 
 
 class SampleDetail(SampleSummary):
-    yolo_bbox: BoundingBox | None = None
-    gt_bbox: BoundingBox | None = None
+    yolo_bbox: Optional[BoundingBox] = None
+    gt_bbox: Optional[BoundingBox] = None
     confidence_reasoning: str = ""
     visual_reasoning: str = ""
     image_path: str = Field(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 from shared.models import (
     AblationCode,
@@ -24,7 +25,7 @@ DEFAULT_MODEL_KEY = "qwen2_5_vl"
 DEFAULT_EXPERIMENT_ID = "20250726_1200"
 DEFAULT_ABLATION = AblationCode.A1
 
-ABLATION_CONDITION_NAMES: dict[AblationCode, str] = {
+ABLATION_CONDITION_NAMES: Dict[AblationCode, str] = {
     AblationCode.A1: "A1_overlay_only",
     AblationCode.A2: "A2_overlay_confidence",
     AblationCode.A3: "A3_overlay_confidence_geometry",
@@ -32,7 +33,7 @@ ABLATION_CONDITION_NAMES: dict[AblationCode, str] = {
     AblationCode.A5: "A5_crop_only",
 }
 
-MOCK_MODELS: list[ModelInfo] = [
+MOCK_MODELS: List[ModelInfo] = [
     ModelInfo(
         model_key="qwen2_5_vl",
         display_name="Qwen2.5-VL",
@@ -75,7 +76,7 @@ MOCK_MODELS: list[ModelInfo] = [
 class MockSampleRecord:
     summary: SampleSummary
     yolo_bbox: BoundingBox
-    gt_bbox: BoundingBox | None
+    gt_bbox: Optional[BoundingBox]
     confidence_reasoning: str
     visual_reasoning: str
 
@@ -90,7 +91,7 @@ def _sample(
     yolo_confidence: float,
     gt_label: GroundTruthLabel,
     yolo_bbox: BoundingBox,
-    gt_bbox: BoundingBox | None,
+    gt_bbox: Optional[BoundingBox],
     confidence_reasoning: str,
     visual_reasoning: str,
 ) -> MockSampleRecord:
@@ -113,7 +114,7 @@ def _sample(
     )
 
 
-MOCK_SAMPLES: list[MockSampleRecord] = [
+MOCK_SAMPLES: List[MockSampleRecord] = [
     _sample(
         "sample_000042",
         "100_0003_0001_1.png",
@@ -181,7 +182,7 @@ MOCK_SAMPLES: list[MockSampleRecord] = [
     ),
 ]
 
-MOCK_STATISTICS_BY_ABLATION: dict[AblationCode, AblationStatistics] = {
+MOCK_STATISTICS_BY_ABLATION: Dict[AblationCode, AblationStatistics] = {
     AblationCode.A1: AblationStatistics(
         ablation=AblationCode.A1,
         ablation_condition=ABLATION_CONDITION_NAMES[AblationCode.A1],
@@ -237,15 +238,15 @@ MOCK_STATISTICS_BY_ABLATION: dict[AblationCode, AblationStatistics] = {
 }
 
 
-def list_models() -> list[ModelInfo]:
+def list_models() -> List[ModelInfo]:
     return MOCK_MODELS
 
 
-def resolve_model(model_key: str) -> ModelInfo | None:
+def resolve_model(model_key: str) -> Optional[ModelInfo]:
     return next((model for model in MOCK_MODELS if model.model_key == model_key), None)
 
 
-def resolve_experiment(model: ModelInfo, experiment_id: str) -> ExperimentSummary | None:
+def resolve_experiment(model: ModelInfo, experiment_id: str) -> Optional[ExperimentSummary]:
     return next(
         (experiment for experiment in model.experiments if experiment.experiment_id == experiment_id),
         None,
@@ -256,7 +257,7 @@ def get_statistics(
     model_key: str,
     experiment_id: str,
     ablation: AblationCode,
-) -> StatisticsResponse | None:
+) -> Optional[StatisticsResponse]:
     model = resolve_model(model_key)
     if model is None:
         return None
@@ -286,10 +287,10 @@ def get_statistics(
 
 def list_sample_summaries(
     *,
-    decision: VerificationDecision | None = None,
-    matched_gt: bool | None = None,
-    gt_label: GroundTruthLabel | None = None,
-) -> list[SampleSummary]:
+    decision: Optional[VerificationDecision] = None,
+    matched_gt: Optional[bool] = None,
+    gt_label: Optional[GroundTruthLabel] = None,
+) -> List[SampleSummary]:
     records = MOCK_SAMPLES
     if decision is not None:
         records = [record for record in records if record.summary.decision == decision]
@@ -300,7 +301,7 @@ def list_sample_summaries(
     return [record.summary for record in records]
 
 
-def get_sample_record(sample_id: str) -> MockSampleRecord | None:
+def get_sample_record(sample_id: str) -> Optional[MockSampleRecord]:
     return next((record for record in MOCK_SAMPLES if record.summary.sample_id == sample_id), None)
 
 
