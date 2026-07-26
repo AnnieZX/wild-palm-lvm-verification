@@ -2,7 +2,7 @@
 #SBATCH --job-name=llava_ground
 #SBATCH --partition=yangGrp
 #SBATCH --account=yanggrp
-#SBATCH --nodelist=lovelace
+# No --nodelist: let Slurm place the job on any available L40S node in yangGrp.
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
