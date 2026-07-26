@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Wild Palm Demo — CSS custom properties (mirror src/theme/tokens.ts)
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  /* Layout */
+  --wp-sidebar-width: 280px;
+  --wp-info-width: 320px;
+  --wp-header-height: 3.5rem;
+
+  /* Forest green (primary) */
+  --wp-forest-50: #f4f7f5;
+  --wp-forest-100: #e4ece6;
+  --wp-forest-500: #4f7a5c;
+  --wp-forest-700: #32503c;
+  --wp-forest-900: #233529;
+
+  /* Slate gray (neutral) */
+  --wp-slate-50: #f8fafc;
+  --wp-slate-100: #f1f5f9;
+  --wp-slate-200: #e2e8f0;
+  --wp-slate-500: #64748b;
+  --wp-slate-700: #334155;
+  --wp-slate-900: #0f172a;
+
+  /* Semantic */
+  --wp-surface: #ffffff;
+  --wp-warning-500: #f97316;
+  --wp-error-500: #ef4444;
+  --wp-selection-500: #3b82f6;
+  --wp-selection-600: #2563eb;
+
+  /* Application surfaces */
+  --wp-bg-app: var(--wp-slate-100);
+  --wp-bg-panel: var(--wp-surface);
+  --wp-bg-viewer: var(--wp-slate-900);
+  --wp-text-primary: var(--wp-slate-900);
+  --wp-text-muted: var(--wp-slate-500);
+  --wp-border: var(--wp-slate-200);
+}
+
+body {
+  @apply min-h-screen bg-slate-100 font-sans text-slate-900 antialiased;
+}
+
+.dashboard-shell {
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+@layer components {
+  .wp-panel {
+    @apply rounded-panel border border-slate-200 bg-surface shadow-panel;
+  }
+
+  .wp-panel-header {
+    @apply border-b border-slate-100 px-4 py-3;
+  }
+
+  .wp-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-slate-500;
+  }
+
+  .wp-link {
+    @apply text-sm font-medium text-forest-700 hover:text-forest-900;
+  }
+
+  .wp-input {
+    @apply w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 shadow-sm;
+  }
+
+  .wp-badge-selection {
+    @apply ring-1 ring-selection-500/40 border-selection-500/60;
+  }
+}
+
+@layer utilities {
+  .dashboard-grid-bg {
+    background-image: linear-gradient(
+        to right,
+        rgb(100 116 139 / 0.12) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgb(100 116 139 / 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
