@@ -1,9 +1,16 @@
 interface ConfidenceFilterProps {
   min: number;
   max: number;
+  onMinChange: (value: number) => void;
+  onMaxChange: (value: number) => void;
 }
 
-export function ConfidenceFilter({ min, max }: ConfidenceFilterProps) {
+export function ConfidenceFilter({
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+}: ConfidenceFilterProps) {
   return (
     <fieldset className="space-y-3">
       <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -15,12 +22,12 @@ export function ConfidenceFilter({ min, max }: ConfidenceFilterProps) {
           <input
             type="number"
             className="mt-1 w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm"
-            defaultValue={min}
+            value={min}
             min={0}
             max={1}
             step={0.01}
-            disabled
-            aria-label="Minimum confidence (placeholder)"
+            onChange={(event) => onMinChange(Number(event.target.value))}
+            aria-label="Minimum confidence"
           />
         </label>
         <label className="block text-[11px] text-slate-500">
@@ -28,12 +35,12 @@ export function ConfidenceFilter({ min, max }: ConfidenceFilterProps) {
           <input
             type="number"
             className="mt-1 w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm"
-            defaultValue={max}
+            value={max}
             min={0}
             max={1}
             step={0.01}
-            disabled
-            aria-label="Maximum confidence (placeholder)"
+            onChange={(event) => onMaxChange(Number(event.target.value))}
+            aria-label="Maximum confidence"
           />
         </label>
       </div>
@@ -42,9 +49,9 @@ export function ConfidenceFilter({ min, max }: ConfidenceFilterProps) {
         className="w-full accent-forest-700"
         min={0}
         max={100}
-        defaultValue={Math.round(((min + max) / 2) * 100)}
-        disabled
-        aria-label="Confidence range (placeholder)"
+        value={Math.round(((min + max) / 2) * 100)}
+        readOnly
+        aria-label="Confidence range midpoint"
       />
     </fieldset>
   );

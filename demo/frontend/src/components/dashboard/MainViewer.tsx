@@ -1,19 +1,29 @@
 import type { SampleDetail } from "@shared/types";
 
 import { ModelComparisonPanel } from "@/components/comparison";
+import type { SampleComparisonData } from "@/components/comparison/types";
 import { OrthomosaicViewer } from "@/components/viewer";
-import { MOCK_SAMPLE_COMPARISON } from "@/lib/mock/comparison";
-import {
-  MOCK_VIEWER_BOXES,
-  MOCK_VIEWER_IMAGE,
-} from "@/lib/mock/viewer";
+import { sampleToViewerBoxes } from "@/lib/mappers";
 
 interface MainViewerProps {
   sample: SampleDetail;
   activeModelKey?: string;
+  imageSrc?: string | null;
+  imageWidth: number;
+  imageHeight: number;
+  comparison: SampleComparisonData;
 }
 
-export function MainViewer({ sample, activeModelKey }: MainViewerProps) {
+export function MainViewer({
+  sample,
+  activeModelKey,
+  imageSrc = null,
+  imageWidth,
+  imageHeight,
+  comparison,
+}: MainViewerProps) {
+  const boxes = sampleToViewerBoxes(sample);
+
   return (
     <section
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-900"
@@ -31,17 +41,18 @@ export function MainViewer({ sample, activeModelKey }: MainViewerProps) {
 
       <OrthomosaicViewer
         className="min-h-0 flex-[2]"
-        imageWidth={MOCK_VIEWER_IMAGE.width}
-        imageHeight={MOCK_VIEWER_IMAGE.height}
-        boxes={MOCK_VIEWER_BOXES}
-        initialSelectedId="yolo-primary"
+        imageWidth={imageWidth}
+        imageHeight={imageHeight}
+        boxes={boxes}
+        initialSelectedId={boxes[0]?.id ?? null}
         placeholderLabel={sample.image_name}
+        imageSrc={imageSrc}
         interactive={false}
       />
 
       <ModelComparisonPanel
         className="max-h-[280px] shrink-0"
-        data={MOCK_SAMPLE_COMPARISON}
+        data={comparison}
         activeModelKey={activeModelKey}
       />
     </section>

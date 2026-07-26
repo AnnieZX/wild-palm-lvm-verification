@@ -106,7 +106,7 @@ export function OrthomosaicViewer({
                   <img
                     src={imageSrc}
                     alt={placeholderLabel}
-                    className="hidden h-full w-full object-contain"
+                    className="h-full w-full object-contain"
                     data-viewer-image
                   />
                 ) : (

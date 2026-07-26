@@ -10,7 +10,7 @@ export interface StatisticsDashboardProps {
 }
 
 /**
- * Statistics dashboard grid — placeholder charts, mock data only.
+ * Statistics dashboard grid populated from GET /api/v1/statistics.
  */
 export function StatisticsDashboard({ data, className = "" }: StatisticsDashboardProps) {
   const modelRows = data.model_comparison.map((row) => ({

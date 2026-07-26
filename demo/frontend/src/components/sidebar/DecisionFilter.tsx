@@ -1,37 +1,41 @@
-import { DECISION_OPTIONS } from "@/lib/mock/dashboard";
+import { DECISION_OPTIONS } from "@/lib/constants";
 
 interface DecisionFilterProps {
   selectedDecision: string;
+  onDecisionChange: (decision: string) => void;
 }
 
-export function DecisionFilter({ selectedDecision }: DecisionFilterProps) {
+export function DecisionFilter({
+  selectedDecision,
+  onDecisionChange,
+}: DecisionFilterProps) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         Decision filter
       </legend>
       <div className="flex flex-wrap gap-2">
-        <label className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs">
+        <label className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs">
           <input
             type="radio"
             name="decision-filter"
             value=""
-            defaultChecked={selectedDecision === ""}
-            disabled
+            checked={selectedDecision === ""}
+            onChange={() => onDecisionChange("")}
           />
           All
         </label>
         {DECISION_OPTIONS.map((decision) => (
           <label
             key={decision}
-            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
           >
             <input
               type="radio"
               name="decision-filter"
               value={decision}
-              defaultChecked={selectedDecision === decision}
-              disabled
+              checked={selectedDecision === decision}
+              onChange={() => onDecisionChange(decision)}
             />
             {decision}
           </label>

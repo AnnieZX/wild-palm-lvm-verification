@@ -1,30 +1,51 @@
-import type { ModelInfo } from "@shared/types";
+import type { AblationCode, ModelInfo, VerificationDecision } from "@shared/types";
 
 import { ConfidenceFilter } from "@/components/sidebar/ConfidenceFilter";
 import { DecisionFilter } from "@/components/sidebar/DecisionFilter";
 import { ModelSelector } from "@/components/sidebar/ModelSelector";
 import { PromptSelector } from "@/components/sidebar/PromptSelector";
 import { SampleSearch } from "@/components/sidebar/SampleSearch";
-import { PROMPT_OPTIONS } from "@/lib/mock/dashboard";
+
+interface PromptOption {
+  code: AblationCode;
+  label: string;
+  condition: string;
+}
 
 interface SidebarProps {
   models: ModelInfo[];
   selectedModelKey: string;
+  onModelChange: (modelKey: string) => void;
+  promptOptions: PromptOption[];
   selectedPrompt: string;
+  onPromptChange: (code: string) => void;
   selectedDecision: string;
+  onDecisionChange: (decision: string) => void;
   confidenceMin: number;
   confidenceMax: number;
+  onConfidenceMinChange: (value: number) => void;
+  onConfidenceMaxChange: (value: number) => void;
   searchSampleId: string;
+  onSearchSampleIdChange: (value: string) => void;
+  onSearchSubmit: () => void;
 }
 
 export function Sidebar({
   models,
   selectedModelKey,
+  onModelChange,
+  promptOptions,
   selectedPrompt,
+  onPromptChange,
   selectedDecision,
+  onDecisionChange,
   confidenceMin,
   confidenceMax,
+  onConfidenceMinChange,
+  onConfidenceMaxChange,
   searchSampleId,
+  onSearchSampleIdChange,
+  onSearchSubmit,
 }: SidebarProps) {
   return (
     <aside
@@ -37,11 +58,31 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto p-4">
-        <ModelSelector models={models} selectedModelKey={selectedModelKey} />
-        <PromptSelector options={PROMPT_OPTIONS} selectedCode={selectedPrompt} />
-        <ConfidenceFilter min={confidenceMin} max={confidenceMax} />
-        <DecisionFilter selectedDecision={selectedDecision} />
-        <SampleSearch value={searchSampleId} />
+        <ModelSelector
+          models={models}
+          selectedModelKey={selectedModelKey}
+          onModelChange={onModelChange}
+        />
+        <PromptSelector
+          options={promptOptions}
+          selectedCode={selectedPrompt}
+          onPromptChange={onPromptChange}
+        />
+        <ConfidenceFilter
+          min={confidenceMin}
+          max={confidenceMax}
+          onMinChange={onConfidenceMinChange}
+          onMaxChange={onConfidenceMaxChange}
+        />
+        <DecisionFilter
+          selectedDecision={selectedDecision}
+          onDecisionChange={onDecisionChange}
+        />
+        <SampleSearch
+          value={searchSampleId}
+          onChange={onSearchSampleIdChange}
+          onSubmit={onSearchSubmit}
+        />
       </nav>
     </aside>
   );

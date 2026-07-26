@@ -9,9 +9,14 @@ interface PromptOption {
 interface PromptSelectorProps {
   options: PromptOption[];
   selectedCode: string;
+  onPromptChange: (code: string) => void;
 }
 
-export function PromptSelector({ options, selectedCode }: PromptSelectorProps) {
+export function PromptSelector({
+  options,
+  selectedCode,
+  onPromptChange,
+}: PromptSelectorProps) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -19,9 +24,9 @@ export function PromptSelector({ options, selectedCode }: PromptSelectorProps) {
       </legend>
       <select
         className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 shadow-sm"
-        defaultValue={selectedCode}
-        disabled
-        aria-label="Prompt selector (placeholder)"
+        value={selectedCode}
+        onChange={(event) => onPromptChange(event.target.value)}
+        aria-label="Prompt selector"
       >
         {options.map((option) => (
           <option key={option.code} value={option.code}>
@@ -30,7 +35,7 @@ export function PromptSelector({ options, selectedCode }: PromptSelectorProps) {
         ))}
       </select>
       <p className="font-mono text-[10px] text-slate-400">
-        {options.find((o) => o.code === selectedCode)?.condition}
+        {options.find((option) => option.code === selectedCode)?.condition}
       </p>
     </fieldset>
   );
