@@ -53,7 +53,7 @@ echo
 echo "Running parity test..."
 echo
 
-python -m pytest tests/test_llava_parity.py -v -s
+python tests/test_llava_parity.py
 
 echo
 echo "Parity test completed."
