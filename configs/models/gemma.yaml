@@ -1,0 +1,13 @@
+# Gemma 3 12B IT verification (production)
+registry_key: gemma
+model_label: Gemma 3 12B IT
+# Official HF repo: google/gemma-3-12b-it (requires HF license acceptance)
+# Cluster resolution uses model_path when set; model_id is fallback for download.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/gemma-3-12b-it
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+min_transformers: "4.50.0"
