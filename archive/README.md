@@ -1,59 +1,63 @@
 # Archive
 
-Obsolete, experimental, and superseded files moved here during repository cleanup (June 2026).
-History is preserved via `git mv`.
+This directory holds **non-primary** research artifacts that must not drive thesis/paper metrics unless explicitly restored and revalidated.
 
-## Layout
+Cleanup of June 2026 (script/doc reorganization) and September 2026 (post A1-1000 cross-model audit) both deposit material here. **Nothing here was deleted.**
+
+## Why the archive exists
+
+- Keep the active `outputs/` tree focused on **canonical** datasets and scientifically usable runs.
+- Preserve failed, superseded, smoke, and debug artifacts for reproducibility and forensic review.
+- Prevent accidental citation of degenerate or incomplete results as primary evidence.
+
+## Do not use archived files for thesis metrics
+
+Archived experiment outputs, evaluations, and Slurm logs are **excluded from scientific analysis** by default. To reuse anything from this tree you must:
+
+1. Restore it to its original path (or a documented new path).
+2. Re-run the audit checks in `docs/EXPERIMENT_STATUS_CANONICAL.md`.
+3. Explicitly justify the restoration in the paper methods.
+
+## Canonical runs (remain under `outputs/`)
+
+| Role | Path |
+|------|------|
+| Production dataset | `outputs/verification_dataset/` (5747) |
+| Shared A1–A5 inputs | `outputs/verification_ablation_{10,100,1000,5747}/` |
+| Qwen A1–A5 @1000 | `outputs/verification/qwen/20260706_2214/` |
+| Qwen A1–A4 @5747 | `outputs/verification/qwen/20260708_0020/` (A5 partial, incomplete) |
+| LLaVA A1 @1000 | `outputs/verification/llava/20260719_1734/` (degenerate all-Reliable; evidence only) |
+| Gemma A1 @1000 | `outputs/verification/gemma/20260802_1702/` (degenerate all-Reliable; evidence only) |
+
+Authoritative narrative: **`docs/EXPERIMENT_STATUS_CANONICAL.md`**.
+
+## Layout (September 2026 audit categories)
 
 | Directory | Contents |
 |-----------|----------|
-| `prototype/scripts/` | Local 5-tile sample pipeline (LabelMe GT → mock/small Qwen) |
-| `experiments/scripts/` | Intermediate 100-palm sequential LVM run (pre-ablation) |
-| `deprecated_scripts/` | YOLO val-export debug and analysis utilities |
-| `old_docs/` | Superseded documentation |
-| `scripts/` | July 2026 cleanup: experimental visualization, YOLO QA, deprecated entry-point redirects |
-| `src/preprocessing/` | Empty stubs (e.g. `patch_extractor.py`) |
+| `failed_runs/` | Crashed or empty runs (e.g. Qwen A5 `1501`, early `20260706_2130`) |
+| `superseded_runs/` | Pilots, duplicate A1–A4 re-runs, legacy flat eval/results, old LVM input trees |
+| `smoke_tests/` | Model/framework smoke outputs and logs |
+| `debug_runs/` | Grounding/parity diagnostics, 1-sample fixtures, early logs |
+| `incomplete_experiments/` | Notes for incomplete work left in place (Qwen A5 @5747) |
+| `invalid_experiments/` | Notes for collapsed-model runs left in place (LLaVA/Gemma) |
+| `miscellaneous_runtime_artifacts/` | Accidental empty pip redirect files, etc. |
+| `deprecated_scripts/`, `prototype/`, `experiments/`, `old_docs/`, `jobs/`, `scripts/`, `src/`, `old_labelme_ablation/`, `unused_data/` | Earlier (June 2026) cleanup |
 
-## Running archived scripts
+## Manifest
 
-From the **repository root**:
+Every path moved in the September 2026 audit is recorded in:
+
+**`archive/ARCHIVE_MANIFEST.csv`**
+
+Columns: `original_path`, `archive_path`, `category`, `experiment_id`, `model`, `reason`, `date_archived`.
+
+## Running very old archived scripts
+
+From the **repository root** (June 2026 layout):
 
 ```bash
 python archive/prototype/scripts/prepare_lvm_inputs.py
-python archive/experiments/scripts/prepare_lvm_inputs_100_sequential.py
-python archive/deprecated_scripts/debug_single_match.py
 ```
 
-Archived scripts set `PROJECT_ROOT` to the repo root (not `archive/`).
-
-## Active pipeline (not archived)
-
-See `docs/REPOSITORY_CLEANUP_REPORT.md` for the current layout.
-
-Production entry points live under `scripts/` and `scripts/pipeline/`.
-Deprecated names forward from `archive/scripts/` (e.g. `run_full_inference_and_overlay.py` → `scripts/run_full_inference.py`).
-
-## Old LabelMe ablation (superseded)
-
-The original E1–E5 × P1–P6 LabelMe ablation pipeline was removed from active scripts.
-Archived under `archive/old_labelme_ablation/`.
-
-## Stale SLURM references
-
-These jobs were moved to `archive/jobs/` because they reference archived scripts:
-
-| Job | Archived script target |
-|-----|------------------------|
-| `archive/jobs/qwen_batch_sample.slurm` | `archive/prototype/scripts/` |
-| `archive/jobs/qwen_100_sequential.slurm` | `archive/experiments/scripts/` |
-
-Old ablation jobs: `archive/old_labelme_ablation/jobs/`
-
-## Deleted (empty only)
-
-- `scripts/run_patch_extraction.py` (never implemented)
-
-## Left in place (protected / empty stubs)
-
-- `src/preprocessing/patch_extractor.py` (empty stub; `src/preprocessing/` not modified)
-- `src/prompts/__init__.py` (empty; `src/prompts/` not modified)
+Prefer active entry points under `scripts/` and `scripts/pipeline/`.
