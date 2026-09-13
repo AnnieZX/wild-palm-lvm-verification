@@ -1,0 +1,15 @@
+# InternVL3-8B-Instruct verification (qualification / production candidate)
+registry_key: internvl3
+model_label: InternVL3-8B-Instruct
+# Official HF repo: OpenGVLab/InternVL3-8B-Instruct
+# Cluster resolution uses model_path when set; model_id left null so local checkpoint wins.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/InternVL3-8B-Instruct
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: true
+use_flash_attn: true
+max_num_tiles: 12
+min_transformers: "4.37.2"

@@ -20,6 +20,8 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "gemma": "gemma",
     "gemma4": "gemma4",
     "qwen3_vl": "qwen3_vl",
+    "internvl3": "internvl3",
+    "internvl": "internvl3",
 }
 
 CHECKPOINT_KEYS = ("model_id", "model_path", "active_model")

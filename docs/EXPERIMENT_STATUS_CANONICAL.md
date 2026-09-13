@@ -43,6 +43,20 @@ Confirmed: `results_index.csv` IDs for Qwen, LLaVA, and Gemma are identical to
 | Qwen A1–A4 @5747 | `outputs/verification/qwen/20260708_0020/` | Primary full-dataset ablations |
 | Qwen A5 @5747 | `…/20260708_0020/A5/` | **INCOMPLETE** (2585/5747; TIME LIMIT); no `results_index.csv` |
 
+### InternVL3 qualification (not A1-1000)
+
+Fixed diagnostics: `outputs/diagnostics/model_qualification/` (balanced A1-100 seed `20260908`; Stage 0 subset).  
+Experiment `20260909_internvl3_qual`. Full write-up: `docs/INTERNVL3_QUALIFICATION.md`.
+
+| Stage | Path | Expected | OK | Parse fail | Infer fail | Verdict |
+|-------|------|---------:|---:|-----------:|-----------:|---------|
+| Stage 0 (10) | `outputs/verification/internvl3/20260909_internvl3_qual/stage0/` | 10 | 10 | 0 | 0 | **PASS** (technical) |
+| Stage 1 (balanced 100) | `…/balanced100/` | 100 | 87 | 13 | 0 | **FAIL_TECHNICAL** |
+
+Stage 1 predictions (n=100): Reliable **56**, Uncertain **31**, Unreliable **0**, empty/parse-fail **13**.  
+Official binary (Uncertain excluded): TP=35, FP=21, TN=0, FN=0; Spec=**0.0000**; BalAcc=**0.5000**.  
+Parser success **87%** (< 95% gate). **Not qualified for A1-1000.**
+
 ---
 
 ## 5. Exact sample counts (A1-1000)
@@ -151,6 +165,8 @@ Protocol: `Reliable` = predicted positive; `Unreliable` = predicted negative; **
 | LLaVA A1-1000 | **VALID_BUT_LIMITED** | Pipeline OK, but **100% Reliable** → accuracy = class prior; specificity 0; not usable as competitive verifier performance |
 | Gemma A1-1000 | **VALID_BUT_LIMITED** | Same degeneration as LLaVA after CPU eval |
 | Smokes / parity / pilots / duplicates | **ENGINEERING_ONLY** or archived | See archive |
+| InternVL3 Stage 0 (`20260909_internvl3_qual`) | **ENGINEERING_ONLY** | 10/10 ok; technical smoke PASS |
+| InternVL3 Stage 1 balanced-100 (same exp) | **FAIL_TECHNICAL** | 13% parse fail; Spec=0; BalAcc=0.5; **not** A1-1000-qualified |
 
 ### Direct answers
 
@@ -243,14 +259,15 @@ Failed A5 `1501`, early empty `2130`, pilots `2145`/`2158`, duplicate `1508`, le
 3. Metrics JSON **Reliable% denominator** quirk for partial-N runs.
 4. Qwen binary specificity still low (0.24 @1000); Uncertain-heavy—report balanced accuracy / calibration, not accuracy alone.
 5. Gemma job script still does not call evaluation automatically (fixed manually this audit).
+6. **InternVL3-8B-Instruct** failed Stage 1 qualification (`FAIL_TECHNICAL`): 13/100 incomplete-JSON parse failures; zero `Unreliable`; Spec=0; BalAcc=0.5. Do **not** run InternVL A1-1000 until Stage 1 is re-qualified on the same fixed balanced-100.
 
 ---
 
 ## 16. Exactly ONE recommended next research action
 
-**Resume and finish Qwen A5 @5747 only** (A5-only job, `RESUME=1`, shared `verification_ablation_5747/A5_crop_only`, walltime/chunking sufficient to clear remaining ~3162 samples), then evaluate A5 with the same CPU GT pipeline—**before** investing in further LLaVA/Gemma accuracy runs.
+**Resume and finish Qwen A5 @5747 only** (A5-only job, `RESUME=1`, shared `verification_ablation_5747/A5_crop_only`, walltime/chunking sufficient to clear remaining ~3162 samples), then evaluate A5 with the same CPU GT pipeline—**before** investing in further LLaVA/Gemma accuracy runs or InternVL A1-1000.
 
-Rationale: Qwen is the only non-degenerate verifier; A1–A4 full-data results are already primary; A5 is the sole missing primary ablation cell.
+Rationale: Qwen is the only non-degenerate verifier; A1–A4 full-data results are already primary; A5 is the sole missing primary ablation cell. InternVL is not A1-1000-qualified.
 
 ---
 
