@@ -44,6 +44,7 @@ def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
 
 def _register_builtin_adapters() -> None:
     from src.lvm.gemma_verification_adapter import build_gemma_adapter
+    from src.lvm.glm_4_6v_flash_verification_adapter import build_glm_4_6v_flash_adapter
     from src.lvm.internvl_verification_adapter import build_internvl_adapter
     from src.lvm.llava_verification_adapter import build_llava_adapter
     from src.lvm.qwen_verification_adapter import build_qwen_adapter
@@ -54,6 +55,8 @@ def _register_builtin_adapters() -> None:
     register_adapter("gemma", build_gemma_adapter)
     register_adapter("internvl3", build_internvl_adapter)
     register_adapter("internvl", build_internvl_adapter)
+    register_adapter("glm_4_6v_flash", build_glm_4_6v_flash_adapter)
+    register_adapter("glm46v_flash", build_glm_4_6v_flash_adapter)
 
 
 _register_builtin_adapters()
