@@ -19,7 +19,7 @@ export interface BoundingBoxLayerProps {
   imageHeight: number;
   transform?: ViewerTransform;
   colorScheme?: BoundingBoxColorScheme;
-  /** Enable click / hover handlers (scaffold: default off). */
+  /** When false, pointer events are disabled. */
   interactive?: boolean;
   onTooltipChange?: (content: HoverTooltipContent | null, pointer: ViewerPointer | null) => void;
 }

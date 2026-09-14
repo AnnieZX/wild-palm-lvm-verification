@@ -30,11 +30,16 @@ MODEL_DISPLAY_NAMES: Dict[str, str] = {
     "llava": "LLaVA-OneVision",
     "gemma": "Gemma 3",
     "internvl": "InternVL",
+    "internvl3": "InternVL3",
+    "glm_4_6v_flash": "GLM-4.6V-Flash",
 }
 
 MODEL_DESCRIPTIONS: Dict[str, str] = {
     "qwen2_5_vl": "Primary production VLM for wild palm verification ablations.",
     "llava": "Secondary VLM adapter for comparative ablation studies.",
+    "gemma": "Gemma 3 comparative verification runs.",
+    "internvl3": "InternVL3 qualification and comparative runs.",
+    "glm_4_6v_flash": "GLM-4.6V-Flash verification and qualification runs.",
 }
 
 EVALUATION_CSV_SUFFIX = "_evaluation.csv"

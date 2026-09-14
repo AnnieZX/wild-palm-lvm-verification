@@ -9,9 +9,9 @@
   color-scheme: light;
 
   /* Layout */
-  --wp-sidebar-width: 280px;
-  --wp-info-width: 320px;
-  --wp-header-height: 3.5rem;
+  --wp-sidebar-width: 260px;
+  --wp-info-width: 300px;
+  --wp-header-height: 3rem;
 
   /* Forest green (primary) */
   --wp-forest-50: #f4f7f5;
@@ -36,33 +36,33 @@
   --wp-selection-600: #2563eb;
 
   /* Application surfaces */
-  --wp-bg-app: var(--wp-slate-100);
+  --wp-bg-app: #eceff2;
   --wp-bg-panel: var(--wp-surface);
-  --wp-bg-viewer: var(--wp-slate-900);
+  --wp-bg-viewer: #0b0f14;
   --wp-text-primary: var(--wp-slate-900);
   --wp-text-muted: var(--wp-slate-500);
-  --wp-border: var(--wp-slate-200);
+  --wp-border: #d5dbe3;
 }
 
 body {
-  @apply min-h-screen bg-slate-100 font-sans text-slate-900 antialiased;
+  @apply min-h-screen bg-[var(--wp-bg-app)] font-sans text-slate-900 antialiased;
 }
 
 .dashboard-shell {
-  font-feature-settings: "tnum" 1, "ss01" 1;
+  font-feature-settings: "tnum" 1;
 }
 
 @layer components {
   .wp-panel {
-    @apply rounded-panel border border-slate-200 bg-surface shadow-panel;
+    @apply rounded-panel border border-slate-200 bg-surface;
   }
 
   .wp-panel-header {
-    @apply border-b border-slate-100 px-4 py-3;
+    @apply border-b border-slate-200 px-3 py-2;
   }
 
   .wp-label {
-    @apply text-xs font-semibold uppercase tracking-wider text-slate-500;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-500;
   }
 
   .wp-link {
@@ -70,22 +70,26 @@ body {
   }
 
   .wp-input {
-    @apply w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 shadow-sm;
+    @apply w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800;
   }
 
   .wp-badge-selection {
-    @apply ring-1 ring-selection-500/40 border-selection-500/60;
+    @apply border-selection-500/60 ring-1 ring-selection-500/40;
   }
-}
 
-@layer utilities {
-  .dashboard-grid-bg {
-    background-image: linear-gradient(
-        to right,
-        rgb(100 116 139 / 0.12) 1px,
-        transparent 1px
-      ),
-      linear-gradient(to bottom, rgb(100 116 139 / 0.12) 1px, transparent 1px);
-    background-size: 24px 24px;
+  .wp-inspector-row {
+    @apply flex items-baseline justify-between gap-3 py-1 text-sm;
+  }
+
+  .wp-inspector-key {
+    @apply text-slate-500;
+  }
+
+  .wp-inspector-value {
+    @apply font-mono text-[13px] text-slate-900;
+  }
+
+  .wp-section-rule {
+    @apply border-t border-slate-200 pt-3 mt-3;
   }
 }

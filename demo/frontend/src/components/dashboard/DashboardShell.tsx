@@ -15,11 +15,10 @@ export function DashboardShell({ header, sidebar, viewer, infoPanel }: Dashboard
         {sidebar}
         <div className="flex min-w-0 flex-1">
           {viewer}
-          <div className="hidden w-[320px] shrink-0 xl:block">{infoPanel}</div>
+          <div className="hidden w-[300px] shrink-0 xl:block">{infoPanel}</div>
         </div>
       </div>
-      {/* Info panel stacks below viewer on narrower viewports */}
-      <div className="max-h-[40vh] overflow-y-auto border-t border-slate-200 xl:hidden">
+      <div className="max-h-[36vh] overflow-y-auto border-t border-slate-200 xl:hidden">
         {infoPanel}
       </div>
     </div>

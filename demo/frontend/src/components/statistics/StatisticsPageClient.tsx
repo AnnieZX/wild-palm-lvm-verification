@@ -16,6 +16,22 @@ function pickDefaultModel(models: ModelInfo[]): ModelInfo | null {
   return models.find((model) => model.model_key === "qwen2_5_vl") ?? models[0];
 }
 
+function pickDefaultExperiment(model: ModelInfo) {
+  if (model.experiments.length === 0) {
+    return null;
+  }
+  const withA1 = model.experiments.filter((experiment) =>
+    experiment.ablations.includes("A1"),
+  );
+  const pool = withA1.length > 0 ? withA1 : model.experiments;
+  return [...pool].sort((a, b) => {
+    if (b.ablations.length !== a.ablations.length) {
+      return b.ablations.length - a.ablations.length;
+    }
+    return b.sample_count - a.sample_count;
+  })[0];
+}
+
 async function fetchStatisticsSafe(
   modelKey: string,
   experimentId: string,
@@ -48,13 +64,17 @@ export function StatisticsPageClient() {
         const modelsResponse = await fetchModels();
         const models = modelsResponse.models;
         const primaryModel = pickDefaultModel(models);
-        const primaryExperiment = primaryModel?.experiments[0];
+        const primaryExperiment = primaryModel
+          ? pickDefaultExperiment(primaryModel)
+          : null;
 
         if (!primaryModel || !primaryExperiment) {
           throw new Error("No experiment statistics available.");
         }
 
-        const primaryAblation = primaryExperiment.primary_ablation;
+        const primaryAblation = primaryExperiment.ablations.includes("A1")
+          ? ("A1" as AblationCode)
+          : primaryExperiment.primary_ablation;
         const primaryStats = await fetchStatistics({
           model_key: primaryModel.model_key,
           experiment_id: primaryExperiment.experiment_id,
@@ -123,23 +143,25 @@ export function StatisticsPageClient() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b border-slate-200 bg-white px-5 py-3">
-        <div className="mx-auto flex max-w-7xl items-center gap-4">
-          <Link href="/" className="wp-link">
-            ← Sample viewer
+    <div className="min-h-screen overflow-y-auto bg-[var(--wp-bg-app)]">
+      <nav className="border-b border-slate-200 bg-white px-4 py-2">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <Link href="/" className="wp-link text-xs">
+            ← Inspection
           </Link>
-          <span className="text-sm text-slate-400">|</span>
-          <span className="text-sm font-medium text-slate-700">Statistics dashboard</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-sm font-medium text-slate-700">Statistics</span>
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl px-5 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-5">
         {loading ? (
           <p className="text-sm text-slate-600">Loading statistics…</p>
         ) : error ? (
-          <div className="rounded-xl border border-red-200 bg-white p-6 shadow-sm">
-            <h1 className="text-lg font-semibold text-slate-900">Statistics unavailable</h1>
+          <div className="rounded border border-red-200 bg-white p-5">
+            <h1 className="text-base font-semibold text-slate-900">
+              Statistics unavailable
+            </h1>
             <p className="mt-2 text-sm text-slate-600">{error}</p>
           </div>
         ) : data ? (

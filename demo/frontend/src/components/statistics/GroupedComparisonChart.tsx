@@ -1,5 +1,4 @@
 import { ChartCard } from "@/components/statistics/ChartCard";
-import type { MetricKey } from "@/components/statistics/types";
 
 export interface ComparisonRow {
   id: string;
@@ -10,15 +9,16 @@ export interface ComparisonRow {
   accuracy: number;
 }
 
+type HighlightMetric = "precision" | "recall" | "f1" | "accuracy";
+
 export interface GroupedComparisonChartProps {
   title: string;
   subtitle?: string;
   rows: ComparisonRow[];
-  /** Which metric to emphasize in the placeholder bars. */
-  highlightMetric?: MetricKey;
+  highlightMetric?: HighlightMetric;
 }
 
-const METRIC_COLORS: Record<MetricKey, string> = {
+const METRIC_COLORS: Record<HighlightMetric, string> = {
   precision: "bg-selection-400",
   recall: "bg-forest-400",
   f1: "bg-forest-600",
@@ -26,7 +26,7 @@ const METRIC_COLORS: Record<MetricKey, string> = {
 };
 
 /**
- * Placeholder grouped bar chart for model or prompt comparisons.
+ * Compact F1 comparison bars for models or ablations with available metrics.
  */
 export function GroupedComparisonChart({
   title,
@@ -34,6 +34,14 @@ export function GroupedComparisonChart({
   rows,
   highlightMetric = "f1",
 }: GroupedComparisonChartProps) {
+  if (rows.length === 0) {
+    return (
+      <ChartCard title={title} subtitle={subtitle}>
+        <p className="text-xs text-slate-500">No comparison rows available.</p>
+      </ChartCard>
+    );
+  }
+
   const maxValue = Math.max(...rows.map((row) => row[highlightMetric]), 0.01);
 
   return (
@@ -50,9 +58,9 @@ export function GroupedComparisonChart({
                   {highlightMetric.toUpperCase()} {value.toFixed(3)}
                 </span>
               </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-2 overflow-hidden rounded bg-slate-100">
                 <div
-                  className={`h-full rounded-full ${METRIC_COLORS[highlightMetric]}`}
+                  className={`h-full rounded ${METRIC_COLORS[highlightMetric]}`}
                   style={{ width: `${widthPct}%` }}
                 />
               </div>

@@ -9,14 +9,12 @@ export interface ChartCardProps {
 
 export function ChartCard({ title, subtitle, children, className = "" }: ChartCardProps) {
   return (
-    <article
-      className={`wp-panel overflow-hidden ${className}`}
-    >
-      <header className="border-b border-slate-100 px-4 py-3">
+    <article className={`rounded border border-slate-200 bg-white ${className}`}>
+      <header className="border-b border-slate-200 px-3 py-2">
         <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
         {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
       </header>
-      <div className="flex min-h-[200px] flex-1 flex-col p-4">{children}</div>
+      <div className="flex min-h-[160px] flex-1 flex-col p-3">{children}</div>
     </article>
   );
 }

@@ -1,18 +1,26 @@
 import { ChartCard } from "@/components/statistics/ChartCard";
 import type { MetricKey, PrimaryMetrics } from "@/components/statistics/types";
 
+const METRIC_ORDER: MetricKey[] = [
+  "precision",
+  "recall",
+  "specificity",
+  "f1",
+  "accuracy",
+  "balanced_accuracy",
+  "uncertain_rate",
+  "coverage",
+];
+
 const METRIC_LABELS: Record<MetricKey, string> = {
   precision: "Precision",
   recall: "Recall",
+  specificity: "Specificity",
   f1: "F1",
   accuracy: "Accuracy",
-};
-
-const METRIC_COLORS: Record<MetricKey, string> = {
-  precision: "bg-selection-500",
-  recall: "bg-forest-500",
-  f1: "bg-forest-700",
-  accuracy: "bg-forest-400",
+  balanced_accuracy: "Balanced Acc.",
+  uncertain_rate: "Uncertain Rate",
+  coverage: "Coverage",
 };
 
 export interface MetricBarChartProps {
@@ -21,42 +29,30 @@ export interface MetricBarChartProps {
   subtitle?: string;
 }
 
+function formatMetric(value: number | null): string {
+  if (value === null) return "—";
+  return value.toFixed(3);
+}
+
 /**
- * Placeholder bar chart for binary verification metrics (0–1 scale).
+ * Protocol metrics table derived from evaluation confusion / decision counts.
  */
 export function MetricBarChart({
   metrics,
-  title = "Verification metrics",
-  subtitle = "Definitive decisions only (Uncertain excluded)",
+  title = "Verification protocol metrics",
+  subtitle = "Definitive decisions only for P/R/Spec/F1/Acc/BA; Uncertain rate & Coverage use full dataset",
 }: MetricBarChartProps) {
-  const entries = (Object.keys(METRIC_LABELS) as MetricKey[]).map((key) => ({
-    key,
-    label: METRIC_LABELS[key],
-    value: metrics[key],
-    color: METRIC_COLORS[key],
-  }));
-
   return (
     <ChartCard title={title} subtitle={subtitle}>
-      <div className="flex flex-1 items-end justify-around gap-3 pt-4">
-        {entries.map((entry) => {
-          const pct = Math.round(entry.value * 100);
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+        {METRIC_ORDER.map((key) => {
+          const value = metrics[key];
           return (
-            <div key={entry.key} className="flex flex-1 flex-col items-center gap-2">
-              <span className="font-mono text-sm font-semibold text-slate-800">
-                {entry.value.toFixed(3)}
-              </span>
-              <div className="flex h-36 w-full max-w-[72px] items-end rounded-t-md bg-slate-100">
-                <div
-                  className={`w-full rounded-t-md ${entry.color} transition-all`}
-                  style={{ height: `${pct}%` }}
-                  role="img"
-                  aria-label={`${entry.label} ${pct}%`}
-                />
-              </div>
-              <span className="text-center text-xs font-medium text-slate-600">
-                {entry.label}
-              </span>
+            <div key={key} className="border-b border-slate-100 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                {METRIC_LABELS[key]}
+              </p>
+              <p className="mt-1 font-mono text-lg text-slate-900">{formatMetric(value)}</p>
             </div>
           );
         })}

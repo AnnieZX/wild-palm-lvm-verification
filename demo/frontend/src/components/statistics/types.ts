@@ -1,10 +1,14 @@
-/** Frontend statistics dashboard view models (mock JSON shape). */
+/** Frontend statistics dashboard view models (API-backed). */
 
 export interface PrimaryMetrics {
-  precision: number;
-  recall: number;
-  f1: number;
-  accuracy: number;
+  precision: number | null;
+  recall: number | null;
+  specificity: number | null;
+  f1: number | null;
+  accuracy: number | null;
+  balanced_accuracy: number | null;
+  uncertain_rate: number | null;
+  coverage: number | null;
 }
 
 export interface DecisionDistributionCounts {
@@ -27,6 +31,8 @@ export interface ModelComparisonRow {
   recall: number;
   f1: number;
   accuracy: number;
+  specificity?: number | null;
+  balanced_accuracy?: number | null;
 }
 
 export interface PromptComparisonRow {
@@ -36,6 +42,8 @@ export interface PromptComparisonRow {
   recall: number;
   f1: number;
   accuracy: number;
+  specificity?: number | null;
+  balanced_accuracy?: number | null;
 }
 
 export interface StatisticsDashboardData {

@@ -16,7 +16,7 @@ export interface BoundingBoxProps {
   isSelected?: boolean;
   isHovered?: boolean;
   colorScheme?: BoundingBoxColorScheme;
-  /** When false, pointer events are disabled (scaffold default). */
+  /** When false, pointer events are disabled. */
   interactive?: boolean;
   onSelect?: (id: string) => void;
   onHoverStart?: (id: string, event: MouseEvent<SVGGElement>) => void;

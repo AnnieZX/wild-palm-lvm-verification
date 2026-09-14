@@ -24,10 +24,10 @@ const config: Config = {
         mono: [...typography.fontMono],
       },
       boxShadow: {
-        panel: "0 1px 3px 0 rgb(15 23 42 / 0.08)",
+        panel: "none",
       },
       borderRadius: {
-        panel: "0.75rem",
+        panel: "0.375rem",
       },
     },
   },

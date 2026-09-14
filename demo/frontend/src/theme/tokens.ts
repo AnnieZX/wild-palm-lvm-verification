@@ -1,8 +1,7 @@
 /**
  * Wild Palm Verification Demo — design tokens.
  *
- * Academic / scientific UI: forest green primary, slate neutrals,
- * semantic orange (warning), red (error), blue (selection).
+ * Neutral inspection-tool chrome; decision/bbox colors carry semantic meaning.
  */
 
 export const colors = {
@@ -73,17 +72,20 @@ export const colors = {
 
 export const typography = {
   fontSans: [
-    "Inter",
+    "var(--font-wp-sans)",
+    "IBM Plex Sans",
+    "Source Sans 3",
     "ui-sans-serif",
     "system-ui",
     "-apple-system",
     "Segoe UI",
-    "Roboto",
     "Helvetica Neue",
     "Arial",
     "sans-serif",
   ],
   fontMono: [
+    "var(--font-wp-mono)",
+    "IBM Plex Mono",
     "ui-monospace",
     "SFMono-Regular",
     "Menlo",
@@ -96,22 +98,22 @@ export const typography = {
 } as const;
 
 export const radii = {
-  sm: "0.375rem",
-  md: "0.5rem",
-  lg: "0.75rem",
-  xl: "1rem",
+  sm: "0.25rem",
+  md: "0.375rem",
+  lg: "0.375rem",
+  xl: "0.5rem",
 } as const;
 
 export const shadows = {
-  sm: "0 1px 2px 0 rgb(15 23 42 / 0.05)",
-  md: "0 4px 6px -1px rgb(15 23 42 / 0.07), 0 2px 4px -2px rgb(15 23 42 / 0.05)",
-  panel: "0 1px 3px 0 rgb(15 23 42 / 0.08)",
+  sm: "none",
+  md: "none",
+  panel: "none",
 } as const;
 
 export const layout = {
-  sidebarWidth: "280px",
-  infoPanelWidth: "320px",
-  headerHeight: "3.5rem",
+  sidebarWidth: "260px",
+  infoPanelWidth: "300px",
+  headerHeight: "3rem",
 } as const;
 
 /** Semantic aliases for documentation and programmatic use. */

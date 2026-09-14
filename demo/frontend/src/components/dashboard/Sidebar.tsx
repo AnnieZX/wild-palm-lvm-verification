@@ -1,9 +1,10 @@
-import type { AblationCode, ModelInfo, VerificationDecision } from "@shared/types";
+import type { AblationCode, ModelInfo, SampleSummary } from "@shared/types";
 
 import { ConfidenceFilter } from "@/components/sidebar/ConfidenceFilter";
 import { DecisionFilter } from "@/components/sidebar/DecisionFilter";
 import { ModelSelector } from "@/components/sidebar/ModelSelector";
 import { PromptSelector } from "@/components/sidebar/PromptSelector";
+import { SampleNavigator } from "@/components/sidebar/SampleNavigator";
 import { SampleSearch } from "@/components/sidebar/SampleSearch";
 
 interface PromptOption {
@@ -28,6 +29,14 @@ interface SidebarProps {
   searchSampleId: string;
   onSearchSampleIdChange: (value: string) => void;
   onSearchSubmit: () => void;
+  samples: SampleSummary[];
+  selectedSampleId: string | null;
+  sampleTotal: number;
+  onSelectSample: (sampleId: string) => void;
+  onPreviousSample: () => void;
+  onNextSample: () => void;
+  canPreviousSample: boolean;
+  canNextSample: boolean;
 }
 
 export function Sidebar({
@@ -46,18 +55,27 @@ export function Sidebar({
   searchSampleId,
   onSearchSampleIdChange,
   onSearchSubmit,
+  samples,
+  selectedSampleId,
+  sampleTotal,
+  onSelectSample,
+  onPreviousSample,
+  onNextSample,
+  canPreviousSample,
+  canNextSample,
 }: SidebarProps) {
   return (
     <aside
-      className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white"
-      aria-label="Filters and navigation"
+      className="flex h-full w-[260px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white"
+      aria-label="Filters and results"
     >
-      <div className="border-b border-slate-200/80 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-800">Controls</h2>
-        <p className="text-xs text-slate-500">Model, prompt &amp; sample filters</p>
+      <div className="border-b border-slate-200 px-3 py-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Filters
+        </h2>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto p-4">
+      <nav className="shrink-0 space-y-4 overflow-y-auto border-b border-slate-200 p-3">
         <ModelSelector
           models={models}
           selectedModelKey={selectedModelKey}
@@ -68,15 +86,15 @@ export function Sidebar({
           selectedCode={selectedPrompt}
           onPromptChange={onPromptChange}
         />
+        <DecisionFilter
+          selectedDecision={selectedDecision}
+          onDecisionChange={onDecisionChange}
+        />
         <ConfidenceFilter
           min={confidenceMin}
           max={confidenceMax}
           onMinChange={onConfidenceMinChange}
           onMaxChange={onConfidenceMaxChange}
-        />
-        <DecisionFilter
-          selectedDecision={selectedDecision}
-          onDecisionChange={onDecisionChange}
         />
         <SampleSearch
           value={searchSampleId}
@@ -84,6 +102,17 @@ export function Sidebar({
           onSubmit={onSearchSubmit}
         />
       </nav>
+
+      <SampleNavigator
+        samples={samples}
+        selectedSampleId={selectedSampleId}
+        total={sampleTotal}
+        onSelect={onSelectSample}
+        onPrevious={onPreviousSample}
+        onNext={onNextSample}
+        canPrevious={canPreviousSample}
+        canNext={canNextSample}
+      />
     </aside>
   );
 }

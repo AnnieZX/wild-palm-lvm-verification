@@ -25,6 +25,7 @@ import type {
   AblationCode,
   ModelInfo,
   SampleDetail,
+  SampleSummary,
   VerificationDecision,
 } from "@shared/types";
 
@@ -32,10 +33,38 @@ function pickDefaultModel(models: ModelInfo[]): ModelInfo | null {
   if (models.length === 0) {
     return null;
   }
-  return (
-    models.find((model) => model.model_key === "qwen2_5_vl") ??
-    models[0]
+  return models.find((model) => model.model_key === "qwen2_5_vl") ?? models[0];
+}
+
+/** Prefer multi-ablation A1 runs over newer single-ablation experiments. */
+function pickDefaultExperiment(model: ModelInfo) {
+  if (model.experiments.length === 0) {
+    return null;
+  }
+  const withA1 = model.experiments.filter((experiment) =>
+    experiment.ablations.includes("A1"),
   );
+  const pool = withA1.length > 0 ? withA1 : model.experiments;
+  return [...pool].sort((a, b) => {
+    if (b.ablations.length !== a.ablations.length) {
+      return b.ablations.length - a.ablations.length;
+    }
+    return b.sample_count - a.sample_count;
+  })[0];
+}
+
+function filterByConfidence(
+  samples: SampleSummary[],
+  confidenceMin: number,
+  confidenceMax: number,
+): SampleSummary[] {
+  return samples.filter((item) => {
+    const confidence = item.yolo_confidence;
+    if (confidence === null) {
+      return true;
+    }
+    return confidence >= confidenceMin && confidence <= confidenceMax;
+  });
 }
 
 export function DashboardPage() {
@@ -51,12 +80,15 @@ export function DashboardPage() {
   const [confidenceMax, setConfidenceMax] = useState(1);
   const [searchSampleId, setSearchSampleId] = useState("");
 
+  const [sampleList, setSampleList] = useState<SampleSummary[]>([]);
+  const [sampleTotal, setSampleTotal] = useState(0);
   const [sample, setSample] = useState<SampleDetail | null>(null);
   const [comparison, setComparison] = useState<SampleComparisonData | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<{ width: number; height: number }>(
     DEFAULT_IMAGE_SIZE,
   );
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const activeModel = useMemo(
     () => models.find((model) => model.model_key === selectedModelKey) ?? null,
@@ -67,7 +99,9 @@ export function DashboardPage() {
     () =>
       activeModel?.experiments.find(
         (experiment) => experiment.experiment_id === selectedExperimentId,
-      ) ?? activeModel?.experiments[0] ?? null,
+      ) ??
+      activeModel?.experiments[0] ??
+      null,
     [activeModel, selectedExperimentId],
   );
 
@@ -91,60 +125,72 @@ export function DashboardPage() {
         return;
       }
 
-      const detailResponse = await fetchSampleDetail(sampleId, scopeParams);
-      setSample(detailResponse.sample);
-      setImageSrc(sampleImageUrl(sampleId, scopeParams));
+      setDetailLoading(true);
+      try {
+        const detailResponse = await fetchSampleDetail(sampleId, scopeParams);
+        setSample(detailResponse.sample);
+        setImageSrc(sampleImageUrl(sampleId, scopeParams));
+        setError(null);
 
-      const comparisonEntries = await Promise.all(
-        models.map(async (model) => {
-          const experiment = model.experiments[0];
-          if (!experiment) {
-            return null;
-          }
-          const ablation = experiment.ablations.includes(selectedPrompt)
-            ? selectedPrompt
-            : experiment.primary_ablation;
+        const comparisonEntries = await Promise.all(
+          models.map(async (model) => {
+            const experiment = model.experiments[0];
+            if (!experiment) {
+              return null;
+            }
+            const ablation = experiment.ablations.includes(selectedPrompt)
+              ? selectedPrompt
+              : experiment.primary_ablation;
 
-          try {
-            const response = await fetchSampleDetail(sampleId, {
-              model_key: model.model_key,
-              experiment_id: experiment.experiment_id,
-              ablation,
-            });
-            return sampleResponseToComparisonEntry(
-              response,
-              model,
-              promptConditionForAblation(ablation),
-            );
-          } catch {
-            return null;
-          }
-        }),
-      );
+            try {
+              const response = await fetchSampleDetail(sampleId, {
+                model_key: model.model_key,
+                experiment_id: experiment.experiment_id,
+                ablation,
+              });
+              return sampleResponseToComparisonEntry(
+                response,
+                model,
+                promptConditionForAblation(ablation),
+              );
+            } catch {
+              return null;
+            }
+          }),
+        );
 
-      const predictions = comparisonEntries.filter(
-        (entry): entry is NonNullable<typeof entry> => entry !== null,
-      );
+        const predictions = comparisonEntries.filter(
+          (entry): entry is NonNullable<typeof entry> => entry !== null,
+        );
 
-      setComparison(
-        buildSampleComparisonData(
-          detailResponse.sample,
-          predictions.length > 0
-            ? predictions
-            : [
-                sampleResponseToComparisonEntry(
-                  detailResponse,
-                  activeModel ?? {
-                    model_key: selectedModelKey,
-                    display_name: selectedModelKey,
-                    description: "",
-                    experiments: [],
-                  },
-                  promptConditionForAblation(selectedPrompt),
-                ),
-              ],
-        ),
-      );
+        setComparison(
+          buildSampleComparisonData(
+            detailResponse.sample,
+            predictions.length > 0
+              ? predictions
+              : [
+                  sampleResponseToComparisonEntry(
+                    detailResponse,
+                    activeModel ?? {
+                      model_key: selectedModelKey,
+                      display_name: selectedModelKey,
+                      description: "",
+                      experiments: [],
+                    },
+                    promptConditionForAblation(selectedPrompt),
+                  ),
+                ],
+          ),
+        );
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load sample detail.",
+        );
+      } finally {
+        setDetailLoading(false);
+      }
     },
     [
       activeModel,
@@ -156,40 +202,51 @@ export function DashboardPage() {
     ],
   );
 
-  const loadFirstMatchingSample = useCallback(async () => {
+  const refreshSampleList = useCallback(async () => {
     if (!selectedModelKey || !selectedExperimentId) {
       return;
     }
 
-    const listResponse = await fetchSamples({
+    const pageSize = 200;
+    const firstPage = await fetchSamples({
       ...scopeParams,
       page: 1,
-      page_size: 50,
+      page_size: pageSize,
       decision: selectedDecision || undefined,
     });
 
-    let candidates = listResponse.samples;
-    candidates = candidates.filter((item) => {
-      const confidence = item.yolo_confidence;
-      if (confidence === null) {
-        return true;
-      }
-      return confidence >= confidenceMin && confidence <= confidenceMax;
-    });
+    let allSamples = [...firstPage.samples];
+    const totalPages = Math.max(1, Math.ceil(firstPage.total / pageSize));
+    // Cap pages to keep the workstation responsive on large CSVs.
+    const maxPages = Math.min(totalPages, 5);
 
-    const targetId = candidates[0]?.sample_id;
-    if (!targetId) {
-      setSample(null);
-      setComparison(null);
-      setImageSrc(null);
-      return;
+    if (maxPages > 1) {
+      const rest = await Promise.all(
+        Array.from({ length: maxPages - 1 }, (_, index) =>
+          fetchSamples({
+            ...scopeParams,
+            page: index + 2,
+            page_size: pageSize,
+            decision: selectedDecision || undefined,
+          }),
+        ),
+      );
+      for (const page of rest) {
+        allSamples = allSamples.concat(page.samples);
+      }
     }
 
-    await loadSample(targetId);
+    const candidates = filterByConfidence(
+      allSamples,
+      confidenceMin,
+      confidenceMax,
+    );
+    setSampleList(candidates);
+    setSampleTotal(candidates.length);
+    return candidates;
   }, [
     confidenceMax,
     confidenceMin,
-    loadSample,
     scopeParams,
     selectedDecision,
     selectedExperimentId,
@@ -217,7 +274,7 @@ export function DashboardPage() {
           return;
         }
 
-        const defaultExperiment = defaultModel.experiments[0];
+        const defaultExperiment = pickDefaultExperiment(defaultModel);
         if (!defaultExperiment) {
           setError("The selected model has no discovered experiments.");
           return;
@@ -225,7 +282,11 @@ export function DashboardPage() {
 
         setSelectedModelKey(defaultModel.model_key);
         setSelectedExperimentId(defaultExperiment.experiment_id);
-        setSelectedPrompt(defaultExperiment.primary_ablation);
+        setSelectedPrompt(
+          defaultExperiment.ablations.includes("A1")
+            ? "A1"
+            : defaultExperiment.primary_ablation,
+        );
       } catch (loadError) {
         if (!cancelled) {
           setError(
@@ -254,10 +315,30 @@ export function DashboardPage() {
 
     let cancelled = false;
 
-    async function refreshSamples() {
+    async function refresh() {
       try {
         setError(null);
-        await loadFirstMatchingSample();
+        const candidates = await refreshSampleList();
+        if (cancelled || !candidates) {
+          return;
+        }
+
+        const currentId = sample?.sample_id;
+        const stillVisible =
+          currentId !== undefined &&
+          candidates.some((item) => item.sample_id === currentId);
+
+        if (stillVisible && currentId) {
+          return;
+        }
+
+        if (candidates[0]) {
+          await loadSample(candidates[0].sample_id);
+        } else {
+          setSample(null);
+          setComparison(null);
+          setImageSrc(null);
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(
@@ -269,11 +350,23 @@ export function DashboardPage() {
       }
     }
 
-    void refreshSamples();
+    void refresh();
     return () => {
       cancelled = true;
     };
-  }, [loadFirstMatchingSample, loading, selectedExperimentId, selectedModelKey]);
+    // Intentionally omit sample to avoid re-fetch loops when selecting within list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    loadSample,
+    loading,
+    refreshSampleList,
+    selectedExperimentId,
+    selectedModelKey,
+    selectedPrompt,
+    selectedDecision,
+    confidenceMin,
+    confidenceMax,
+  ]);
 
   useEffect(() => {
     if (!imageSrc) {
@@ -293,41 +386,64 @@ export function DashboardPage() {
 
   const handleModelChange = (modelKey: string) => {
     const model = models.find((item) => item.model_key === modelKey);
-    const experiment = model?.experiments[0];
+    const experiment = model ? pickDefaultExperiment(model) : null;
     setSelectedModelKey(modelKey);
     setSelectedExperimentId(experiment?.experiment_id ?? "");
-    setSelectedPrompt(experiment?.primary_ablation ?? "A1");
+    setSelectedPrompt(
+      experiment?.ablations.includes("A1")
+        ? "A1"
+        : (experiment?.primary_ablation ?? "A1"),
+    );
     setSearchSampleId("");
+  };
+
+  const selectedIndex = sampleList.findIndex(
+    (item) => item.sample_id === sample?.sample_id,
+  );
+  const canPrevious = selectedIndex > 0;
+  const canNext = selectedIndex >= 0 && selectedIndex < sampleList.length - 1;
+
+  const goPrevious = () => {
+    if (!canPrevious) return;
+    const previous = sampleList[selectedIndex - 1];
+    if (previous) void loadSample(previous.sample_id);
+  };
+
+  const goNext = () => {
+    if (!canNext) return;
+    const next = sampleList[selectedIndex + 1];
+    if (next) void loadSample(next.sample_id);
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--wp-bg-app)] text-sm text-slate-600">
         Loading experiment catalog…
       </div>
     );
   }
 
-  if (error && !sample) {
+  if (error && !sample && sampleList.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 px-6">
-        <div className="max-w-lg rounded-xl border border-red-200 bg-white p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-slate-900">Dashboard unavailable</h1>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--wp-bg-app)] px-6">
+        <div className="max-w-lg rounded border border-red-200 bg-white p-5">
+          <h1 className="text-base font-semibold text-slate-900">
+            Workstation unavailable
+          </h1>
           <p className="mt-2 text-sm text-slate-600">{error}</p>
-          <p className="mt-4 text-xs text-slate-500">
-            Ensure the FastAPI backend is running and{" "}
-            <code className="rounded bg-slate-100 px-1">DEMO_OUTPUTS_ROOT</code> points at
-            your experiment outputs.
+          <p className="mt-3 text-xs text-slate-500">
+            Ensure the FastAPI backend is running and can read repository{" "}
+            <code className="rounded bg-slate-100 px-1">outputs/</code>.
           </p>
         </div>
       </div>
     );
   }
 
-  if (!activeModel || !activeExperiment || !sample || !comparison) {
+  if (!activeModel || !activeExperiment) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
-        No samples available for the selected experiment.
+      <div className="flex min-h-screen items-center justify-center bg-[var(--wp-bg-app)] text-sm text-slate-600">
+        No experiments available.
       </div>
     );
   }
@@ -339,12 +455,14 @@ export function DashboardPage() {
           <Header
             experimentId={selectedExperimentId}
             sampleCount={activeExperiment.sample_count}
+            modelName={activeModel.display_name}
+            ablation={selectedPrompt}
           />
           <Link
             href="/statistics"
-            className="absolute right-5 top-1/2 -translate-y-1/2 wp-link"
+            className="absolute right-4 top-1/2 -translate-y-1/2 wp-link text-xs"
           >
-            Statistics →
+            Statistics
           </Link>
         </div>
       }
@@ -372,27 +490,55 @@ export function DashboardPage() {
               void loadSample(sampleId);
               return;
             }
-            void loadFirstMatchingSample();
+            if (sampleList[0]) {
+              void loadSample(sampleList[0].sample_id);
+            }
           }}
+          samples={sampleList}
+          selectedSampleId={sample?.sample_id ?? null}
+          sampleTotal={sampleTotal}
+          onSelectSample={(sampleId) => {
+            void loadSample(sampleId);
+          }}
+          onPreviousSample={goPrevious}
+          onNextSample={goNext}
+          canPreviousSample={canPrevious}
+          canNextSample={canNext}
         />
       }
       viewer={
-        <MainViewer
-          sample={sample}
-          activeModelKey={selectedModelKey}
-          imageSrc={imageSrc}
-          imageWidth={imageSize.width}
-          imageHeight={imageSize.height}
-          comparison={comparison}
-        />
+        sample && comparison ? (
+          <MainViewer
+            sample={sample}
+            activeModelKey={selectedModelKey}
+            imageSrc={imageSrc}
+            imageWidth={imageSize.width}
+            imageHeight={imageSize.height}
+            comparison={comparison}
+          />
+        ) : (
+          <section className="flex min-h-0 flex-1 items-center justify-center bg-[var(--wp-bg-viewer)] text-sm text-slate-400">
+            {detailLoading
+              ? "Loading sample…"
+              : error
+                ? error
+                : "No samples match the current filters."}
+          </section>
+        )
       }
       infoPanel={
-        <InformationPanel
-          sample={sample}
-          model={activeModel}
-          experimentId={selectedExperimentId}
-          ablation={selectedPrompt}
-        />
+        sample ? (
+          <InformationPanel
+            sample={sample}
+            model={activeModel}
+            experimentId={selectedExperimentId}
+            ablation={selectedPrompt}
+          />
+        ) : (
+          <aside className="flex h-full items-center justify-center border-l border-slate-200 bg-white text-xs text-slate-500">
+            Select a sample to inspect.
+          </aside>
+        )
       }
     />
   );
