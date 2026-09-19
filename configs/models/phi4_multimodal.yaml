@@ -1,0 +1,15 @@
+# Phi-4 Multimodal Instruct verification
+registry_key: phi4_multimodal
+model_label: Phi-4-Multimodal-Instruct
+# Official HF repo: microsoft/Phi-4-multimodal-instruct
+model_id: microsoft/Phi-4-multimodal-instruct
+model_path: /deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct
+dtype: auto
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: true
+# flash_attn not installed in wild-palm-phi4; use eager (verifier can still try flash).
+attn_implementation: eager
+min_transformers: "4.48.2"
+hf_repo: microsoft/Phi-4-multimodal-instruct

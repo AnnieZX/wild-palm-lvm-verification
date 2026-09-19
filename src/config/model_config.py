@@ -24,6 +24,8 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "internvl": "internvl3",
     "glm_4_6v_flash": "glm_4_6v_flash",
     "glm46v_flash": "glm_4_6v_flash",
+    "phi4_multimodal": "phi4_multimodal",
+    "phi4": "phi4_multimodal",
 }
 
 CHECKPOINT_KEYS = ("model_id", "model_path", "active_model")
