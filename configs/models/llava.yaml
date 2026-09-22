@@ -1,6 +1,7 @@
 # LLaVA-OneVision verification (production)
 registry_key: llava
 model_label: LLaVA-OneVision
+backend: local
 # Official HF repo (download / reference): llava-hf/llava-onevision-qwen2-7b-ov-hf
 # Cluster resolution uses model_path (model_id left null so local checkpoint wins).
 model_id: null

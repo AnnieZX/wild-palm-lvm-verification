@@ -23,6 +23,14 @@ class BaseVerificationAdapter(ABC):
 
     Subclasses implement provider-specific inference only. The runner owns
     dataset iteration, resume, logging, and output persistence.
+
+    Contract (local backend today; future API backend later):
+      - load once at adapter construction (checkpoint or client)
+      - verify(job) returns raw model text inside VerificationOutcome.record
+      - shared parser / evaluator / A1–A5 prompts stay outside the adapter
+
+    Future ``backend=api`` adapters must still implement verify() and return
+    the same outcome shape. Do not change frozen prompts, parser, or schema.
     """
 
     @property

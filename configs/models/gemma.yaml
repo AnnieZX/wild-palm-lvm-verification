@@ -1,6 +1,7 @@
 # Gemma 3 12B IT verification (production)
 registry_key: gemma
 model_label: Gemma 3 12B IT
+backend: local
 # Official HF repo: google/gemma-3-12b-it (requires HF license acceptance)
 # Cluster resolution uses model_path when set; model_id is fallback for download.
 model_id: null

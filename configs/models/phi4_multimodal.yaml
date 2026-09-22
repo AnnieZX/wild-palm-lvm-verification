@@ -1,8 +1,11 @@
 # Phi-4 Multimodal Instruct verification
 registry_key: phi4_multimodal
 model_label: Phi-4-Multimodal-Instruct
+backend: local
 # Official HF repo: microsoft/Phi-4-multimodal-instruct
-model_id: microsoft/Phi-4-multimodal-instruct
+# Cluster resolution uses model_path; model_id left null so local checkpoint wins
+# (same pattern as internvl3 / glm configs). Historical Slurm also passed --model-path.
+model_id: null
 model_path: /deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct
 dtype: auto
 device_map: auto

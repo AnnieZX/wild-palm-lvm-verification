@@ -1,6 +1,7 @@
 # InternVL3-8B-Instruct verification (qualification / production candidate)
 registry_key: internvl3
 model_label: InternVL3-8B-Instruct
+backend: local
 # Official HF repo: OpenGVLab/InternVL3-8B-Instruct
 # Cluster resolution uses model_path when set; model_id left null so local checkpoint wins.
 model_id: null

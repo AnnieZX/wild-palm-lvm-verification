@@ -13,6 +13,11 @@ _REGISTRY: dict[str, AdapterFactory] = {}
 # Primary production keys. Aliases map to the same canonical key for lookup.
 _REGISTRY_ALIASES: dict[str, str] = {
     "qwen": "qwen2_5_vl",
+    "qwen25_vl_7b": "qwen2_5_vl",
+    "qwen2_5_vl_7b": "qwen2_5_vl",
+    "internvl3_8b": "internvl3",
+    "phi4": "phi4_multimodal",
+    "glm46v_flash": "glm_4_6v_flash",
 }
 
 
@@ -29,8 +34,8 @@ def resolve_registry_key(model: str) -> str:
 
 
 def get_registered_models() -> tuple[str, ...]:
-    """Return sorted registered model keys (includes aliases)."""
-    return tuple(sorted(_REGISTRY))
+    """Return sorted registered model keys (includes CLI aliases)."""
+    return tuple(sorted(set(_REGISTRY) | set(_REGISTRY_ALIASES)))
 
 
 def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:

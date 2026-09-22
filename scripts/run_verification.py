@@ -6,17 +6,22 @@ Purpose:
 Input:
     - Verification dataset (images/, prompts/, index.csv or prompt_index.csv)
     - Or an explicit --prompt-index CSV (e.g. ablation condition prompt_index.csv)
+    - Or --condition A1–A5 (resolves frozen ablation prompt_index automatically)
     - Model checkpoint from configs/models/<model>.yaml (override with --model-path)
 
 Output:
-    - Per-sample JSON under --results-dir (default: outputs/verification_results/)
+    - Per-sample JSON under --results-dir
     - results_index.csv under --results-dir
+
+Canonical layout (when --condition + --experiment-id, or auto-generated id):
+    outputs/verification/<canonical_model>/<experiment_id>/<A1..A5>/
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +32,15 @@ from src.config.model_config import (
     resolve_model_checkpoint,
     resolve_model_config_path,
 )
-from src.paths import VERIFICATION_DATASET_DIR, VERIFICATION_RESULTS_DIR
+from src.paths import (
+    OUTPUTS_DIR,
+    VERIFICATION_DATASET_DIR,
+    VERIFICATION_RESULTS_DIR,
+    ablation_code_from_condition,
+    discover_ablation_inputs_dir,
+    resolve_ablation_condition_name,
+    verification_condition_dir,
+)
 from src.utils.verification_resume import RESULTS_INDEX_FILENAME
 from src.verification.jobs import load_verification_jobs
 from src.verification.output_manager import VerificationOutputManager
@@ -50,13 +63,33 @@ def parse_args() -> argparse.Namespace:
         "--dataset-dir",
         type=Path,
         default=VERIFICATION_DATASET_DIR,
-        help="Verification dataset root (default when --prompt-index is not set)",
+        help="Verification dataset root (default when --prompt-index/--condition unset)",
     )
     parser.add_argument(
         "--prompt-index",
         type=Path,
         default=None,
         help="Path to prompt_index.csv; image/prompt paths resolve relative to its parent",
+    )
+    parser.add_argument(
+        "--condition",
+        type=str,
+        default=None,
+        help=(
+            "Ablation condition A1–A5 (or full folder name). "
+            "When set without --prompt-index, resolves frozen ablation inputs. "
+            "Also recorded in resume logging / result metadata."
+        ),
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=None,
+        help=(
+            "Ablation input set size (e.g. 1000 → outputs/verification_ablation_1000). "
+            "Used only when --condition resolves the prompt index. "
+            "Default: prefer verification_ablation_1000 when present."
+        ),
     )
     parser.add_argument(
         "--results-dir",
@@ -114,15 +147,29 @@ def parse_args() -> argparse.Namespace:
         "--experiment-id",
         type=str,
         default=None,
-        help="Experiment id for resume logging (optional)",
-    )
-    parser.add_argument(
-        "--condition",
-        type=str,
-        default=None,
-        help="Ablation condition code for resume logging (optional)",
+        help="Experiment id for canonical output paths and resume logging",
     )
     return parser.parse_args()
+
+
+def _resolve_condition_prompt_index(condition: str, sample_size: int | None) -> Path:
+    """Resolve frozen A1–A5 prompt_index.csv without regenerating prompts."""
+    condition_name = resolve_ablation_condition_name(condition)
+    if sample_size is not None:
+        ablation_root = discover_ablation_inputs_dir(sample_size)
+    else:
+        preferred_1000 = OUTPUTS_DIR / "verification_ablation_1000"
+        if (preferred_1000 / "A1_overlay_only" / "prompt_index.csv").exists():
+            ablation_root = preferred_1000
+        else:
+            ablation_root = discover_ablation_inputs_dir(None)
+    prompt_index = ablation_root / condition_name / "prompt_index.csv"
+    if not prompt_index.exists():
+        raise FileNotFoundError(
+            f"Prompt index not found: {prompt_index}\n"
+            "Run scripts/pipeline/build_ablation_verification_prompts.py first."
+        )
+    return prompt_index
 
 
 def main() -> None:
@@ -130,12 +177,21 @@ def main() -> None:
     registry_key = resolve_registry_key(args.model)
     model_key = normalize_model_key(args.model)
 
-    if args.prompt_index is not None:
-        if not args.prompt_index.exists():
-            print(f"Prompt index not found: {args.prompt_index}")
+    prompt_index = args.prompt_index
+    dataset_dir: Path
+
+    if prompt_index is not None:
+        if not prompt_index.exists():
+            print(f"Prompt index not found: {prompt_index}")
             sys.exit(1)
-        dataset_dir = args.prompt_index.parent
-        prompt_index = args.prompt_index
+        dataset_dir = prompt_index.parent
+    elif args.condition is not None:
+        try:
+            prompt_index = _resolve_condition_prompt_index(args.condition, args.sample_size)
+        except (FileNotFoundError, ValueError) as error:
+            print(error)
+            sys.exit(1)
+        dataset_dir = prompt_index.parent
     else:
         if not args.dataset_dir.exists():
             print(f"Verification dataset not found: {args.dataset_dir}")
@@ -146,6 +202,22 @@ def main() -> None:
             sys.exit(1)
         dataset_dir = args.dataset_dir
         prompt_index = None
+
+    # Canonical results path when using ablation conditions and the default
+    # results-dir was not overridden on the CLI.
+    results_dir = args.results_dir
+    experiment_id = args.experiment_id
+    using_default_results = args.results_dir.resolve() == VERIFICATION_RESULTS_DIR.resolve()
+    if args.condition is not None and using_default_results:
+        if not experiment_id:
+            experiment_id = datetime.now().strftime("%Y%m%d_%H%M") + "_adhoc"
+            print(f"No --experiment-id provided; using {experiment_id}")
+        condition_code = ablation_code_from_condition(args.condition)
+        results_dir = verification_condition_dir(
+            model_key,
+            condition_code,
+            experiment_id=experiment_id,
+        )
 
     try:
         config_path = resolve_model_config_path(args.model, args.model_config)
@@ -170,11 +242,12 @@ def main() -> None:
     if args.limit is not None:
         jobs = jobs[: args.limit]
 
-    results_dir = args.results_dir.resolve()
+    results_dir = results_dir.resolve()
     output_manager = VerificationOutputManager(results_dir)
     results_index_path = results_dir / RESULTS_INDEX_FILENAME
 
     try:
+        # Adapter construction loads the checkpoint ONCE for this process.
         adapter = create_adapter(
             args.model,
             model_name=model_path,
@@ -183,7 +256,7 @@ def main() -> None:
             max_new_tokens=args.max_new_tokens,
             model_key=model_key,
             condition=args.condition or "",
-            experiment_id=args.experiment_id or "",
+            experiment_id=experiment_id or "",
         )
     except (RuntimeError, FileNotFoundError, ValueError) as error:
         print(error)
@@ -196,6 +269,10 @@ def main() -> None:
     print(f"  Dataset:      {dataset_dir}")
     if prompt_index is not None:
         print(f"  Prompt index: {prompt_index}")
+    if args.condition:
+        print(f"  Condition:    {args.condition}")
+    if experiment_id:
+        print(f"  Experiment:   {experiment_id}")
     print(f"  Results:      {results_dir}")
     print(f"  Model config: {config_path}")
     print(f"  Model path:   {model_path}")
@@ -208,7 +285,7 @@ def main() -> None:
         RunnerConfig(
             resume=args.resume,
             skip_existing=args.skip_existing,
-            experiment_id=args.experiment_id,
+            experiment_id=experiment_id,
             condition=args.condition,
             batch_size=args.batch_size,
         ),
