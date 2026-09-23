@@ -8,14 +8,17 @@ canonicalize_model_key() {
     local raw="${1:?model key required}"
     case "${raw}" in
         qwen|qwen25_vl_7b|qwen2_5_vl_7b|qwen2_5_vl) echo "qwen2_5_vl" ;;
+        qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
         internvl|internvl3_8b|internvl3) echo "internvl3" ;;
         phi4|phi4_multimodal) echo "phi4_multimodal" ;;
         glm46v_flash|glm_4_6v_flash) echo "glm_4_6v_flash" ;;
+        molmo2|molmo2_8b|molmo2-8b) echo "molmo2_8b" ;;
+        minicpm_v4_5|minicpm45|minicpm-v-4.5|minicpm_v45) echo "minicpm_v4_5" ;;
         llava) echo "llava" ;;
         gemma) echo "gemma" ;;
         *)
             echo "ERROR: unsupported model key: ${raw}" >&2
-            echo "Supported: qwen2_5_vl, phi4_multimodal, glm_4_6v_flash, internvl3, llava, gemma" >&2
+            echo "Supported: qwen2_5_vl, qwen3_vl, phi4_multimodal, glm_4_6v_flash, internvl3, llava, gemma, molmo2_8b, minicpm_v4_5" >&2
             return 1
             ;;
     esac
@@ -42,6 +45,9 @@ model_venv_path() {
     case "$(canonicalize_model_key "$1")" in
         phi4_multimodal) echo "${PHI_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-phi4}" ;;
         glm_4_6v_flash) echo "${GLM_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-glm46v}" ;;
+        qwen3_vl) echo "${QWEN3_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl}" ;;
+        molmo2_8b) echo "${MOLMO2_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-molmo2}" ;;
+        minicpm_v4_5) echo "${MINICPM_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-minicpm45}" ;;
         *) echo "" ;;
     esac
 }
@@ -49,7 +55,7 @@ model_venv_path() {
 # Default batch size per model (historical: Phi/GLM/InternVL often 1; Qwen/LLaVA 4).
 model_default_batch_size() {
     case "$(canonicalize_model_key "$1")" in
-        phi4_multimodal|glm_4_6v_flash|internvl3) echo "1" ;;
+        phi4_multimodal|glm_4_6v_flash|internvl3|qwen3_vl|molmo2_8b|minicpm_v4_5) echo "1" ;;
         *) echo "4" ;;
     esac
 }
@@ -58,11 +64,14 @@ model_default_batch_size() {
 model_default_checkpoint() {
     case "$(canonicalize_model_key "$1")" in
         qwen2_5_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct" ;;
+        qwen3_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-8B-Instruct" ;;
         phi4_multimodal) echo "/deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct" ;;
         glm_4_6v_flash) echo "/deac/csc/yangGrp/luoz23/models/GLM-4.6V-Flash" ;;
         internvl3) echo "/deac/csc/yangGrp/luoz23/models/InternVL3-8B-Instruct" ;;
         llava) echo "/deac/csc/yangGrp/luoz23/models/llava_onevision" ;;
         gemma) echo "/deac/csc/yangGrp/luoz23/models/gemma-3-12b-it" ;;
+        molmo2_8b) echo "/deac/csc/yangGrp/luoz23/models/Molmo2-8B" ;;
+        minicpm_v4_5) echo "/deac/csc/yangGrp/luoz23/models/MiniCPM-V-4_5" ;;
         *) echo "" ;;
     esac
 }
@@ -118,9 +127,58 @@ activate_model_environment() {
                         ;;
                 esac
                 ;;
+            qwen3_vl)
+                case "$(which python)" in
+                    */envs/wild-palm-qwen3vl/*) ;;
+                    *)
+                        echo "ERROR: python is not from wild-palm-qwen3vl: $(which python)" >&2
+                        return 1
+                        ;;
+                esac
+                python - <<'PY'
+from transformers import Qwen3VLForConditionalGeneration  # noqa: F401
+import transformers
+print("QWEN3_TRANSFORMERS_OK", transformers.__version__)
+PY
+                ;;
+            molmo2_8b)
+                case "$(which python)" in
+                    */envs/wild-palm-molmo2/*) ;;
+                    *)
+                        echo "ERROR: python is not from wild-palm-molmo2: $(which python)" >&2
+                        return 1
+                        ;;
+                esac
+                python - <<'PY'
+import transformers
+assert transformers.__version__ == "4.57.1", transformers.__version__
+from transformers import AutoModelForImageTextToText, AutoProcessor  # noqa: F401
+import molmo_utils  # noqa: F401
+print("MOLMO2_TRANSFORMERS_PIN_OK", transformers.__version__)
+PY
+                ;;
+            minicpm_v4_5)
+                case "$(which python)" in
+                    */envs/wild-palm-minicpm45/*) ;;
+                    *)
+                        echo "ERROR: python is not from wild-palm-minicpm45: $(which python)" >&2
+                        return 1
+                        ;;
+                esac
+                python - <<'PY'
+import transformers
+import torch
+import torchvision  # noqa: F401
+print("MINICPM_TRANSFORMERS_OK", transformers.__version__)
+print("MINICPM_TORCH_OK", torch.__version__)
+assert transformers.__version__.startswith("4.51"), (
+    f"MiniCPM-V-4.5 requires transformers==4.51.0, got {transformers.__version__}"
+)
+PY
+                ;;
         esac
     else
-        # Default-cluster models (Qwen / LLaVA / Gemma / InternVL): mirror historical
+        # Default-cluster models (Qwen2.5 / LLaVA / Gemma / InternVL): mirror historical
         # jobs/run_qwen_ablation.slurm — do NOT module-load a bare Python that lacks
         # transformers. Use the submitting shell's python (/usr/bin/python on DEAC).
         export PYTHONPATH="${project_dir}${PYTHONPATH:+:${PYTHONPATH}}"

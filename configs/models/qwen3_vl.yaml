@@ -1,11 +1,20 @@
-# Qwen3-VL verification (planned — not yet implemented)
+# Qwen3-VL-8B-Instruct verification (local backend)
 registry_key: qwen3_vl
-model_label: Qwen3-VL
-model_id: Qwen/Qwen3-VL-8B-Instruct
-dtype: auto
+model_label: Qwen3-VL-8B-Instruct
+backend: local
+# Official HF repo: Qwen/Qwen3-VL-8B-Instruct
+# Cluster resolution uses model_path; model_id left null so local checkpoint wins.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/Qwen3-VL-8B-Instruct
+dtype: bfloat16
 device_map: auto
 max_new_tokens: 512
 do_sample: false
 trust_remote_code: false
-generation:
-  attn_implementation: sdpa
+# Optional: flash_attention_2 when available; default leaves Transformers default.
+attn_implementation: null
+min_transformers: "4.57.0"
+hf_repo: Qwen/Qwen3-VL-8B-Instruct
+dependencies:
+  - qwen-vl-utils
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl

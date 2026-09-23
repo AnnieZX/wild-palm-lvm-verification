@@ -137,6 +137,17 @@ print("GLM_TRANSFORMERS_PIN_OK", transformers.__version__)
 PY
 fi
 
+# Molmo2: assert official card pin (transformers==4.57.1) + remote-code classes.
+if [[ "${MODEL}" == "molmo2_8b" ]]; then
+    python - <<'PY'
+import transformers
+assert transformers.__version__ == "4.57.1", transformers.__version__
+from transformers import AutoModelForImageTextToText, AutoProcessor  # noqa: F401
+import molmo_utils  # noqa: F401
+print("MOLMO2_TRANSFORMERS_PIN_OK", transformers.__version__)
+PY
+fi
+
 if [[ ! -f "${PROMPT_INDEX}" ]]; then
     echo "ERROR: missing prompt index: ${PROMPT_INDEX}" >&2
     exit 1

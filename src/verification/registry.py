@@ -15,9 +15,17 @@ _REGISTRY_ALIASES: dict[str, str] = {
     "qwen": "qwen2_5_vl",
     "qwen25_vl_7b": "qwen2_5_vl",
     "qwen2_5_vl_7b": "qwen2_5_vl",
+    "qwen3_vl_8b": "qwen3_vl",
+    "qwen3vl": "qwen3_vl",
+    "qwen3vl_8b": "qwen3_vl",
     "internvl3_8b": "internvl3",
     "phi4": "phi4_multimodal",
     "glm46v_flash": "glm_4_6v_flash",
+    "molmo2": "molmo2_8b",
+    "molmo2-8b": "molmo2_8b",
+    "minicpm45": "minicpm_v4_5",
+    "minicpm-v-4.5": "minicpm_v4_5",
+    "minicpm_v45": "minicpm_v4_5",
 }
 
 
@@ -52,11 +60,18 @@ def _register_builtin_adapters() -> None:
     from src.lvm.glm_4_6v_flash_verification_adapter import build_glm_4_6v_flash_adapter
     from src.lvm.internvl_verification_adapter import build_internvl_adapter
     from src.lvm.llava_verification_adapter import build_llava_adapter
+    from src.lvm.minicpm_v4_5_verification_adapter import build_minicpm_v4_5_adapter
+    from src.lvm.molmo2_verification_adapter import build_molmo2_adapter
     from src.lvm.phi4_multimodal_verification_adapter import build_phi4_multimodal_adapter
     from src.lvm.qwen_verification_adapter import build_qwen_adapter
+    from src.lvm.qwen3_vl_verification_adapter import build_qwen3_vl_adapter
 
     register_adapter("qwen2_5_vl", build_qwen_adapter)
     register_adapter("qwen", build_qwen_adapter)
+    register_adapter("qwen3_vl", build_qwen3_vl_adapter)
+    register_adapter("qwen3_vl_8b", build_qwen3_vl_adapter)
+    register_adapter("qwen3vl", build_qwen3_vl_adapter)
+    register_adapter("qwen3vl_8b", build_qwen3_vl_adapter)
     register_adapter("llava", build_llava_adapter)
     register_adapter("gemma", build_gemma_adapter)
     register_adapter("internvl3", build_internvl_adapter)
@@ -65,6 +80,12 @@ def _register_builtin_adapters() -> None:
     register_adapter("glm46v_flash", build_glm_4_6v_flash_adapter)
     register_adapter("phi4_multimodal", build_phi4_multimodal_adapter)
     register_adapter("phi4", build_phi4_multimodal_adapter)
+    register_adapter("molmo2_8b", build_molmo2_adapter)
+    register_adapter("molmo2", build_molmo2_adapter)
+    register_adapter("molmo2-8b", build_molmo2_adapter)
+    register_adapter("minicpm_v4_5", build_minicpm_v4_5_adapter)
+    register_adapter("minicpm45", build_minicpm_v4_5_adapter)
+    register_adapter("minicpm-v-4.5", build_minicpm_v4_5_adapter)
 
 
 _register_builtin_adapters()

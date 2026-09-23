@@ -1,0 +1,32 @@
+# Molmo2-8B verification (local backend)
+# Official HF: https://huggingface.co/allenai/Molmo2-8B
+registry_key: molmo2_8b
+model_label: Molmo2-8B
+backend: local
+# Official HF repo: allenai/Molmo2-8B
+# Cluster resolution uses model_path; model_id left null so local checkpoint wins.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/Molmo2-8B
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+# Required by official model card (remote Molmo2 processor/model code).
+trust_remote_code: true
+# Official Quick Start pin (incompatible with GLM 5.17 / other model envs).
+min_transformers: "4.57.1"
+pinned_transformers: "4.57.1"
+hf_repo: allenai/Molmo2-8B
+processor_class: AutoProcessor
+model_class: AutoModelForImageTextToText
+chat_path: apply_chat_template
+dependencies:
+  - transformers==4.57.1
+  - torch
+  - pillow
+  - einops
+  - torchvision
+  - accelerate
+  - decord2
+  - molmo_utils
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-molmo2

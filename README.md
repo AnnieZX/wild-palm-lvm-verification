@@ -4,224 +4,124 @@
 
 A **model-agnostic Vision-Language Model (VLM) verification framework** for assessing the reliability of wild palm detections in UAV orthomosaic imagery.
 
-This repository **verifies existing YOLO detections** — it does not perform object detection. LabelMe ground truth is used only for **evaluation**, not during inference.
-
-**Architecture freeze:** July 2026 · See [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md)
+This repository **verifies existing YOLO palm detections**. It does **not** perform object detection. LabelMe ground truth is used only for **evaluation**, not during inference.
 
 ---
 
-## Project Overview
+## Scientific objective
 
-Large-scale palm monitoring requires reviewing thousands of detector outputs. This project separates detection from verification:
+YOLO proposes candidate palm detections. A VLM acts as a **second-stage verifier** and classifies each detection as:
 
-```
-YOLO Detection                    Verification Framework                 Evaluation
-────────────────                  ──────────────────────                 ──────────
-Find candidate boxes       →      Judge each detection            →     Match to GT
-Produce confidence scores         Reliable / Uncertain / Unreliable       Compute metrics
-```
+| Decision | Meaning |
+|----------|---------|
+| **Reliable** | Accept as a valid palm detection |
+| **Uncertain** | Abstain; defer to human review |
+| **Unreliable** | Reject as a false or invalid detection |
 
-| Stage | Role | Primary output |
-|-------|------|----------------|
-| **YOLO detection** | YOLO11x proposes bounding boxes on orthomosaic patches | `outputs/full_inference/predictions_full.json` |
-| **Verification** | A VLM reviews each detection with structured prompts | `outputs/verification/<model>/<experiment_id>/A*/sample_*.json` |
-| **Evaluation** | Greedy IoU matching + binary metrics | `outputs/evaluation/<model>/<experiment_id>/A*/` |
+**Research question:** Can modern VLMs reject detector false positives while preserving true palm detections, and how does input context (**A1–A5**) affect verification performance?
 
-Official protocols: [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md) · [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md)
+All compared models use the same **frozen** benchmark: identical detection set, A1–A5 prompt semantics, shared response parser, and shared evaluator.
 
 ---
 
-## Repository Architecture
+## Pipeline overview
+
+```
+YOLO Detection                 VLM Verification                      Evaluation
+────────────────               ────────────────                      ──────────
+Candidate boxes         →      Reliable / Uncertain / Unreliable  →  Match to LabelMe GT
++ confidence scores            (frozen A1–A5 inputs)                 Compute metrics
+```
 
 ```mermaid
 flowchart TB
-    RAW["Raw Images"]
-    YOLO["YOLO Detection"]
-    DS["Verification Dataset Generation"]
-    ABL["A1–A5 Ablation Builder"]
+    BENCH["Frozen A1–A5 benchmark"]
     RUN["VerificationRunner"]
     REG["Registry"]
-    ADP["Model Adapter"]
-    VER["Model Verifier"]
-    CLN["Cleanup Layer"]
-    PAR["Shared Response Parser"]
-    REC["Result Record"]
-    OUT["Output Manager"]
-    EVAL["Ground Truth Evaluation"]
+    LOC["Local Adapter"]
+    API["API Adapter<br/>(architecture-ready; not yet benchmarked)"]
+    CKPT["Local checkpoint"]
+    HTTP["Provider HTTP/API"]
+    OUTC["Canonical outcome"]
+    PAR["Shared parser"]
+    REC["Canonical record"]
+    EVAL["Shared evaluator"]
     MET["Metrics"]
-    VIZ["Visualization"]
 
-    RAW --> YOLO --> DS --> ABL --> RUN
-    RUN --> REG --> ADP --> VER --> CLN --> PAR --> REC --> OUT
-    OUT --> EVAL --> MET --> VIZ
+    BENCH --> RUN --> REG
+    REG --> LOC --> CKPT --> OUTC
+    REG --> API --> HTTP --> OUTC
+    OUTC --> PAR --> REC --> EVAL --> MET
 ```
 
-Detailed diagrams: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+**Local path (production today):** Frozen A1–A5 → generic runner → registry → model adapter → local checkpoint → model-native preprocessing/generation → shared parser → shared evaluator.
 
-| Stage | Module / script | Responsibility |
-|-------|-----------------|----------------|
-| Dataset | `scripts/pipeline/generate_verification_dataset.py` | One verification sample per YOLO detection |
-| Ablation inputs | `scripts/pipeline/build_ablation_verification_prompts.py` | A1–A5 image variants + prompt files |
-| Inference CLI | `scripts/run_verification.py` | Load jobs, create adapter, run runner |
-| Runner | `src/verification/runner.py` | Resume, iteration, persistence (model-agnostic) |
-| Registry | `src/verification/registry.py` | Map `--model` to adapter factory |
-| Adapter | `src/lvm/*_verification_adapter.py` | `verify(job)` — model-specific inference |
-| Verifier | `src/lvm/*_verifier.py` | Transformers load + generate |
-| Cleanup | `src/lvm/parsers/cleanup.py` | Model-specific text normalization (optional) |
-| Parser | `src/lvm/parsers/base.py` | Shared JSON extraction + decision validation |
-| Record | `src/verification/records.py` | Canonical `sample_*.json` schema |
-| Output | `src/verification/output_manager.py` | JSON files + `results_index.csv` |
-| Evaluation | `scripts/evaluate_verification_against_groundtruth.py` | Greedy IoU matching vs LabelMe |
-| Metrics | `scripts/compute_verification_metrics.py` | Precision, Recall, F1 (Uncertain excluded) |
+**API path:** Same runner/registry/parser/evaluator contract is reserved in `BaseVerificationAdapter` for a future `backend=api` adapter. **No API models have been benchmarked** in this repository.
 
 ---
 
-## Repository Structure
+## Current model status
 
-```
-wild-palm-lvm-verification/
-├── configs/
-│   ├── model.yaml                 # Legacy Qwen2.5 fallback (active_model)
-│   └── models/                    # Per-model configs (frozen pattern)
-│       ├── qwen2_5_vl.yaml
-│       ├── llava.yaml
-│       ├── gemma4.yaml
-│       └── qwen3_vl.yaml
-├── scripts/
-│   ├── run_verification.py        # Main inference entry point
-│   ├── run_ablation_verification.py
-│   ├── run_qwen_ablation_experiment.sh
-│   ├── evaluate_verification_against_groundtruth.py
-│   ├── compute_verification_metrics.py
-│   ├── pipeline/                  # Dataset + prompt preparation
-│   └── visualization/
-├── src/
-│   ├── verification/              # Frozen framework (runner, registry, jobs, records)
-│   ├── lvm/                       # Model adapters, verifiers, parsers
-│   ├── prompts/                   # A1–A5 prompt templates
-│   ├── preprocessing/             # Dataset overlays, GT extraction
-│   ├── evaluation/                # Greedy GT matching
-│   ├── visualization/             # Publication figures
-│   ├── config/                    # Model config loader
-│   └── paths.py                   # Output path helpers
-├── jobs/                          # SLURM submission scripts
-├── docs/                          # Protocols, architecture, freeze contract
-├── archive/                       # Superseded experiments (not production)
-├── outputs/                       # Generated artifacts (gitignored)
-└── logs/                          # SLURM logs
-```
+Status terms: **Complete** · **Qualified** · **Partial** · **Collapsed** · **Integrated / not yet qualified**.
 
-| Directory | Purpose |
-|-----------|---------|
-| **`scripts/`** | CLI entry points. Pipeline prep under `scripts/pipeline/`. |
-| **`src/`** | Shared library: frozen framework + model adapters. |
-| **`jobs/`** | Cluster SLURM jobs and submit wrappers. |
-| **`configs/`** | Model checkpoints and generation settings. Use `configs/models/<key>.yaml`. |
-| **`docs/`** | Architecture, evaluation protocol, ablation design, model status. |
-| **`archive/`** | Historical prototypes; not part of the active pipeline. |
-| **`outputs/`** | All experiment artifacts. Layout in [`outputs/README.md`](outputs/README.md). |
+| Model | Approx. scale | Integration | Qualification | Full A1–A5 @5,747 | Behavior / key observation |
+|-------|---------------|-------------|---------------|-------------------|----------------------------|
+| **Qwen2.5-VL-7B-Instruct** | ~7B | `qwen2_5_vl` | Non-collapse @1000 | **Complete** (A1–A5) | Established baseline; uses all three labels; A5 strongest specificity |
+| **Qwen3-VL-8B-Instruct** | ~8B | `qwen3_vl` | **Qualified** (sanity1, smoke20, A1@1000) | Not started | No collapse on A1@1000; Spec 0.51, BalAcc 0.64 |
+| **Phi-4-multimodal-instruct** | ~5.6B | `phi4_multimodal` | Non-collapse @1000 | **Complete** | Zero Uncertain on full run; effectively binary Reliable/Unreliable |
+| **GLM-4.6V-Flash** | Flash VLM | `glm_4_6v_flash` | Non-collapse @1000 | **Complete** | Non-collapse; conservative A5 tradeoff (high Spec, lower recall) |
+| **LLaVA-OneVision** | ~7B | `llava` | A1@1000 only | — | **Collapsed** — 100% Reliable |
+| **Gemma 3 12B IT** | ~12B | `gemma` | A1@1000 only | — | **Collapsed** — 100% Reliable |
+| **InternVL3-8B** | ~8B | `internvl3` | Stage 0 pass; Stage 1 fail | — | **Partial** — not A1@1000-qualified (parse failures; Spec 0) |
+| **MiniCPM-V-4.5** | ~8.7B | `minicpm_v4_5` | Not started | — | **Integrated**; checkpoint present; **no inference submitted** |
+| **Molmo2-8B** | ~8B | `molmo2_8b` | Not started | — | **Integrated**; env ready; **checkpoint not downloaded**; no inference |
+
+Registry keys and configs: `configs/models/<key>.yaml`. Aliases are listed in `src/verification/registry.py`.
 
 ---
 
-## Verification Framework
+## Current Benchmark Snapshot
 
-The frozen framework lives in `src/verification/`. Adding a new VLM does **not** modify these components.
+**Full dataset (N = 5,747):** GT+ = 4,685 · GT− = 1,062 · always-Reliable accuracy ≈ **0.815**.
 
-### VerificationRunner (`runner.py`)
+**A1 @1,000 qualification slice:** GT+ = 928 · GT− = 72 · always-Reliable accuracy = **0.928**.
 
-Orchestrates inference: resume filtering, job iteration, calls `adapter.verify(job)`, persists results via `OutputManager`.
+Do not compare 1,000-sample metrics to full-set metrics as if they were the same experiment.
 
-### VerificationJob (`jobs.py`)
+### Full-scale A1–A5 @5,747 (headline)
 
-```python
-VerificationJob(sample_id, image_path, prompt_path)
-```
+| Model | Status | Headline behavior |
+|-------|--------|-------------------|
+| **Qwen2.5-VL** | Complete | Three-way decisions; A1 Spec 0.31 / BalAcc 0.62; A5 Spec **0.72** / BalAcc **0.68** (more conservative) |
+| **GLM-4.6V-Flash** | Complete | Non-collapse; A1 Spec 0.55 / BalAcc 0.62; A4 F1 0.81; A5 Spec **0.76** |
+| **Phi-4 multimodal** | Complete | **0 Uncertain** on all A1–A5; A1 Acc 0.77 / Spec 0.23; A4 Spec **0.67** / BalAcc **0.67** |
 
-Loaded from `prompt_index.csv` or `index.csv`. Prompts are pre-built on disk — adapters read `.txt` files.
+Canonical Qwen full metrics: [`docs/QWEN_FULL_A1_A5_RESULTS.md`](docs/QWEN_FULL_A1_A5_RESULTS.md).
 
-### BaseVerificationAdapter (`base_adapter.py`)
+### Qualification / subset highlights
 
-```python
-verify(job: VerificationJob) -> VerificationOutcome
-```
+| Model | Experiment | Mix (R / U / Ur) | Acc | Spec | BalAcc | Verdict |
+|-------|------------|------------------|-----|------|--------|---------|
+| **Qwen3-VL** A1@1000 | `qwen3vl_A1_1000` | 724 / 48 / 228 | 0.7616 | 0.5077 | 0.6439 | **Qualified** (no collapse) |
+| **Qwen2.5-VL** A1@1000 | `20260706_2214` | 672 / 272 / 56 | 0.90 | 0.24 | 0.59 | Non-collapse baseline |
+| **LLaVA** A1@1000 | `20260719_1734` | 1000 / 0 / 0 | 0.928 | **0** | **0.5** | **Collapsed** (= always-Reliable) |
+| **Gemma 3** A1@1000 | `20260802_1702` | 1000 / 0 / 0 | 0.928 | **0** | **0.5** | **Collapsed** (= always-Reliable) |
 
-Adapters implement inference only. Status values: `ok`, `parse_error`, `inference_error`.
-
-### Registry (`registry.py`)
-
-```python
-create_adapter(model, **kwargs)  # model = registry key
-```
-
-Primary key: `qwen2_5_vl`. Alias: `qwen`.
-
-### OutputManager (`output_manager.py`)
-
-Writes `sample_*.json` and atomically updates `results_index.csv`.
-
-### ResultRecord (`records.py`)
-
-`build_result_record()` produces the canonical JSON schema. Evaluation reads only `decision`.
-
-### Parser (`src/lvm/parsers/`)
-
-```
-raw model text → cleanup (model-specific) → JSON parse → decision validation
-```
-
-Shared across all models. Shim at `src/lvm/verification_response_parser.py`.
-
-### Configuration (`src/config/model_config.py`)
-
-Per-model YAML in `configs/models/`. Resolution: `--model-path` → config `model_id` → legacy `configs/model.yaml` (Qwen2.5 only).
-
-### Resume (`src/utils/verification_resume.py`)
-
-Logical identity: `(model_key, condition, sample_id)` via directory isolation:
-
-```
-outputs/verification/<model_key>/<experiment_id>/<A1..A5>/sample_*.json
-```
-
-Pass `--resume` to skip completed samples. Legacy paths under `verification/qwen/` are auto-detected.
-
-Full contract: [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md)
+Accuracy and F1 alone are misleading on this imbalanced task. Prefer **specificity** and **balanced accuracy** when judging verification skill.
 
 ---
 
-## Multi-Model Architecture
+## Ablation study (A1–A5)
 
-| Model | Registry key | Status |
-|-------|--------------|--------|
-| **Qwen2.5-VL** | `qwen2_5_vl` (alias: `qwen`) | Production baseline |
-| **LLaVA** | `llava` | Planned |
-| **Gemma 4** | `gemma4` | Planned |
-| **Qwen3-VL** | `qwen3_vl` | Planned |
+Five frozen conditions isolate how **visual context** and **detector metadata** affect VLM verification. YOLO boxes, dataset, matching, parser, and metrics stay fixed; only VLM inputs change.
 
-Adding a new model requires only:
-
-1. Verifier — `src/lvm/<model>_verifier.py`
-2. Adapter — `src/lvm/<model>_verification_adapter.py`
-3. Config — `configs/models/<key>.yaml`
-4. Registry entry — `register_adapter()` in `registry.py`
-
-Details: [`docs/SUPPORTED_MODELS.md`](docs/SUPPORTED_MODELS.md)
-
----
-
-## Ablation Study
-
-Five conditions (A1–A5) test how **input information** affects verification. YOLO detections, dataset, matching, and metrics are fixed. Only VLM inputs change.
-
-| Condition | Image input | Metadata in prompt | Purpose |
-|-----------|-------------|-------------------|---------|
-| **A1** | Single-detection overlay | None | Visual-only baseline |
-| **A2** | Overlay | YOLO confidence | Effect of detector confidence |
-| **A3** | Overlay | Confidence + bbox geometry | Effect of geometric metadata |
-| **A4** | Dual panel (overlay + crop) | YOLO confidence | Local detail with full context |
-| **A5** | Bbox crop only | YOLO confidence | Context vs crop-only (A4 vs A5) |
-
-Inputs: `outputs/verification_ablation_<N>/` · Results: `outputs/verification/<model_key>/<experiment_id>/A1` … `A5`
+| Condition | Image input | Metadata in prompt |
+|-----------|-------------|--------------------|
+| **A1** | Overlay only (dimmed surround + green bbox) | None |
+| **A2** | Overlay | YOLO confidence |
+| **A3** | Overlay | Confidence + bbox geometry |
+| **A4** | Dual panel (overlay + crop) | YOLO confidence |
+| **A5** | Crop only | YOLO confidence |
 
 Design: [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md)
 
@@ -229,138 +129,179 @@ Design: [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md)
 
 ## Evaluation
 
-Ground truth from LabelMe (`label == "palm"`), converted to axis-aligned boxes.
+Ground truth: LabelMe annotations with `label == "palm"`, converted to axis-aligned boxes.
 
-**Matching:** Greedy one-to-one assignment by descending IoU, threshold **0.5** (Pascal VOC / COCO).
+**Matching:** Greedy one-to-one assignment by descending IoU; accept if **IoU ≥ 0.5**.
 
-**Verification labels:**
+**Binary roles:**
 
-| Prediction | Binary role |
-|------------|-------------|
+| Prediction | Role |
+|------------|------|
 | Reliable | Positive |
 | Unreliable | Negative |
-| Uncertain | **Excluded** from Precision / Recall / F1 |
+| Uncertain | **Excluded** from Precision / Recall / F1 / Accuracy / Specificity / Balanced Accuracy |
 
-Metrics: TP, FP, FN, TN, Precision, Recall, F1, Accuracy — computed only on Reliable + Unreliable predictions.
+Reported metrics: TP, TN, FP, FN, Precision, Recall, Specificity, F1, Accuracy, Balanced Accuracy (Spec/BalAcc derived from the same confusion counts; Uncertain rate reported separately over the full sample count).
 
 Protocol: [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md)
 
 ---
 
-## Reproducibility
+## Running experiments
 
-| Mechanism | Location |
-|-----------|----------|
-| **`results_index.csv`** | Per-condition index: `sample_id`, `result_path`, `status` |
-| **Resume** | `--resume` skips existing `sample_*.json` in results directory |
-| **Output schema** | Frozen in `build_result_record()` — see FRAMEWORK_FREEZE |
-| **Model configs** | `configs/models/<registry_key>.yaml` |
-| **Experiment dirs** | `outputs/verification/<model_key>/<experiment_id>/A*/` |
+Primary launcher: **`scripts/submit_model_ablation.sh`** → **`jobs/run_verification.slurm`**, with per-model env/checkpoint helpers in **`jobs/lib/model_runtime.sh`**.
 
-Re-running evaluation on the same inference outputs produces identical metrics (deterministic matching).
+Defaults to **dry-run** (prints `sbatch` commands; does not submit). Use `--submit` to enqueue.
 
----
-
-## Running Experiments
-
-### Cluster setup
+### A1 qualification / subset
 
 ```bash
-conda create -n palm-lvm python=3.11 && conda activate palm-lvm
-pip install -r requirements_cluster.txt
-python scripts/pipeline/check_cluster_environment.py
-sbatch jobs/qwen_download.slurm
+# Preview (default)
+DRY_RUN=1 ./scripts/submit_model_ablation.sh qwen3_vl \
+  --conditions A1 --limit 1000 \
+  --experiment-id qwen3vl_A1_1000
+
+# Submit
+./scripts/submit_model_ablation.sh qwen3_vl \
+  --conditions A1 --limit 1000 \
+  --experiment-id qwen3vl_A1_1000 \
+  --submit
 ```
 
-### Prerequisites
+### Full A1–A5 @5,747
 
 ```bash
-python scripts/run_full_inference.py
-python scripts/pipeline/generate_verification_dataset.py
-python scripts/pipeline/build_ablation_verification_prompts.py --sample-count 1000
+./scripts/submit_model_ablation.sh phi4_multimodal \
+  --conditions A1,A2,A3,A4,A5 \
+  --limit 5747 \
+  --ablation-size 5747 \
+  --experiment-id 20260921_phi4_A1A5_5747 \
+  --time 24:00:00 \
+  --submit
 ```
 
-### Single model / single condition
+### Design properties
+
+- **`MODEL=<registry_key>`** selects adapter, config, isolated env (when required), and default checkpoint
+- One model loaded **once per Slurm job** (one condition per job)
+- Outputs isolated: `outputs/verification/<model>/<experiment_id>/A*/`
+- Evaluation written to: `outputs/evaluation/<model>/<experiment_id>/A*/`
+- **`--resume` / `RESUME=1`** skips completed samples
+- Per-model isolated Python environments where needed (Phi-4, GLM, Qwen3-VL, MiniCPM, Molmo)
+
+### Direct CLI (single condition)
 
 ```bash
 python scripts/run_verification.py \
   --model qwen2_5_vl \
   --prompt-index outputs/verification_ablation_1000/A1_overlay_only/prompt_index.csv \
   --results-dir outputs/verification/qwen2_5_vl/my_run/A1 \
-  --batch-size 4
+  --batch-size 4 \
+  --resume
 ```
 
-### Full A1–A5 experiment (cluster)
-
-```bash
-SAMPLE_SIZE=1000 bash jobs/submit_qwen_ablation.sh
-```
-
-Uses `MODEL=qwen2_5_vl` by default. Orchestrator: `scripts/run_qwen_ablation_experiment.sh`.
-
-### Resume interrupted run
-
-```bash
-EXPERIMENT_ID=20260708_0020 SAMPLE_SIZE=1000 bash scripts/submit_qwen_A5_resume.sh
-```
-
-Automatically detects legacy outputs under `outputs/verification/qwen/` when resuming Qwen2.5 runs.
-
-### Evaluation and metrics
-
-```bash
-python scripts/evaluate_verification_against_groundtruth.py \
-  --results-dir outputs/verification/qwen2_5_vl/<experiment_id>/A1 \
-  --index-csv outputs/verification_dataset/index.csv \
-  --output-dir outputs/evaluation/qwen2_5_vl/<experiment_id>/A1 \
-  --condition-code A1
-
-python scripts/compute_verification_metrics.py \
-  --evaluation-dir outputs/evaluation/qwen2_5_vl/<experiment_id>/A1
-```
-
-### Visualization
-
-```bash
-python scripts/visualization/visualize_verification.py \
-  --model qwen2_5_vl \
-  --experiment-id <experiment_id> \
-  --sample-count 50
-```
-
-Guide: [`docs/visualization.md`](docs/visualization.md)
+Legacy Qwen-only orchestrators (`scripts/run_qwen_ablation_experiment.sh`, `jobs/submit_qwen_ablation.sh`) remain for historical Qwen2.5 runs; new models should use `submit_model_ablation.sh`.
 
 ---
 
-## Future Work
+## Adding a New VLM
 
-- Implement LLaVA, Gemma 4, and Qwen3-VL adapters (configs and registry slots prepared)
-- Cross-model comparison on identical A1–A5 inputs
-- Public benchmark release with frozen evaluation protocol
+Integration contract (do **not** change frozen A1–A5 semantics, shared parser, or evaluator for one model):
 
-Integration plan: [`docs/MULTI_MODEL_INTEGRATION_PLAN.md`](docs/MULTI_MODEL_INTEGRATION_PLAN.md)
+1. Model-specific verifier — `src/lvm/<model>_verifier.py`
+2. `VerificationAdapter` — `src/lvm/<model>_verification_adapter.py`
+3. Config — `configs/models/<key>.yaml`
+4. Registry entry — `register_adapter()` in `src/verification/registry.py`
+5. Isolated runtime environment (if dependency pins conflict) — wire in `jobs/lib/model_runtime.sh`
+6. Static validation (import / load / chat-template wiring)
+7. **sanity1** (n=1 smoke)
+8. **smoke20** collapse check
+9. **A1@1000** qualification (non-collapse gates)
+10. **Full A1–A5 @5,747** only after qualification passes
+
+Use the model’s native processor / chat template. Load the checkpoint **once per job**.
 
 ---
 
-## Documentation Index
+## Repository structure
+
+```
+wild-palm-lvm-verification/
+├── configs/
+│   ├── model.yaml                 # Legacy Qwen2.5 fallback
+│   └── models/                    # Per-model configs
+│       ├── qwen2_5_vl.yaml
+│       ├── qwen3_vl.yaml
+│       ├── phi4_multimodal.yaml
+│       ├── glm_4_6v_flash.yaml
+│       ├── internvl3.yaml
+│       ├── llava.yaml
+│       ├── gemma.yaml
+│       ├── minicpm_v4_5.yaml
+│       └── molmo2_8b.yaml
+├── scripts/
+│   ├── run_verification.py        # Main inference CLI
+│   ├── submit_model_ablation.sh   # Generic Slurm submitter
+│   ├── evaluate_verification_against_groundtruth.py
+│   ├── compute_verification_metrics.py
+│   └── pipeline/                  # Dataset + A1–A5 prompt prep
+├── src/
+│   ├── verification/              # Runner, registry, jobs, records
+│   ├── lvm/                       # Adapters, verifiers, parsers
+│   ├── prompts/                   # A1–A5 templates
+│   ├── evaluation/                # Greedy GT matching
+│   └── config/                    # Model config loader
+├── jobs/
+│   ├── run_verification.slurm     # Generic per-condition job
+│   └── lib/model_runtime.sh       # Env / checkpoint / key helpers
+├── docs/                          # Protocols, results, status
+├── archive/                       # Superseded experiments
+├── outputs/                       # Generated artifacts (gitignored)
+└── logs/                          # Slurm logs
+```
+
+---
+
+## Framework components
+
+| Component | Location | Role |
+|-----------|----------|------|
+| Runner | `src/verification/runner.py` | Resume, iteration, persistence |
+| Registry | `src/verification/registry.py` | `--model` → adapter factory |
+| Adapter | `src/lvm/*_verification_adapter.py` | `verify(job)` only |
+| Parser | `src/lvm/parsers/` | Shared JSON + decision validation |
+| Records | `src/verification/records.py` | Canonical `sample_*.json` |
+| Evaluation | `scripts/evaluate_verification_against_groundtruth.py` | IoU matching vs LabelMe |
+
+Architecture freeze contract: [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md)
+
+---
+
+## Next steps
+
+- Run Qwen3-VL full A1–A5 @5,747 after A1@1000 qualification (already complete)
+- Qualify MiniCPM-V-4.5 (sanity1 → smoke20 → A1@1000)
+- Download and qualify Molmo2-8B
+- Cross-model comparison on the identical full benchmark (Qwen2.5, GLM, Phi-4, then qualified successors)
+- Optional larger / API reference models (architecture-ready; not selected for execution yet)
+- Publication-quality analysis and visualization
+
+---
+
+## Documentation index
 
 | Document | Contents |
 |----------|----------|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagrams (Mermaid) |
-| [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md) | Frozen APIs and fairness contract |
-| [`docs/SUPPORTED_MODELS.md`](docs/SUPPORTED_MODELS.md) | Per-model status |
+| [`docs/EXPERIMENT_STATUS_CANONICAL.md`](docs/EXPERIMENT_STATUS_CANONICAL.md) | Canonical run inventory (may lag newest completed trees) |
+| [`docs/QWEN_FULL_A1_A5_RESULTS.md`](docs/QWEN_FULL_A1_A5_RESULTS.md) | Qwen2.5 full A1–A5 @5,747 metrics |
+| [`docs/MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md`](docs/MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md) | Collapse analysis (LLaVA / Gemma) |
 | [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md) | GT matching and metrics |
 | [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md) | A1–A5 design |
-| [`docs/visualization.md`](docs/visualization.md) | Figure generation |
-
----
-
-## Archive
-
-Superseded prototypes and early experiments: [`archive/`](archive/README.md). Not part of the production pipeline.
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagrams |
+| [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md) | Frozen APIs and fairness contract |
 
 ---
 
 ## Author
 
-**Annie Luo** · CS Honors Thesis · Mentor: **Fan Yang** · Wake Forest University · May 2026
+**Annie Luo** · CS Honors Thesis · Mentor: **Fan Yang** · Wake Forest University · **2026**

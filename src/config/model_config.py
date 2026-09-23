@@ -22,6 +22,9 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "gemma": "gemma",
     "gemma4": "gemma4",
     "qwen3_vl": "qwen3_vl",
+    "qwen3_vl_8b": "qwen3_vl",
+    "qwen3vl": "qwen3_vl",
+    "qwen3vl_8b": "qwen3_vl",
     "internvl3": "internvl3",
     "internvl": "internvl3",
     "internvl3_8b": "internvl3",
@@ -29,6 +32,13 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "glm46v_flash": "glm_4_6v_flash",
     "phi4_multimodal": "phi4_multimodal",
     "phi4": "phi4_multimodal",
+    "molmo2_8b": "molmo2_8b",
+    "molmo2": "molmo2_8b",
+    "molmo2-8b": "molmo2_8b",
+    "minicpm_v4_5": "minicpm_v4_5",
+    "minicpm45": "minicpm_v4_5",
+    "minicpm-v-4.5": "minicpm_v4_5",
+    "minicpm_v45": "minicpm_v4_5",
 }
 
 CHECKPOINT_KEYS = ("model_id", "model_path", "active_model")

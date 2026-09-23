@@ -1,0 +1,30 @@
+# MiniCPM-V-4.5 verification (local backend)
+registry_key: minicpm_v4_5
+model_label: MiniCPM-V-4.5
+backend: local
+# Official HF repo: openbmb/MiniCPM-V-4_5
+# Cluster resolution uses model_path; model_id left null so local checkpoint wins.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/MiniCPM-V-4_5
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+# Official chat() API parameter is `sampling` (bool); we map do_sample=False
+# via sampling=True + do_sample=False kwargs (see verifier docstring).
+# Official sampling=False path uses num_beams=3 (beam search), not greedy.
+sampling: true
+enable_thinking: false
+trust_remote_code: true
+# Official card: sdpa or flash_attention_2 (no eager). Prefer sdpa (optional FA2).
+attn_implementation: sdpa
+# Official remote-code card / generation_config cite transformers 4.51.0.
+min_transformers: "4.51.0"
+hf_repo: openbmb/MiniCPM-V-4_5
+parameter_count: ~8.7B
+license: apache-2.0
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-minicpm45
+aliases:
+  - minicpm45
+  - minicpm_v4_5
+  - minicpm-v-4.5
