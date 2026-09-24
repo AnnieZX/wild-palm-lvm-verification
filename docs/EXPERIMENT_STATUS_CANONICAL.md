@@ -1,9 +1,49 @@
 # Experiment Status — Canonical Source of Truth
 
 **Date of audit:** 2026-09-09 (DEAC cluster)  
-**Scope:** Read-only inspection of cluster outputs + CPU re-evaluation of Gemma A1-1000. No GPU inference. No deletions. Obsolete artifacts archived with manifest.
+**Last status update:** 2026-09-21 (GLM @5747 + Phi-4 @1000 / A2 rerun)  
+**Scope (original):** Read-only inspection of cluster outputs + CPU re-evaluation of Gemma A1-1000. No GPU inference. No deletions. Obsolete artifacts archived with manifest.
 
 **Audit artifacts:** `outputs/analysis/a1_1000_cross_model_audit/`
+
+---
+
+## 0. Live experiment status (2026-09-21)
+
+### GLM-4.6V-Flash A1–A5 @5747 — **COMPLETE**
+
+| Field | Value |
+|-------|-------|
+| Experiment | `outputs/verification/glm_4_6v_flash/20260919_glm46v_flash_A1A5_5747/` |
+| Evaluation | `outputs/evaluation/glm_4_6v_flash/20260919_glm46v_flash_A1A5_5747/` |
+| Counts | A1–A5 each **5747/5747** JSON; eval CSV + metrics present for all five |
+| Slurm jobs | A1=`8340875`, A2=`8340876`, A3=`8340877`, A4=`8340878`, A5=`8340879` (all COMPLETED) |
+| Verdict | **COMPLETE** — do not rerun |
+
+### Phi-4-multimodal A1–A5 @1000
+
+| Ablation | Status | N | Experiment / notes | Job |
+|----------|--------|--:|--------------------|-----|
+| **A1** | **COMPLETE** | 1000/1000 | `…/20260919_1524_phi4_A1A5_1000/A1/` | `8340904` COMPLETED |
+| **A2** (original) | **FAILED / incomplete** | 5/1000 | same exp `A2/`; TIMEOUT 8h on `gpu-v100-01` | `8340905` TIMEOUT |
+| **A3** | **COMPLETE** | 1000/1000 | `…/20260919_1524_phi4_A1A5_1000/A3/` | `8340906` COMPLETED |
+| **A4** | **COMPLETE** | 1000/1000 | `…/20260919_1524_phi4_A1A5_1000/A4/` | `8340907` COMPLETED |
+| **A5** | **COMPLETE** | 1000/1000 | `…/20260919_1524_phi4_A1A5_1000/A5/` | `8340908` COMPLETED |
+
+**A2 hardware failure (diagnosed):** Original A2 ran on a V100 with uncorrected ECC pathology; per-sample runtime ~4900s (vs ~10–15s healthy), wall-clock TIMEOUT at 5/1000. Not a protocol/parser bug. Mitigations in tree: prefer `yangGrp` L40S, refuse GPUs with volatile uncorrected ECC, harden Phi-4 `eos_token_id` / generation config.
+
+**A2 clean rerun (in progress):**
+
+| Field | Value |
+|-------|-------|
+| Experiment | `outputs/verification/phi4_multimodal/20260920_2339_phi4_A2_1000/` (does **not** overwrite `20260919_1524`) |
+| Smoke | `20260920_2336_phi4_a2_smoke` / job `8342094` — `A2_SMOKE_DIAG_PASS` on L40S |
+| Full A2 job | `8342097` — **RUNNING** on `lovelace` (L40S); progress ~570+/1000 as of 2026-09-21 |
+| Status | **IN_PROGRESS** — await 1000/1000 + eval before promoting Phi-4 to full scale |
+
+### Phi-4 A1–A5 @5747 — **NOT SUBMITTED**
+
+Scripts prepared only (`jobs/run_phi4_Ax_5747.slurm`, `jobs/submit_phi4_Ax_5747.sh`; default dry-run). No `phi4_*5747*` Slurm logs or output dirs. **Do not submit until A2 @1000 clean rerun completes.**
 
 ---
 
@@ -254,27 +294,30 @@ Failed A5 `1501`, early empty `2130`, pilots `2145`/`2158`, duplicate `1508`, le
 
 ## 15. Remaining unresolved issues
 
-1. **Qwen A5 @5747** incomplete (TIME LIMIT); need A5-only resume with walltime ≫ 24h or multi-job resume.
-2. **LLaVA/Gemma** not usable as verifiers under current prompt/decoding until behavior changes (prompt redesign, decoding constraints, or different checkpoints)—root cause is model collapse, not eval bugs.
-3. Metrics JSON **Reliable% denominator** quirk for partial-N runs.
-4. Qwen binary specificity still low (0.24 @1000); Uncertain-heavy—report balanced accuracy / calibration, not accuracy alone.
-5. Gemma job script still does not call evaluation automatically (fixed manually this audit).
-6. **InternVL3-8B-Instruct** failed Stage 1 qualification (`FAIL_TECHNICAL`): 13/100 incomplete-JSON parse failures; zero `Unreliable`; Spec=0; BalAcc=0.5. Do **not** run InternVL A1-1000 until Stage 1 is re-qualified on the same fixed balanced-100.
+1. **Phi-4 A2 @1000 clean rerun** (`8342097` / `20260920_2339_phi4_A2_1000`) still IN_PROGRESS — finish + evaluate before any Phi-4 @5747 submit.
+2. **Qwen A5 @5747** incomplete (TIME LIMIT); need A5-only resume with walltime ≫ 24h or multi-job resume.
+3. **LLaVA/Gemma** not usable as verifiers under current prompt/decoding until behavior changes (prompt redesign, decoding constraints, or different checkpoints)—root cause is model collapse, not eval bugs.
+4. Metrics JSON **Reliable% denominator** quirk for partial-N runs.
+5. Qwen binary specificity still low (0.24 @1000); Uncertain-heavy—report balanced accuracy / calibration, not accuracy alone.
+6. Gemma job script still does not call evaluation automatically (fixed manually this audit).
+7. **InternVL3-8B-Instruct** failed Stage 1 qualification (`FAIL_TECHNICAL`): 13/100 incomplete-JSON parse failures; zero `Unreliable`; Spec=0; BalAcc=0.5. Do **not** run InternVL A1-1000 until Stage 1 is re-qualified on the same fixed balanced-100.
+
+**Resolved since 2026-09-09 audit:** GLM-4.6V-Flash A1–A5 @5747 COMPLETE; Phi-4 A1/A3/A4/A5 @1000 COMPLETE; Phi-4 A2 original TIMEOUT root-caused (ECC-bad V100).
 
 ---
 
 ## 16. Exactly ONE recommended next research action
 
-**Resume and finish Qwen A5 @5747 only** (A5-only job, `RESUME=1`, shared `verification_ablation_5747/A5_crop_only`, walltime/chunking sufficient to clear remaining ~3162 samples), then evaluate A5 with the same CPU GT pipeline—**before** investing in further LLaVA/Gemma accuracy runs or InternVL A1-1000.
+**Finish Phi-4 A2 @1000 clean rerun** (job `8342097`, experiment `20260920_2339_phi4_A2_1000`), evaluate with the frozen GT pipeline, then decide promotion to Phi-4 A1–A5 @5747 (scripts ready; **not yet submitted**).
 
-Rationale: Qwen is the only non-degenerate verifier; A1–A4 full-data results are already primary; A5 is the sole missing primary ablation cell. InternVL is not A1-1000-qualified.
+Rationale: GLM full-scale matrix is done; Phi-4 A1/A3/A4/A5 @1000 are done; A2 is the only blocking cell before an independent-family full-scale run. Qwen A5 @5747 resume remains a parallel primary-matrix debt.
 
 ---
 
 ## End summary
 
 **KEEP:**  
-Qwen `20260706_2214` (A1–A5 @1000); Qwen `20260708_0020` A1–A4 @5747; production `verification_dataset` + `verification_ablation_*`; cross-model audit under `outputs/analysis/a1_1000_cross_model_audit/`; LLaVA/Gemma A1-1000 raw+eval as **collapse evidence only**.
+Qwen `20260706_2214` (A1–A5 @1000); Qwen `20260708_0020` A1–A4 @5747; **GLM-4.6V-Flash** `20260919_glm46v_flash_A1A5_5747` (A1–A5 @5747 COMPLETE); **Phi-4** `20260919_1524_phi4_A1A5_1000` A1/A3/A4/A5 @1000 COMPLETE + A2 clean rerun `20260920_2339_phi4_A2_1000` (in progress); production `verification_dataset` + `verification_ablation_*`; cross-model audit under `outputs/analysis/a1_1000_cross_model_audit/`; LLaVA/Gemma A1-1000 raw+eval as **collapse evidence only**.
 
 **ARCHIVED:**  
 Failed/superseded Qwen pilots & duplicate `1508`; legacy flat eval/results; old LVM inputs; smokes; debug/parity/fixtures; pip junk — see `archive/ARCHIVE_MANIFEST.csv`.
@@ -283,4 +326,4 @@ Failed/superseded Qwen pilots & duplicate `1508`; legacy flat eval/results; old 
 LLaVA A1-1000 and Gemma A1-1000 **headline accuracy/F1** (equal to always-Reliable baseline; specificity 0). Pipeline itself is not “broken,” but the **scientific claim of verification skill is invalid**.
 
 **STILL NEEDS INVESTIGATION:**  
-Complete Qwen A5 @5747; optional follow-up on *why* LLaVA/Gemma collapse (prompt/decoding/model), only after Qwen matrix is finished.
+Finish Phi-4 A2 @1000 clean rerun, then decide Phi-4 @5747; complete Qwen A5 @5747; optional follow-up on *why* LLaVA/Gemma collapse (prompt/decoding/model).
