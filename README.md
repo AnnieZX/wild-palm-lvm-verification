@@ -1,200 +1,260 @@
-# Wild Palm VLM Verification
+<div align="center">
 
-**CS Honors Thesis** · Annie Luo · Mentor: Fan Yang · Wake Forest University · 2026
+# 🌴 Wild Palm VLM Verification
 
-A **model-agnostic Vision-Language Model (VLM) verification framework** for assessing the reliability of wild palm detections in UAV orthomosaic imagery.
+**Can a vision-language model check a detector's work?**
 
-This repository **verifies existing YOLO palm detections**. It does **not** perform object detection. LabelMe ground truth is used only for **evaluation**, not during inference.
+Open-weight VLMs as **second-stage verifiers** for YOLO wild-palm detections in UAV orthomosaics,<br/>
+evaluated under five controlled visual-context ablations (**A1–A5**).
+
+<sub>CS Honors Thesis · <b>Annie Luo</b> · Mentor: <b>Fan Yang</b> · Wake Forest University · 2026</sub>
+
+<br/>
+
+![Detections](https://img.shields.io/badge/YOLO_detections-5%2C747-1baf7a?style=flat-square)
+![Models](https://img.shields.io/badge/VLMs_tested-9-2a78d6?style=flat-square)
+![Full A1–A5](https://img.shields.io/badge/full_A1–A5_complete-4_models-4a3aa7?style=flat-square)
+![Ablations](https://img.shields.io/badge/ablations-A1–A5-eb6834?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-52514e?style=flat-square)
+
+[**Results**](#-results) · [**How it works**](#-how-it-works) · [**Ablations**](#-the-a1a5-ablations) · [**Models**](#-model-status) · [**Reproduce**](#-reproduce) · [**Docs**](#-documentation)
+
+</div>
+
+<br/>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/ablation_inputs_dark.png">
+  <img alt="The same palm detection rendered as the VLM sees it under A1–A3 (dimmed overlay with a green target box), A4 (overlay plus an enlarged crop) and A5 (crop only)." src="docs/assets/readme/ablation_inputs_light.png">
+</picture>
+
+<sub>What the verifier sees. One target box, rendered with this repo's own builders (<code>verification_overlay.py</code>, <code>ablation_verification_images.py</code>) on a bundled sample patch. For this illustration the box comes from a LabelMe <code>palm</code> annotation; in experiments it is always a YOLO detection.</sub>
 
 ---
 
-## Scientific objective
+## ✨ At a glance
 
-YOLO proposes candidate palm detections. A VLM acts as a **second-stage verifier** and classifies each detection as:
+> [!IMPORTANT]
+> This repository **does not detect palms**. YOLO detections are **frozen inputs**. The VLM only **verifies** each box, and LabelMe ground truth is used **for evaluation only**. It is never shown to the model.
 
-| Decision | Meaning |
-|----------|---------|
-| **Reliable** | Accept as a valid palm detection |
-| **Uncertain** | Abstain; defer to human review |
-| **Unreliable** | Reject as a false or invalid detection |
+Every YOLO box gets one closed-set verdict:
 
-**Research question:** Can modern VLMs reject detector false positives while preserving true palm detections, and how does input context (**A1–A5**) affect verification performance?
+| | Verdict | Meaning |
+|:-:|---|---|
+| 🟢 | **Reliable** | Accept: this is a palm |
+| 🔵 | **Uncertain** | Abstain: leave it for human review |
+| 🟠 | **Unreliable** | Reject: likely a detector false positive |
 
-All compared models use the same **frozen** benchmark: identical detection set, A1–A5 prompt semantics, shared response parser, and shared evaluator.
+**Research question:** can modern VLMs *reject detector false positives while keeping true palms*, and how does the visual context they receive (**A1–A5**) change that?
+
+### Key findings
+
+1. **Four models finished full A1–A5 at N = 5,747 without collapsing:** Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash and Phi-4 Multimodal.
+2. **Context changes behavior a lot, even within one model.** Qwen2.5-VL's specificity is **0.02 under A3** and **0.72 under A5**.
+3. **Collapse is common.** LLaVA-OneVision and Gemma 3 answered *Reliable* for **100%** of samples. MiniCPM-V-4.5 answered Reliable for 97% of them, and Molmo2-8B abstained on **79%**.
+4. **Accuracy and F1 on their own mislead here.** Always answering "Reliable" already scores **0.815** accuracy, and Molmo2 reaches **F1 = 0.96** with **specificity = 0**. We report specificity and the full decision mix alongside them.
 
 ---
 
-## Pipeline overview
+## 📊 Results
 
-```
-YOLO Detection                 VLM Verification                      Evaluation
-────────────────               ────────────────                      ──────────
-Candidate boxes         →      Reliable / Uncertain / Unreliable  →  Match to LabelMe GT
-+ confidence scores            (frozen A1–A5 inputs)                 Compute metrics
-```
+### Full-scale comparison: N = 5,747, all five conditions
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/specificity_dark.png">
+  <img alt="Specificity heatmap for four models across A1–A5. Qwen2.5-VL ranges from 0.02 (A3) to 0.72 (A5); Qwen3-VL peaks at 0.81 on A5; GLM-4.6V-Flash stays between 0.55 and 0.76; Phi-4 peaks at 0.67 on A4." src="docs/assets/readme/specificity_light.png" width="640">
+</picture>
+
+Specificity is the share of detector false positives (GT−) that the verifier rejects. Higher is better, and the always-Reliable baseline scores **0**. Every model reaches its highest specificity on a **crop-based condition (A4 or A5)**, usually at a cost in sensitivity. None has a single best condition for everything: each ablation trades sensitivity against specificity differently.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/decision_mix_dark.png">
+  <img alt="Decision distributions per condition. Qwen2.5-VL abstains 23–31% on A1–A4; Qwen3-VL abstains 69% on A5; GLM rejects about a third of boxes; Phi-4 never answers Uncertain." src="docs/assets/readme/decision_mix_light.png">
+</picture>
+
+The four models behave very differently:
+
+- **Qwen2.5-VL** uses all three verdicts.
+- **Qwen3-VL** abstains heavily under A5 (crop only).
+- **GLM-4.6V-Flash** rejects often, which gives it the most consistent specificity.
+- **Phi-4** **never** answers Uncertain and works as a binary verifier.
+
+<details>
+<summary><b>Full metrics table: 4 models × 5 conditions</b></summary>
+
+<br/>
+
+Binary metrics exclude *Uncertain* (see [Evaluation](#-evaluation)). BalAcc = (Sens + Spec) / 2, computed from the reported values.
+
+| Model | Cond. | Acc | Prec | Sens | Spec | BalAcc | F1 | R / U / Ur |
+|---|:-:|--:|--:|--:|--:|--:|--:|--:|
+| **Qwen2.5-VL** | A1 | 0.851 | 0.895 | 0.938 | 0.306 | 0.622 | 0.916 | 3593 / 1775 / 379 |
+| | A2 | 0.866 | 0.880 | 0.980 | 0.105 | 0.542 | 0.927 | 4268 / 1344 / 135 |
+| | A3 | 0.874 | 0.876 | 0.998 | **0.018** | 0.508 | 0.933 | 4416 / 1313 / 18 |
+| | A4 | 0.833 | 0.907 | 0.898 | 0.433 | 0.666 | 0.903 | 3570 / 1557 / 620 |
+| | A5 | 0.660 | 0.911 | 0.647 | **0.720** | 0.683 | 0.757 | 3065 / 455 / 2227 |
+| **Qwen3-VL** | A1 | 0.752 | 0.864 | 0.827 | 0.414 | 0.621 | 0.845 | 4309 / 246 / 1192 |
+| | A2 | 0.792 | 0.856 | 0.900 | 0.286 | 0.593 | 0.877 | 4636 / 401 / 710 |
+| | A3 | 0.753 | 0.865 | 0.828 | 0.413 | 0.621 | 0.846 | 4221 / 367 / 1159 |
+| | A4 | 0.789 | 0.829 | 0.934 | 0.128 | 0.531 | 0.879 | 5051 / 276 / 420 |
+| | A5 | 0.715 | 0.943 | 0.694 | **0.812** | 0.753 | 0.799 | 1081 / 3948 / 718 |
+| **GLM-4.6V-Flash** | A1 | 0.671 | 0.873 | 0.698 | 0.549 | 0.624 | 0.776 | 3719 / 50 / 1978 |
+| | A2 | 0.685 | 0.877 | 0.714 | 0.555 | 0.634 | 0.787 | 3783 / 57 / 1907 |
+| | A3 | 0.688 | 0.887 | 0.709 | 0.591 | 0.650 | 0.788 | 3696 / 100 / 1951 |
+| | A4 | 0.719 | 0.884 | 0.754 | 0.559 | 0.657 | 0.814 | 3960 / 64 / 1723 |
+| | A5 | 0.545 | 0.920 | 0.505 | **0.761** | 0.633 | 0.652 | 2163 / 1082 / 2502 |
+| **Phi-4 Multimodal** | A1 | 0.766 | 0.835 | 0.889 | 0.226 | 0.557 | 0.861 | 4985 / 0 / 762 |
+| | A2 | 0.774 | 0.838 | 0.896 | 0.234 | 0.565 | 0.866 | 5012 / 0 / 735 |
+| | A3 | 0.696 | 0.855 | 0.754 | 0.437 | 0.596 | 0.802 | 4132 / 0 / 1615 |
+| | A4 | 0.670 | 0.900 | 0.669 | **0.673** | 0.671 | 0.768 | 3481 / 0 / 2266 |
+| | A5 | 0.734 | 0.879 | 0.781 | 0.527 | 0.654 | 0.827 | 4160 / 0 / 1587 |
+
+Source of truth: [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md) and `outputs/evaluation/<model>/<experiment>/A*/A*_metrics.json`.
+
+</details>
+
+### Many VLMs collapse into a single answer
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/a1_behavior_dark.png">
+  <img alt="A1 decision mix for eight models. GLM, Qwen3-VL, Qwen2.5-VL and Phi-4 use Unreliable and reach specificity 0.23–0.55. MiniCPM is 97% Reliable, Molmo2 is 79% Uncertain, and LLaVA-OneVision and Gemma 3 are 100% Reliable, all with specificity at or near zero." src="docs/assets/readme/a1_behavior_light.png">
+</picture>
+
+| Failure mode | What it looks like | Example (A1) |
+|---|---|---|
+| **Single-class collapse** | Every answer is *Reliable*. Accuracy equals the class prior and specificity is 0 | LLaVA-OneVision, Gemma 3: 1000 / 0 / 0 at N = 1,000 |
+| **Reliable-heavy partial collapse** | Nearly always *Reliable* and rarely rejects anything | MiniCPM-V-4.5: 5557 / 0 / 190, Spec 0.078 |
+| **Abstention-heavy partial collapse** | Mostly *Uncertain* and almost never *Unreliable* | Molmo2-8B: 1209 / 4537 / 1, Spec 0 |
+| **Structured-output failure** | Replies that don't parse as the required JSON | InternVL3-8B: 13 of 100 unparsable in qualification |
+
+> [!WARNING]
+> **Molmo2's F1 of 0.962 is not verification skill.** It is computed on only the **~21%** of samples that received a Reliable or Unreliable verdict, and among those it rejected just **one** box. Always read F1 together with the decision mix, or with decision coverage = (R + Ur) / N, a post-hoc descriptor that the frozen evaluator does not output.
+
+### 🚧 In progress: InternVL3.5-8B
+
+InternVL3-8B failed qualification (87% parse success, Spec 0). The HF-native **InternVL3.5-8B-HF** then **passed** the same balanced-100 gate with 100% parse success, **Spec 0.20** and **BalAcc 0.60**. Both the model version and the inference API changed between the two runs, so the improvement can't be attributed to the version alone. As of **2026-09-24** its full A1–A5 run at N = 5,747 is **still running** (about 1.1k–1.2k of 5,747 samples done for A1–A4, and A5 is queued). No full-scale InternVL3.5 metrics are reported yet.
+
+---
+
+## 🧭 How it works
 
 ```mermaid
-flowchart TB
-    BENCH["Frozen A1–A5 benchmark"]
-    RUN["VerificationRunner"]
-    REG["Registry"]
-    LOC["Local Adapter"]
-    API["API Adapter<br/>(architecture-ready; not yet benchmarked)"]
-    CKPT["Local checkpoint"]
-    HTTP["Provider HTTP/API"]
-    OUTC["Canonical outcome"]
-    PAR["Shared parser"]
-    REC["Canonical record"]
-    EVAL["Shared evaluator"]
-    MET["Metrics"]
+flowchart LR
+    A["🛰️ UAV orthomosaic<br/>patches"] --> B["🎯 YOLO detections<br/><i>frozen input</i>"]
+    B --> C["🖼️ One sample<br/>per box"]
+    C --> D["🧪 A1–A5<br/>input builder"]
+    D --> E["🤖 VLM verifier<br/><i>model adapter</i>"]
+    E --> F["🧾 Shared JSON<br/>parser"]
+    F --> G{"Reliable<br/>Uncertain<br/>Unreliable"}
+    G --> H["📏 Evaluation vs.<br/>LabelMe GT"]
+    GT[("LabelMe palm<br/>annotations")] -. evaluation only .-> H
 
-    BENCH --> RUN --> REG
-    REG --> LOC --> CKPT --> OUTC
-    REG --> API --> HTTP --> OUTC
-    OUTC --> PAR --> REC --> EVAL --> MET
+    classDef frozen fill:#e8f1fc,stroke:#2a78d6,color:#0b0b0b
+    classDef model fill:#fdeee7,stroke:#eb6834,color:#0b0b0b
+    class B,C,D,F,H frozen
+    class E model
 ```
 
-**Local path (production today):** Frozen A1–A5 → generic runner → registry → model adapter → local checkpoint → model-native preprocessing/generation → shared parser → shared evaluator.
+<sub>🔵 frozen and shared by every model: detections, dataset, A1–A5 inputs, parser, evaluator  ·  🟠 model-specific: adapter, config, registry entry, checkpoint</sub>
 
-**API path:** Same runner/registry/parser/evaluator contract is reserved in `BaseVerificationAdapter` for a future `backend=api` adapter. **No API models have been benchmarked** in this repository.
-
----
-
-## Current model status
-
-Status terms (shared across docs): **Complete** · **A1 only** · **Collapsed** · **Qualification failed / stopped** · **Not evaluated**.
-
-| Model | Approx. scale | Integration | Qualification | Full A1–A5 @5,747 | Behavior / key observation |
-|-------|---------------|-------------|---------------|-------------------|----------------------------|
-| **Qwen2.5-VL-7B-Instruct** | ~7B | `qwen2_5_vl` | Non-collapse @1000 | **Complete** | Baseline; three-way labels; A2/A3 low Spec; A5 most conservative |
-| **Qwen3-VL-8B-Instruct** | ~8B | `qwen3_vl` | Non-collapse @1000 | **Complete** | Strong A5 shift (high Uncertain; Spec 0.81) |
-| **Phi-4-multimodal-instruct** | ~5.6B | `phi4_multimodal` | Non-collapse @1000 | **Complete** | **0 Uncertain** all A1–A5; binary R/Ur |
-| **GLM-4.6V-Flash** | Flash VLM | `glm_4_6v_flash` | Non-collapse @1000 | **Complete** | Non-collapse; substantial Unreliable; A5 high Spec |
-| **MiniCPM-V-4.5** | ~8.7B | `minicpm_v4_5` | Gates passed; A1@5747 done | **A1 only** (H200) | Near–always-Reliable (Spec 0.0782) |
-| **Molmo2-8B** | ~8B | `molmo2_8b` | Gates passed; A1@5747 done | **A1 only** (H200) | Uncertain-heavy (Spec 0) |
-| **LLaVA-OneVision** | ~7B | `llava` | A1@1000 only | **Not evaluated** | **Collapsed** — 100% Reliable |
-| **Gemma 3 12B IT** | ~12B | `gemma` | A1@1000 only | **Not evaluated** | **Collapsed** — 100% Reliable |
-| **InternVL3-8B** | ~8B | `internvl3` | Stage 0 pass; Stage 1 fail | **Not evaluated** | **Qualification failed / stopped** (parse failures; Spec 0) |
-
-Registry keys and configs: `configs/models/<key>.yaml`. Aliases are listed in `src/verification/registry.py`.
-
-**Authoritative status & metrics:** [`docs/EXPERIMENT_STATUS_CANONICAL.md`](docs/EXPERIMENT_STATUS_CANONICAL.md) · [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md)
+Every compared model sees **the same 5,747 boxes, the same prompts, the same parser and the same evaluator**. Only the adapter changes, and it wraps each model's native processor and chat template.
 
 ---
 
-## Current Benchmark Snapshot
+## 🧪 The A1–A5 ablations
 
-**Full dataset (N = 5,747):** GT+ = 4,685 · GT− = 1,062 · always-Reliable accuracy ≈ **0.815**.
+Five frozen conditions vary **only what the VLM sees**. The boxes, matching rule and metrics stay fixed.
 
-**A1 @1,000 qualification slice:** GT+ = 928 · GT− = 72 · always-Reliable accuracy = **0.928**.
+| | Condition | Image input | Extra prompt metadata |
+|:-:|---|---|---|
+| **A1** | Overlay only | Full patch, dimmed outside the box (×0.55), green target box | — |
+| **A2** | Overlay + confidence | Same overlay as A1 | YOLO confidence |
+| **A3** | Overlay + confidence + geometry | Same overlay as A1 | Confidence + bbox area, width, height, aspect ratio, center |
+| **A4** | Dual panel | Overlay (left) + enlarged box crop (right) | YOLO confidence |
+| **A5** | Crop only | Enlarged box crop with 15 px padding, no surround | YOLO confidence |
 
-Do not compare 1,000-sample metrics to full-set metrics as if they were the same experiment.
-
-### Full-scale A1–A5 @5,747 (headline)
-
-Four models have **verified-complete** A1–A5 @5,747:
-
-| Model | Status | Headline behavior |
-|-------|--------|-------------------|
-| **Qwen2.5-VL** | Complete | Three-way decisions; A3 Spec ≈ 0.02; A5 Spec ≈ **0.72** |
-| **Qwen3-VL** | Complete | Condition-dependent; A5 highly abstaining (U=3948) with Spec ≈ **0.81** |
-| **GLM-4.6V-Flash** | Complete | Non-collapse; substantial Unreliable; A5 Spec ≈ **0.76** |
-| **Phi-4 multimodal** | Complete | **0 Uncertain** on all A1–A5; A4 Spec ≈ **0.67** |
-
-MiniCPM and Molmo: **A1 @5,747 only** (not peer A1–A5). Tables: [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md).
-
-### Qualification / collapse highlights
-
-| Model | Experiment | Mix (R / U / Ur) | Acc | Spec | Verdict |
-|-------|------------|------------------|-----|------|---------|
-| **Qwen3-VL** A1@1000 | `qwen3vl_A1_1000` | 724 / 48 / 228 | 0.76 | 0.51 | Qualified (no collapse) |
-| **Qwen2.5-VL** A1@1000 | `20260706_2214` | 672 / 272 / 56 | 0.90 | 0.24 | Non-collapse baseline |
-| **LLaVA** A1@1000 | `20260719_1734` | 1000 / 0 / 0 | 0.928 | **0** | **Collapsed** |
-| **Gemma 3** A1@1000 | `20260802_1702` | 1000 / 0 / 0 | 0.928 | **0** | **Collapsed** |
-
-Accuracy and F1 alone are misleading on this imbalanced task. Prefer **specificity** and decision mix when judging verification skill.
+Design rationale: [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md) · Prompts: [`src/prompts/ablation_verification_prompts.py`](src/prompts/ablation_verification_prompts.py)
 
 ---
 
-## Ablation study (A1–A5)
+## 📏 Evaluation
 
-Five frozen conditions isolate how **visual context** and **detector metadata** affect VLM verification. YOLO boxes, dataset, matching, parser, and metrics stay fixed; only VLM inputs change.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-| Condition | Image input | Metadata in prompt |
-|-----------|-------------|--------------------|
-| **A1** | Overlay only (dimmed surround + green bbox) | None |
-| **A2** | Overlay | YOLO confidence |
-| **A3** | Overlay | Confidence + bbox geometry |
-| **A4** | Dual panel (overlay + crop) | YOLO confidence |
-| **A5** | Crop only | YOLO confidence |
+**Dataset**
 
-Design: [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md)
+| | |
+|---|--:|
+| YOLO detections (N) | **5,747** |
+| Matched to GT (GT+) | 4,685 |
+| Unmatched (GT−) | 1,062 |
+| Always-Reliable accuracy | **0.815** |
+
+<sub>The A1 qualification slice (N = 1,000) has a prior of 0.928. Don't compare it directly with full-set numbers.</sub>
+
+</td>
+<td width="50%" valign="top">
+
+**Scoring**
+
+| Verdict | Binary role |
+|---|---|
+| Reliable | positive |
+| Unreliable | negative |
+| Uncertain | **excluded** |
+
+<sub>TP = GT+ ∧ Reliable · FP = GT− ∧ Reliable · FN = GT+ ∧ Unreliable · TN = GT− ∧ Unreliable. An *Uncertain* verdict is never counted as FN or TN.</sub>
+
+</td>
+</tr>
+</table>
+
+- **Matching:** within each patch, YOLO boxes are paired with LabelMe `palm` boxes by descending IoU, one-to-one and greedily. A pair counts as a match when **IoU ≥ 0.5**.
+- **Metrics:** accuracy, precision, sensitivity (recall), specificity, F1 and balanced accuracy, plus the full R / U / Ur distribution over N.
+
+Full protocol: [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md)
 
 ---
 
-## Evaluation
+## 🤖 Model status
 
-Ground truth: LabelMe annotations with `label == "palm"`, converted to axis-aligned boxes.
+| Model | Registry key | Furthest stage | Status | Behavior |
+|---|---|---|:-:|---|
+| **Qwen2.5-VL-7B-Instruct** | `qwen2_5_vl` | Full A1–A5 @ 5,747 | ✅ Complete | Uses all three verdicts; A5 is the most conservative |
+| **Qwen3-VL-8B-Instruct** | `qwen3_vl` | Full A1–A5 @ 5,747 | ✅ Complete | A5 abstains heavily, with Spec 0.81 |
+| **GLM-4.6V-Flash** | `glm_4_6v_flash` | Full A1–A5 @ 5,747 | ✅ Complete | Rejects often; the most stable specificity |
+| **Phi-4 Multimodal** | `phi4_multimodal` | Full A1–A5 @ 5,747 | ✅ Complete | Never answers Uncertain (binary verifier) |
+| **InternVL3.5-8B-HF** | `internvl3_5_hf` | Full A1–A5 @ 5,747 | 🚧 Running | Passed the balanced-100 gate |
+| **MiniCPM-V-4.5** | `minicpm_v4_5` | A1 @ 5,747 | ⚠️ A1 only | Reliable-heavy partial collapse |
+| **Molmo2-8B** | `molmo2_8b` | A1 @ 5,747 | ⚠️ A1 only | Abstention-heavy partial collapse |
+| **LLaVA-OneVision** | `llava` | A1 @ 1,000 | ❌ Collapsed | 100% Reliable |
+| **Gemma 3 12B IT** | `gemma` | A1 @ 1,000 | ❌ Collapsed | 100% Reliable |
+| **InternVL3-8B-Instruct** | `internvl3` | Balanced-100 gate | ❌ Failed | Parse failures, Spec 0 |
 
-**Matching:** Greedy one-to-one assignment by descending IoU; accept if **IoU ≥ 0.5**.
-
-**Binary roles:**
-
-| Prediction | Role |
-|------------|------|
-| Reliable | Positive |
-| Unreliable | Negative |
-| Uncertain | **Excluded** from Precision / Recall / F1 / Accuracy / Specificity / Balanced Accuracy |
-
-Reported metrics: TP, TN, FP, FN, Precision, Recall, Specificity, F1, Accuracy, Balanced Accuracy (Spec/BalAcc derived from the same confusion counts; Uncertain rate reported separately over the full sample count).
-
-Protocol: [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md)
+<sub>A2–A5 were intentionally **not run** for MiniCPM and Molmo2 after their A1 results. <code>configs/models/gemma4.yaml</code> is an unregistered stub and **Gemma 4 has not been evaluated**. Canonical inventory: <a href="docs/EXPERIMENT_STATUS_CANONICAL.md"><code>docs/EXPERIMENT_STATUS_CANONICAL.md</code></a>.</sub>
 
 ---
 
-## Running experiments
+## 🚀 Reproduce
 
-Primary launcher: **`scripts/submit_model_ablation.sh`** → **`jobs/run_verification.slurm`**, with per-model env/checkpoint helpers in **`jobs/lib/model_runtime.sh`**.
-
-Defaults to **dry-run** (prints `sbatch` commands; does not submit). Use `--submit` to enqueue.
-
-### A1 qualification / subset
+The main launcher is **`scripts/submit_model_ablation.sh`**. It submits one Slurm job per condition through `jobs/run_verification.slurm`, and per-model environments and checkpoints are resolved in `jobs/lib/model_runtime.sh`. It **dry-runs by default**, and nothing is submitted until you pass `--submit`.
 
 ```bash
-# Preview (default)
-DRY_RUN=1 ./scripts/submit_model_ablation.sh qwen3_vl \
-  --conditions A1 --limit 1000 \
-  --experiment-id qwen3vl_A1_1000
-
-# Submit
+# Preview the sbatch commands (default: dry-run)
 ./scripts/submit_model_ablation.sh qwen3_vl \
-  --conditions A1 --limit 1000 \
-  --experiment-id qwen3vl_A1_1000 \
-  --submit
-```
+  --conditions A1 --limit 1000 --experiment-id qwen3vl_A1_1000
 
-### Full A1–A5 @5,747
-
-```bash
+# Full A1–A5 at N = 5,747
 ./scripts/submit_model_ablation.sh phi4_multimodal \
-  --conditions A1,A2,A3,A4,A5 \
-  --limit 5747 \
-  --ablation-size 5747 \
-  --experiment-id 20260921_phi4_A1A5_5747 \
-  --time 24:00:00 \
+  --conditions A1,A2,A3,A4,A5 --limit 5747 --ablation-size 5747 \
+  --experiment-id my_phi4_A1A5_5747 --time 24:00:00 \
   --submit
 ```
 
-### Design properties
-
-- **`MODEL=<registry_key>`** selects adapter, config, isolated env (when required), and default checkpoint
-- One model loaded **once per Slurm job** (one condition per job)
-- Outputs isolated: `outputs/verification/<model>/<experiment_id>/A*/`
-- Evaluation written to: `outputs/evaluation/<model>/<experiment_id>/A*/`
-- **`--resume` / `RESUME=1`** skips completed samples
-- Per-model isolated Python environments where needed (Phi-4, GLM, Qwen3-VL, MiniCPM, Molmo)
-
-### Direct CLI (single condition)
+<details>
+<summary><b>Single condition from the CLI, outputs and resume</b></summary>
 
 ```bash
 python scripts/run_verification.py \
@@ -205,107 +265,86 @@ python scripts/run_verification.py \
   --resume
 ```
 
-Legacy Qwen-only orchestrators (`scripts/run_qwen_ablation_experiment.sh`, `jobs/submit_qwen_ablation.sh`) remain for historical Qwen2.5 runs; new models should use `submit_model_ablation.sh`.
+| | Path |
+|---|---|
+| Predictions | `outputs/verification/<model>/<experiment_id>/A1..A5/sample_*.json` |
+| Metrics | `outputs/evaluation/<model>/<experiment_id>/A1..A5/A*_metrics.json` |
+
+- Each job loads the model **once** and runs one condition.
+- `--resume` / `RESUME=1` skips samples that are already done.
+- Models whose dependency pins conflict (Phi-4, GLM, Qwen3-VL, MiniCPM, Molmo2) run in isolated Python environments.
+- The legacy Qwen2.5 production tree is `outputs/verification/qwen/20260708_0020/`.
+- Cluster setup: [`docs/cluster_deployment.md`](docs/cluster_deployment.md)
+
+</details>
+
+<details>
+<summary><b>Adding a new VLM</b></summary>
+
+<br/>
+
+Never change the A1–A5 semantics, the shared parser or the evaluator to suit one model.
+
+1. Verifier: `src/lvm/<model>_verifier.py`, using the model's **native** processor and chat template
+2. Adapter: `src/lvm/<model>_verification_adapter.py`
+3. Config: `configs/models/<key>.yaml`
+4. Registry: `register_adapter()` in `src/verification/registry.py`
+5. Isolated environment, if needed, wired into `jobs/lib/model_runtime.sh`
+
+**Preferred qualification ladder for new models:**
+
+`Stage 0 (≈10 samples)` → `Stage 1 balanced-100 (parse ≥ 95%, Spec ≥ 0.20, BalAcc ≥ 0.55, < 95% single class)` → `A1 @ 1,000 (optional)` → `full A1–A5 @ 5,747`
+
+<sub>Earlier models followed different paths. For example, the Qwen2.5-VL full run predates this gate, and LLaVA and Gemma were diagnosed at A1 @ 1,000.</sub>
+
+</details>
 
 ---
 
-## Adding a New VLM
-
-Integration contract (do **not** change frozen A1–A5 semantics, shared parser, or evaluator for one model):
-
-1. Model-specific verifier — `src/lvm/<model>_verifier.py`
-2. `VerificationAdapter` — `src/lvm/<model>_verification_adapter.py`
-3. Config — `configs/models/<key>.yaml`
-4. Registry entry — `register_adapter()` in `src/verification/registry.py`
-5. Isolated runtime environment (if dependency pins conflict) — wire in `jobs/lib/model_runtime.sh`
-6. Static validation (import / load / chat-template wiring)
-7. **sanity1** (n=1 smoke)
-8. **smoke20** collapse check
-9. **A1@1000** qualification (non-collapse gates)
-10. **Full A1–A5 @5,747** only after qualification passes
-
-Use the model’s native processor / chat template. Load the checkpoint **once per job**.
-
----
-
-## Repository structure
+## 🗂️ Repository layout
 
 ```
 wild-palm-lvm-verification/
-├── configs/
-│   ├── model.yaml                 # Legacy Qwen2.5 fallback
-│   └── models/                    # Per-model configs
-│       ├── qwen2_5_vl.yaml
-│       ├── qwen3_vl.yaml
-│       ├── phi4_multimodal.yaml
-│       ├── glm_4_6v_flash.yaml
-│       ├── internvl3.yaml
-│       ├── llava.yaml
-│       ├── gemma.yaml
-│       ├── minicpm_v4_5.yaml
-│       └── molmo2_8b.yaml
-├── scripts/
-│   ├── run_verification.py        # Main inference CLI
-│   ├── submit_model_ablation.sh   # Generic Slurm submitter
-│   ├── evaluate_verification_against_groundtruth.py
-│   ├── compute_verification_metrics.py
-│   └── pipeline/                  # Dataset + A1–A5 prompt prep
+├── configs/models/          # one YAML per VLM
 ├── src/
-│   ├── verification/              # Runner, registry, jobs, records
-│   ├── lvm/                       # Adapters, verifiers, parsers
-│   ├── prompts/                   # A1–A5 templates
-│   ├── evaluation/                # Greedy GT matching
-│   └── config/                    # Model config loader
-├── jobs/
-│   ├── run_verification.slurm     # Generic per-condition job
-│   └── lib/model_runtime.sh       # Env / checkpoint / key helpers
-├── docs/                          # Protocols, results, status
-├── archive/                       # Superseded experiments
-├── outputs/                       # Generated artifacts (gitignored)
-└── logs/                          # Slurm logs
+│   ├── preprocessing/       # overlay (dim 0.55) + A4/A5 image builders
+│   ├── prompts/             # frozen A1–A5 prompt templates
+│   ├── verification/        # runner · registry · records · resume
+│   ├── lvm/                 # model adapters/verifiers + shared parser
+│   └── evaluation/          # greedy IoU matching
+├── scripts/
+│   ├── submit_model_ablation.sh
+│   ├── run_verification.py
+│   ├── evaluate_verification_against_groundtruth.py
+│   └── visualization/make_readme_figures.py   # regenerates the figures above
+├── jobs/                    # Slurm jobs + model_runtime.sh
+├── docs/                    # protocols, results, status
+├── data/samples/            # 5 example patches + LabelMe JSON
+└── outputs/                 # generated artifacts (not tracked)
 ```
 
----
-
-## Framework components
-
-| Component | Location | Role |
-|-----------|----------|------|
-| Runner | `src/verification/runner.py` | Resume, iteration, persistence |
-| Registry | `src/verification/registry.py` | `--model` → adapter factory |
-| Adapter | `src/lvm/*_verification_adapter.py` | `verify(job)` only |
-| Parser | `src/lvm/parsers/` | Shared JSON + decision validation |
-| Records | `src/verification/records.py` | Canonical `sample_*.json` |
-| Evaluation | `scripts/evaluate_verification_against_groundtruth.py` | IoU matching vs LabelMe |
-
-Architecture freeze contract: [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md)
+Architecture and fairness contract: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md)
 
 ---
 
-## Next steps
+## 📚 Documentation
 
-- Present the four-model A1–A5 @5,747 comparison ([`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md))
-- Decide whether MiniCPM / Molmo warrant A2–A5 (A1 evidence suggests limited verifier value)
-- Publication-quality analysis and visualization across the four complete models
-- Optional larger / API reference models (architecture-ready; not selected for execution yet)
-
----
-
-## Documentation index
-
-| Document | Contents |
-|----------|----------|
-| [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md) | **Advisor-facing** A1–A5 @5,747 comparison tables |
-| [`docs/EXPERIMENT_STATUS_CANONICAL.md`](docs/EXPERIMENT_STATUS_CANONICAL.md) | Canonical run inventory, jobs, taxonomy, history |
-| [`docs/QWEN_FULL_A1_A5_RESULTS.md`](docs/QWEN_FULL_A1_A5_RESULTS.md) | Qwen2.5-only detailed A1–A5 write-up |
-| [`docs/MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md`](docs/MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md) | Collapse analysis (LLaVA / Gemma) |
-| [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md) | GT matching and metrics |
-| [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md) | A1–A5 design |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagrams |
-| [`docs/FRAMEWORK_FREEZE.md`](docs/FRAMEWORK_FREEZE.md) | Frozen APIs and fairness contract |
+| Document | What's inside |
+|---|---|
+| [`FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_COMPARISON.md) | Advisor-facing A1–A5 tables at N = 5,747 |
+| [`EXPERIMENT_STATUS_CANONICAL.md`](docs/EXPERIMENT_STATUS_CANONICAL.md) | Every run, its status and collapse label |
+| [`MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md`](docs/MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md) | Collapse forensics and model-expansion shortlist |
+| [`INTERNVL3_QUALIFICATION.md`](docs/INTERNVL3_QUALIFICATION.md) | Why InternVL3 failed the gate |
+| [`EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md) | GT matching and metric definitions |
+| [`ABLATION_STUDY.md`](docs/ABLATION_STUDY.md) | A1–A5 design |
+| [`QWEN_FULL_A1_A5_RESULTS.md`](docs/QWEN_FULL_A1_A5_RESULTS.md) | Detailed Qwen2.5-VL write-up |
 
 ---
 
-## Author
+<div align="center">
 
-**Annie Luo** · CS Honors Thesis · Mentor: **Fan Yang** · Wake Forest University · **2026**
+**Annie Luo** · CS Honors Thesis · Mentor **Fan Yang** · Wake Forest University · 2026
+
+<sub>Released under the <a href="LICENSE">MIT License</a>.</sub>
+
+</div>
