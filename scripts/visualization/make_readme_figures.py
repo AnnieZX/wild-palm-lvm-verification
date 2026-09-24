@@ -37,6 +37,17 @@ from src.preprocessing.ablation_verification_images import (  # noqa: E402
 from src.preprocessing.verification_overlay import render_single_detection_overlay  # noqa: E402
 
 OUT = ROOT / "docs" / "assets" / "readme"
+# TODO(DEAC sync): replace the ablation-gallery target with a REAL YOLO candidate.
+# No YOLO detection is tracked in this repository, so the gallery currently uses a
+# LabelMe `palm` annotation as a stand-in box (the README caption says so). After
+# syncing a real example from DEAC (e.g. a row of a verification_dataset
+# prompt_index.csv plus its raw patch), set YOLO_CANDIDATE to a dict like
+#     {"image": ROOT / "data/samples/images/<patch>.png",
+#      "bbox_xywh": (x, y, w, h)}          # exact YOLO box, pixel coordinates
+# then re-run this script and drop the "Illustration only" note from the README.
+YOLO_CANDIDATE: dict | None = None
+
+# Fallback stand-in (LabelMe annotation, NOT a YOLO detection).
 SAMPLE_IMAGE = ROOT / "data" / "samples" / "images" / "100_0003_0001_2.png"
 SAMPLE_JSON = ROOT / "data" / "samples" / "json" / "100_0003_0001_2.json"
 SAMPLE_PALM_INDEX = 1
@@ -134,8 +145,12 @@ def _sample_bbox() -> tuple[float, float, float, float]:
 
 def ablation_inputs(theme: str) -> None:
     t = THEMES[theme]
-    raw = cv2.imread(str(SAMPLE_IMAGE))
-    bbox = _sample_bbox()
+    if YOLO_CANDIDATE is not None:
+        raw = cv2.imread(str(YOLO_CANDIDATE["image"]))
+        bbox = tuple(float(v) for v in YOLO_CANDIDATE["bbox_xywh"])
+    else:
+        raw = cv2.imread(str(SAMPLE_IMAGE))
+        bbox = _sample_bbox()
     overlay = render_single_detection_overlay(raw, bbox)
     a4 = build_a4_combined_image(overlay, bbox)
     a5 = build_a5_crop_only_image(raw, bbox)
@@ -266,10 +281,10 @@ def a1_behavior(theme: str) -> None:
                 color=t["text2"] if spec >= 0.2 else t["series"][2], fontweight="bold",
                 transform=ax.get_yaxis_transform())
     ax.axhline(3.5, color=t["muted"], linewidth=1, linestyle=(0, (3, 3)))
-    ax.text(1.02, 3.5, "collapse ↓", va="center", fontsize=8.5, color=t["muted"],
+    ax.text(1.02, 3.5, "collapse modes ↓", va="center", fontsize=8.5, color=t["muted"],
             transform=ax.get_yaxis_transform(), style="italic",
             bbox=dict(facecolor=t["surface"], edgecolor="none", pad=1))
-    fig.suptitle("A1 (overlay only): functional verifiers vs. collapsed models",
+    fig.suptitle("A1 (overlay only): functional verifiers vs. collapse and partial-collapse modes",
                  x=0.012, y=1.07, ha="left", fontsize=12.5, color=t["text"], fontweight="bold")
     _legend(fig, t, y=1.01)
     _save(fig, "a1_behavior", theme)

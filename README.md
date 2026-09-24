@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌴 Wild Palm VLM Verification
+# Wild Palm VLM Verification
 
 **Can a vision-language model check a detector's work?**
 
@@ -11,13 +11,12 @@ evaluated under five controlled visual-context ablations (**A1–A5**).
 
 <br/>
 
-![Detections](https://img.shields.io/badge/YOLO_detections-5%2C747-1baf7a?style=flat-square)
-![Models](https://img.shields.io/badge/VLMs_tested-9-2a78d6?style=flat-square)
-![Full A1–A5](https://img.shields.io/badge/full_A1–A5_complete-4_models-4a3aa7?style=flat-square)
-![Ablations](https://img.shields.io/badge/ablations-A1–A5-eb6834?style=flat-square)
+![Task](https://img.shields.io/badge/task-detection_verification-52514e?style=flat-square)
+![Benchmark](https://img.shields.io/badge/benchmark-N%3D5%2C747_YOLO_boxes-52514e?style=flat-square)
+![Ablations](https://img.shields.io/badge/ablations-A1–A5-52514e?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-52514e?style=flat-square)
 
-[**Results**](#-results) · [**How it works**](#-how-it-works) · [**Ablations**](#-the-a1a5-ablations) · [**Models**](#-model-status) · [**Reproduce**](#-reproduce) · [**Docs**](#-documentation)
+[**Results**](#results) · [**Method**](#method) · [**Ablations**](#the-a1a5-ablations) · [**Models**](#model-status) · [**Reproduce**](#reproduce) · [**Docs**](#documentation)
 
 </div>
 
@@ -28,22 +27,22 @@ evaluated under five controlled visual-context ablations (**A1–A5**).
   <img alt="The same palm detection rendered as the VLM sees it under A1–A3 (dimmed overlay with a green target box), A4 (overlay plus an enlarged crop) and A5 (crop only)." src="docs/assets/readme/ablation_inputs_light.png">
 </picture>
 
-<sub>What the verifier sees. One target box, rendered with this repo's own builders (<code>verification_overlay.py</code>, <code>ablation_verification_images.py</code>) on a bundled sample patch. For this illustration the box comes from a LabelMe <code>palm</code> annotation; in experiments it is always a YOLO detection.</sub>
+<sub>What the verifier sees. One target box, rendered with this repo's own builders (<code>verification_overlay.py</code>, <code>ablation_verification_images.py</code>) on a bundled sample patch. <b>Illustration only:</b> this target box is a LabelMe <code>palm</code> annotation, because no YOLO candidate is tracked in this repository; in every experiment the target is a frozen YOLO detection. <!-- TODO: regenerate with a real YOLO candidate (see YOLO_CANDIDATE in scripts/visualization/make_readme_figures.py). --></sub>
 
 ---
 
-## ✨ At a glance
+## Overview
 
 > [!IMPORTANT]
 > This repository **does not detect palms**. YOLO detections are **frozen inputs**. The VLM only **verifies** each box, and LabelMe ground truth is used **for evaluation only**. It is never shown to the model.
 
 Every YOLO box gets one closed-set verdict:
 
-| | Verdict | Meaning |
-|:-:|---|---|
-| 🟢 | **Reliable** | Accept: this is a palm |
-| 🔵 | **Uncertain** | Abstain: leave it for human review |
-| 🟠 | **Unreliable** | Reject: likely a detector false positive |
+| Verdict | Role | Meaning |
+|---|---|---|
+| **Reliable** | accept | The box contains a palm |
+| **Uncertain** | abstain | Defer to human review |
+| **Unreliable** | reject | Likely a detector false positive |
 
 **Research question:** can modern VLMs *reject detector false positives while keeping true palms*, and how does the visual context they receive (**A1–A5**) change that?
 
@@ -51,12 +50,12 @@ Every YOLO box gets one closed-set verdict:
 
 1. **Four models finished full A1–A5 at N = 5,747 without collapsing:** Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash and Phi-4 Multimodal.
 2. **Context changes behavior a lot, even within one model.** Qwen2.5-VL's specificity is **0.02 under A3** and **0.72 under A5**.
-3. **Collapse is common.** LLaVA-OneVision and Gemma 3 answered *Reliable* for **100%** of samples. MiniCPM-V-4.5 answered Reliable for 97% of them, and Molmo2-8B abstained on **79%**.
+3. **Collapse and partial collapse are common.** LLaVA-OneVision and Gemma 3 answered *Reliable* for **100%** of samples. MiniCPM-V-4.5 answered Reliable for 97% of them, and Molmo2-8B abstained on **79%**.
 4. **Accuracy and F1 on their own mislead here.** Always answering "Reliable" already scores **0.815** accuracy, and Molmo2 reaches **F1 = 0.96** with **specificity = 0**. We report specificity and the full decision mix alongside them.
 
 ---
 
-## 📊 Results
+## Results
 
 ### Full-scale comparison: N = 5,747, all five conditions
 
@@ -84,7 +83,7 @@ The four models behave very differently:
 
 <br/>
 
-Binary metrics exclude *Uncertain* (see [Evaluation](#-evaluation)). BalAcc = (Sens + Spec) / 2, computed from the reported values.
+Binary metrics exclude *Uncertain* (see [Evaluation](#evaluation)). BalAcc = (Sens + Spec) / 2, computed from the reported values.
 
 | Model | Cond. | Acc | Prec | Sens | Spec | BalAcc | F1 | R / U / Ur |
 |---|:-:|--:|--:|--:|--:|--:|--:|--:|
@@ -113,7 +112,7 @@ Source of truth: [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_C
 
 </details>
 
-### Many VLMs collapse into a single answer
+### VLMs exhibit distinct verification failure modes
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/a1_behavior_dark.png">
@@ -128,25 +127,37 @@ Source of truth: [`docs/FULL_SCALE_MODEL_COMPARISON.md`](docs/FULL_SCALE_MODEL_C
 | **Structured-output failure** | Replies that don't parse as the required JSON | InternVL3-8B: 13 of 100 unparsable in qualification |
 
 > [!WARNING]
-> **Molmo2's F1 of 0.962 is not verification skill.** It is computed on only the **~21%** of samples that received a Reliable or Unreliable verdict, and among those it rejected just **one** box. Always read F1 together with the decision mix, or with decision coverage = (R + Ur) / N, a post-hoc descriptor that the frozen evaluator does not output.
+> **Molmo2's F1 of 0.962 does not by itself indicate strong verification performance.** It is computed on only the **~21%** of samples that received a Reliable or Unreliable verdict, and among those it rejected just **one** box. Always read F1 together with the decision mix, or with decision coverage = (R + Ur) / N, a post-hoc descriptor that the frozen evaluator does not output.
 
-### 🚧 In progress: InternVL3.5-8B
+<!-- STATUS:INTERNVL3_5 BEGIN
+     Refresh this block from docs/EXPERIMENT_STATUS_CANONICAL.md once DEAC results are synced.
+     When the full run completes: move InternVL3.5 into the figures/tables above and update the
+     Model status row. Do not report numbers that are not in the canonical docs / metrics JSON. -->
+### Pending: InternVL3.5-8B
 
-InternVL3-8B failed qualification (87% parse success, Spec 0). The HF-native **InternVL3.5-8B-HF** then **passed** the same balanced-100 gate with 100% parse success, **Spec 0.20** and **BalAcc 0.60**. Both the model version and the inference API changed between the two runs, so the improvement can't be attributed to the version alone. As of **2026-09-24** its full A1–A5 run at N = 5,747 is **still running** (about 1.1k–1.2k of 5,747 samples done for A1–A4, and A5 is queued). No full-scale InternVL3.5 metrics are reported yet.
+| | InternVL3-8B-Instruct | InternVL3.5-8B-HF |
+|---|:-:|:-:|
+| Balanced-100 gate | Failed | Passed |
+| Parse success | 87% | 100% |
+| Specificity / BalAcc | 0.00 / 0.50 | 0.20 / 0.60 |
+| Full A1–A5 @ 5,747 | Not run | In progress |
+
+<sub><b>Status last verified:</b> 2026-09-24 (A1–A4 ≈1.1k–1.2k of 5,747 samples; A5 queued). No full-scale InternVL3.5 metrics are reported yet. Both the model version and the inference API changed between the two runs, so the qualification improvement cannot be attributed to the version alone.</sub>
+<!-- STATUS:INTERNVL3_5 END -->
 
 ---
 
-## 🧭 How it works
+## Method
 
 ```mermaid
 flowchart LR
-    A["🛰️ UAV orthomosaic<br/>patches"] --> B["🎯 YOLO detections<br/><i>frozen input</i>"]
-    B --> C["🖼️ One sample<br/>per box"]
-    C --> D["🧪 A1–A5<br/>input builder"]
-    D --> E["🤖 VLM verifier<br/><i>model adapter</i>"]
-    E --> F["🧾 Shared JSON<br/>parser"]
+    A["UAV orthomosaic<br/>patches"] --> B["YOLO detections<br/><i>frozen input</i>"]
+    B --> C["One sample<br/>per box"]
+    C --> D["A1–A5<br/>input builder"]
+    D --> E["VLM verifier<br/><i>model adapter</i>"]
+    E --> F["Shared JSON<br/>parser"]
     F --> G{"Reliable<br/>Uncertain<br/>Unreliable"}
-    G --> H["📏 Evaluation vs.<br/>LabelMe GT"]
+    G --> H["Evaluation vs.<br/>LabelMe GT"]
     GT[("LabelMe palm<br/>annotations")] -. evaluation only .-> H
 
     classDef frozen fill:#e8f1fc,stroke:#2a78d6,color:#0b0b0b
@@ -155,13 +166,13 @@ flowchart LR
     class E model
 ```
 
-<sub>🔵 frozen and shared by every model: detections, dataset, A1–A5 inputs, parser, evaluator  ·  🟠 model-specific: adapter, config, registry entry, checkpoint</sub>
+<sub><b>Blue:</b> frozen and shared by every model (detections, dataset, A1–A5 inputs, parser, evaluator) · <b>Orange:</b> model-specific (adapter, config, checkpoint)</sub>
 
 Every compared model sees **the same 5,747 boxes, the same prompts, the same parser and the same evaluator**. Only the adapter changes, and it wraps each model's native processor and chat template.
 
 ---
 
-## 🧪 The A1–A5 ablations
+## The A1–A5 ablations
 
 Five frozen conditions vary **only what the VLM sees**. The boxes, matching rule and metrics stay fixed.
 
@@ -177,7 +188,7 @@ Design rationale: [`docs/ABLATION_STUDY.md`](docs/ABLATION_STUDY.md) · Prompts:
 
 ---
 
-## 📏 Evaluation
+## Evaluation
 
 <table>
 <tr>
@@ -218,26 +229,26 @@ Full protocol: [`docs/EVALUATION_PROTOCOL.md`](docs/EVALUATION_PROTOCOL.md)
 
 ---
 
-## 🤖 Model status
+## Model status
 
-| Model | Registry key | Furthest stage | Status | Behavior |
-|---|---|---|:-:|---|
-| **Qwen2.5-VL-7B-Instruct** | `qwen2_5_vl` | Full A1–A5 @ 5,747 | ✅ Complete | Uses all three verdicts; A5 is the most conservative |
-| **Qwen3-VL-8B-Instruct** | `qwen3_vl` | Full A1–A5 @ 5,747 | ✅ Complete | A5 abstains heavily, with Spec 0.81 |
-| **GLM-4.6V-Flash** | `glm_4_6v_flash` | Full A1–A5 @ 5,747 | ✅ Complete | Rejects often; the most stable specificity |
-| **Phi-4 Multimodal** | `phi4_multimodal` | Full A1–A5 @ 5,747 | ✅ Complete | Never answers Uncertain (binary verifier) |
-| **InternVL3.5-8B-HF** | `internvl3_5_hf` | Full A1–A5 @ 5,747 | 🚧 Running | Passed the balanced-100 gate |
-| **MiniCPM-V-4.5** | `minicpm_v4_5` | A1 @ 5,747 | ⚠️ A1 only | Reliable-heavy partial collapse |
-| **Molmo2-8B** | `molmo2_8b` | A1 @ 5,747 | ⚠️ A1 only | Abstention-heavy partial collapse |
-| **LLaVA-OneVision** | `llava` | A1 @ 1,000 | ❌ Collapsed | 100% Reliable |
-| **Gemma 3 12B IT** | `gemma` | A1 @ 1,000 | ❌ Collapsed | 100% Reliable |
-| **InternVL3-8B-Instruct** | `internvl3` | Balanced-100 gate | ❌ Failed | Parse failures, Spec 0 |
+| Model | Furthest evaluation | Status | Observed behavior |
+|---|---|---|---|
+| **Qwen2.5-VL-7B-Instruct** | Full A1–A5 @ 5,747 | Complete | Uses all three verdicts; A5 is the most conservative |
+| **Qwen3-VL-8B-Instruct** | Full A1–A5 @ 5,747 | Complete | A5 abstains heavily, with Spec 0.81 |
+| **GLM-4.6V-Flash** | Full A1–A5 @ 5,747 | Complete | Rejects often; the most stable specificity |
+| **Phi-4 Multimodal** | Full A1–A5 @ 5,747 | Complete | Never answers Uncertain (binary verifier) |
+| **InternVL3.5-8B-HF** | Balanced-100 gate; full A1–A5 running | *In progress* | Passed the gate (Spec 0.20); see [Pending](#pending-internvl35-8b) |
+| **MiniCPM-V-4.5** | A1 @ 5,747 | A1 only | Reliable-heavy partial collapse |
+| **Molmo2-8B** | A1 @ 5,747 | A1 only | Abstention-heavy partial collapse |
+| **LLaVA-OneVision** | A1 @ 1,000 | Collapsed | Single-class: 100% Reliable |
+| **Gemma 3 12B IT** | A1 @ 1,000 | Collapsed | Single-class: 100% Reliable |
+| **InternVL3-8B-Instruct** | Balanced-100 gate | Failed | Parse failures, Spec 0 |
 
-<sub>A2–A5 were intentionally **not run** for MiniCPM and Molmo2 after their A1 results. <code>configs/models/gemma4.yaml</code> is an unregistered stub and **Gemma 4 has not been evaluated**. Canonical inventory: <a href="docs/EXPERIMENT_STATUS_CANONICAL.md"><code>docs/EXPERIMENT_STATUS_CANONICAL.md</code></a>.</sub>
+<sub>A2–A5 were intentionally **not run** for MiniCPM and Molmo2 after their A1 results. Gemma 4 is configured but **has not been evaluated**. Registry keys, configs and the canonical inventory: <a href="docs/EXPERIMENT_STATUS_CANONICAL.md"><code>docs/EXPERIMENT_STATUS_CANONICAL.md</code></a>.</sub>
 
 ---
 
-## 🚀 Reproduce
+## Reproduce
 
 The main launcher is **`scripts/submit_model_ablation.sh`**. It submits one Slurm job per condition through `jobs/run_verification.slurm`, and per-model environments and checkpoints are resolved in `jobs/lib/model_runtime.sh`. It **dry-runs by default**, and nothing is submitted until you pass `--submit`.
 
@@ -301,7 +312,7 @@ Never change the A1–A5 semantics, the shared parser or the evaluator to suit o
 
 ---
 
-## 🗂️ Repository layout
+## Repository layout
 
 ```
 wild-palm-lvm-verification/
@@ -327,7 +338,7 @@ Architecture and fairness contract: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.m
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Document | What's inside |
 |---|---|
