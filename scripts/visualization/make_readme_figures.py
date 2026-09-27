@@ -7,15 +7,17 @@ Figures:
   specificity_{light,dark}.png       Specificity heatmap per model × condition @5747 (all 6 complete models)
   a1_behavior_{light,dark}.png       A1 decision mix across every A1-evaluated model
 
-Numbers are transcribed from docs/FULL_SCALE_MODEL_COMPARISON.md and
-docs/EXPERIMENT_STATUS_CANONICAL.md (no inference is run).
+Numbers are transcribed from docs/EXPERIMENT_RESULTS_CANONICAL.md (Evaluation
+Protocol v2; source artifacts outputs/evaluation_protocol_v2/). No inference is run.
+R/U/Ur counts are prediction-only and identical under Protocols v1 and v2.
 
 Usage:
-    python scripts/visualization/make_readme_figures.py
+    python scripts/visualization/make_readme_figures.py [--only specificity a1_behavior]
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -34,6 +36,7 @@ from src.preprocessing.ablation_verification_images import (  # noqa: E402
     build_a4_combined_image,
     build_a5_crop_only_image,
 )
+from src.preprocessing.gt_palm_bboxes import is_palm_label  # noqa: E402
 from src.preprocessing.verification_overlay import render_single_detection_overlay  # noqa: E402
 
 OUT = ROOT / "docs" / "assets" / "readme"
@@ -53,19 +56,21 @@ SAMPLE_JSON = ROOT / "data" / "samples" / "json" / "100_0003_0001_2.json"
 SAMPLE_PALM_INDEX = 1
 
 CONDITIONS = ["A1", "A2", "A3", "A4", "A5"]
-# Every model with a completed full A1–A5 @5747 run: four useful verifiers, then two collapsed.
+# Every model with a completed full A1–A5 @5747 run: four useful verifiers, then
+# InternVL3.5 (abstention-heavy, condition-dependent), then Gemma 4 (Reliable-heavy collapse).
 MODELS = ["Qwen2.5-VL", "Qwen3-VL", "GLM-4.6V-Flash", "Phi-4 MM", "InternVL3.5-8B", "Gemma 4 12B"]
 N_USEFUL = 4
+COLLAPSED = {"Gemma 4 12B"}
 OUTCOME = {
     "Qwen2.5-VL": "useful verifier",
     "Qwen3-VL": "useful verifier",
     "GLM-4.6V-Flash": "useful verifier",
     "Phi-4 MM": "useful verifier",
-    "InternVL3.5-8B": "abstention-heavy collapse",
+    "InternVL3.5-8B": "abstention-heavy, condition-dependent",
     "Gemma 4 12B": "Reliable-heavy collapse",
 }
 
-# R / U / Ur @5747 — docs/FULL_SCALE_MODEL_COMPARISON.md
+# R / U / Ur @5747 — docs/EXPERIMENT_RESULTS_CANONICAL.md §5
 DECISIONS = {
     "Qwen2.5-VL": [(3593, 1775, 379), (4268, 1344, 135), (4416, 1313, 18), (3570, 1557, 620), (3065, 455, 2227)],
     "Qwen3-VL": [(4309, 246, 1192), (4636, 401, 710), (4221, 367, 1159), (5051, 276, 420), (1081, 3948, 718)],
@@ -75,29 +80,32 @@ DECISIONS = {
     "Gemma 4 12B": [(5583, 0, 164), (5595, 0, 152), (5424, 0, 323), (5547, 0, 200), (5261, 0, 486)],
 }
 
-# Specificity @5747 — docs/FULL_SCALE_MODEL_COMPARISON.md
+# Specificity @5747, Protocol v2 — docs/EXPERIMENT_RESULTS_CANONICAL.md §5
 SPECIFICITY = {
-    "Qwen2.5-VL": [0.3059, 0.1045, 0.0179, 0.4327, 0.7198],
-    "Qwen3-VL": [0.4138, 0.2857, 0.4130, 0.1275, 0.8121],
-    "GLM-4.6V-Flash": [0.5492, 0.5547, 0.5912, 0.5592, 0.7607],
-    "Phi-4 MM": [0.2260, 0.2335, 0.4369, 0.6733, 0.5273],
-    "InternVL3.5-8B": [0.1436, 0.0265, 0.0651, 0.0157, 0.1269],
-    "Gemma 4 12B": [0.0782, 0.0678, 0.1657, 0.1215, 0.2363],
+    "Qwen2.5-VL": [0.4225, 0.1773, 0.0377, 0.6358, 0.9005],
+    "Qwen3-VL": [0.5453, 0.3887, 0.5402, 0.1241, 0.9495],
+    "GLM-4.6V-Flash": [0.6566, 0.6785, 0.7349, 0.7005, 0.9062],
+    "Phi-4 MM": [0.2571, 0.2774, 0.5141, 0.8574, 0.6959],
+    "InternVL3.5-8B": [0.3657, 0.1059, 0.2418, 0.0549, 0.0938],
+    "Gemma 4 12B": [0.1034, 0.0909, 0.2320, 0.1850, 0.3323],
 }
 
-# A1 decision mix for every model evaluated on A1 — docs/EXPERIMENT_STATUS_CANONICAL.md
+# A1 decision mix for every model evaluated on A1, Protocol v2 specificity —
+# docs/EXPERIMENT_RESULTS_CANONICAL.md §5–§7. Groups: useful verifiers,
+# abstention-heavy (condition-dependent), collapse modes.
 A1_ALL = [
-    ("GLM-4.6V-Flash", "@5747", (3719, 50, 1978), 0.549),
-    ("Qwen3-VL", "@5747", (4309, 246, 1192), 0.414),
-    ("Qwen2.5-VL", "@5747", (3593, 1775, 379), 0.306),
-    ("Phi-4 MM", "@5747", (4985, 0, 762), 0.226),
-    ("MiniCPM-V-4.5", "@5747", (5557, 0, 190), 0.078),
-    ("Gemma 4 12B", "@5747", (5583, 0, 164), 0.078),
-    ("InternVL3.5-8B", "@5747", (3085, 2570, 92), 0.144),
+    ("GLM-4.6V-Flash", "@5747", (3719, 50, 1978), 0.657),
+    ("Qwen3-VL", "@5747", (4309, 246, 1192), 0.545),
+    ("Qwen2.5-VL", "@5747", (3593, 1775, 379), 0.423),
+    ("Phi-4 MM", "@5747", (4985, 0, 762), 0.257),
+    ("InternVL3.5-8B", "@5747", (3085, 2570, 92), 0.366),
+    ("MiniCPM-V-4.5", "@5747", (5557, 0, 190), 0.113),
+    ("Gemma 4 12B", "@5747", (5583, 0, 164), 0.103),
     ("Molmo2-8B", "@5747", (1209, 4537, 1), 0.000),
     ("LLaVA-OneVision", "@1000", (1000, 0, 0), 0.000),
     ("Gemma 3 12B", "@1000", (1000, 0, 0), 0.000),
 ]
+A1_GROUP_BREAKS = [(3.5, "abstention-heavy ↓"), (4.5, "collapse modes ↓")]
 
 # Validated categorical slots (aqua / blue / orange), light and dark steps.
 THEMES = {
@@ -153,7 +161,7 @@ def _style_axes(ax, t) -> None:
 # 1. A1–A5 input gallery
 # --------------------------------------------------------------------------- #
 def _sample_bbox() -> tuple[float, float, float, float]:
-    shapes = [s for s in json.loads(SAMPLE_JSON.read_text())["shapes"] if s["label"] == "palm"]
+    shapes = [s for s in json.loads(SAMPLE_JSON.read_text())["shapes"] if is_palm_label(s.get("label"))]
     pts = shapes[SAMPLE_PALM_INDEX]["points"]
     xs, ys = [p[0] for p in pts], [p[1] for p in pts]
     return min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
@@ -225,9 +233,9 @@ def decision_mix(theme: str) -> None:
     fig, axes = plt.subplots(2, 3, figsize=(13, 6.8), sharey=True, facecolor=t["surface"])
     for ax, model in zip(axes.flat, MODELS):
         _style_axes(ax, t)
-        collapsed = MODELS.index(model) >= N_USEFUL
-        ax.text(1.0, 1.02, OUTCOME[model], transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=9, style="italic",
+        collapsed = model in COLLAPSED
+        ax.text(1.0, 1.02, OUTCOME[model].replace(", ", ",\n"), transform=ax.transAxes,
+                ha="right", va="bottom", fontsize=9, style="italic", linespacing=1.1,
                 color=t["series"][2] if collapsed else t["text2"])
         for i, counts in enumerate(DECISIONS[model]):
             _stacked_row(ax, i, counts, t, label_min=0.1)
@@ -257,10 +265,10 @@ def specificity(theme: str) -> None:
     data = [SPECIFICITY[m] for m in MODELS]
     fig, ax = plt.subplots(figsize=(7.2, 4.8), facecolor=t["surface"])
     ax.set_facecolor(t["surface"])
-    ax.imshow(data, cmap=cmap, vmin=0, vmax=0.85, aspect="auto")
+    ax.imshow(data, cmap=cmap, vmin=0, vmax=1.0, aspect="auto")
     for i, row in enumerate(data):
         for j, v in enumerate(row):
-            dark_cell = v > 0.42 if theme == "light" else v > 0.55
+            dark_cell = v > 0.5 if theme == "light" else v > 0.65
             ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=11,
                     fontweight="bold",
                     color=("#ffffff" if dark_cell else t["text"]) if theme == "light"
@@ -268,20 +276,26 @@ def specificity(theme: str) -> None:
     ax.set_xticks(range(5), CONDITIONS)
     ax.set_yticks(range(len(MODELS)), MODELS)
     ax.tick_params(length=0, colors=t["text"])
-    for lbl in ax.get_yticklabels()[N_USEFUL:]:
-        lbl.set_color(t["series"][2])
+    for lbl, model in zip(ax.get_yticklabels(), MODELS):
+        if model in COLLAPSED:
+            lbl.set_color(t["series"][2])
+        elif MODELS.index(model) >= N_USEFUL:
+            lbl.set_color(t["text2"])
     for s in ax.spines.values():
         s.set_visible(False)
     ax.set_xticks([x + 0.5 for x in range(4)], minor=True)
     ax.set_yticks([y + 0.5 for y in range(len(MODELS) - 1)], minor=True)
     ax.grid(which="minor", color=t["surface"], linewidth=3)
     ax.tick_params(which="minor", length=0)
-    ax.axhline(N_USEFUL - 0.5, color=t["muted"], linewidth=1.2, linestyle=(0, (3, 3)))
-    ax.text(1.01, N_USEFUL - 0.5, "collapsed ↓", va="center", ha="left", fontsize=8.5,
-            color=t["muted"], style="italic", transform=ax.get_yaxis_transform())
+    first_collapsed = min(MODELS.index(m) for m in COLLAPSED)
+    for y, label in [(N_USEFUL - 0.5, "abstention-heavy ↓"),
+                     (first_collapsed - 0.5, "Reliable-heavy collapse ↓")]:
+        ax.axhline(y, color=t["muted"], linewidth=1.2, linestyle=(0, (3, 3)))
+        ax.text(1.01, y, label, va="center", ha="left", fontsize=8.5,
+                color=t["muted"], style="italic", transform=ax.get_yaxis_transform())
     ax.xaxis.tick_top()
-    ax.set_title("Specificity: share of detector false positives rejected", loc="left",
-                 fontsize=12, fontweight="bold", color=t["text"], pad=30)
+    ax.set_title("Specificity (Protocol v2): share of detector false positives rejected",
+                 loc="left", fontsize=12, fontweight="bold", color=t["text"], pad=30)
     _save(fig, "specificity", theme)
 
 
@@ -301,26 +315,39 @@ def a1_behavior(theme: str) -> None:
     ax.spines["left"].set_visible(False)
     for lbl in ax.get_yticklabels():
         lbl.set_color(t["text"])
-    for i, (_, _, _, spec) in enumerate(A1_ALL):
-        ax.text(1.02, i, f"Spec {spec:.2f}", va="center", fontsize=9.5,
+    for i, (_, _, counts, spec) in enumerate(A1_ALL):
+        coverage = (counts[0] + counts[2]) / sum(counts)
+        note = f"Spec {spec:.2f}" + (f" · cov {coverage:.2f}" if coverage < 0.9 else "")
+        ax.text(1.02, i, note, va="center", fontsize=9.5,
                 color=t["text2"] if spec >= 0.2 else t["series"][2], fontweight="bold",
                 transform=ax.get_yaxis_transform())
-    ax.axhline(3.5, color=t["muted"], linewidth=1, linestyle=(0, (3, 3)))
-    ax.text(1.02, 3.5, "collapse modes ↓", va="center", fontsize=8.5, color=t["muted"],
-            transform=ax.get_yaxis_transform(), style="italic",
-            bbox=dict(facecolor=t["surface"], edgecolor="none", pad=1))
-    fig.suptitle("A1 (overlay only): functional verifiers vs. collapse and partial-collapse modes",
+    for y, label in A1_GROUP_BREAKS:
+        ax.axhline(y, color=t["muted"], linewidth=1, linestyle=(0, (3, 3)))
+        ax.text(1.02, y, label, va="center", fontsize=8.5, color=t["muted"],
+                transform=ax.get_yaxis_transform(), style="italic",
+                bbox=dict(facecolor=t["surface"], edgecolor="none", pad=1))
+    fig.suptitle("A1 (overlay only): useful verifiers, abstention-heavy behavior, and collapse modes",
                  x=0.012, y=1.07, ha="left", fontsize=12.5, color=t["text"], fontweight="bold")
     _legend(fig, t, y=1.01)
     _save(fig, "a1_behavior", theme)
 
 
+FIGURES = {
+    "ablation_inputs": ablation_inputs,
+    "decision_mix": decision_mix,
+    "specificity": specificity,
+    "a1_behavior": a1_behavior,
+}
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--only", nargs="+", choices=sorted(FIGURES), default=list(FIGURES),
+                        help="Regenerate only these figures (default: all)")
+    args = parser.parse_args()
     for theme in THEMES:
-        ablation_inputs(theme)
-        decision_mix(theme)
-        specificity(theme)
-        a1_behavior(theme)
+        for name in args.only:
+            FIGURES[name](theme)
 
 
 if __name__ == "__main__":

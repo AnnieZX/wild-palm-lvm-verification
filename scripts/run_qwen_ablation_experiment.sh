@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# DEPRECATED (Evaluation Protocol v2, 2026-09-27): reproduces a completed experiment and
+# writes GT evaluation to the frozen Protocol v1 tree outputs/evaluation/. Do not use for
+# new runs; use scripts/submit_model_ablation.sh -> jobs/run_verification.slurm (v2 root).
+# Re-score existing predictions with scripts/rescore_protocol_v2.py.
+#
 # Orchestrate the full Qwen2.5-VL verification ablation experiment (A1–A5).
 #
 # Called by jobs/run_qwen_ablation.slurm or directly from the project root:

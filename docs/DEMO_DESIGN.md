@@ -60,7 +60,7 @@ The demo follows a **three-tier logical architecture**: browser client, API serv
 ┌─────────────────────────────────────────────────────────────────┐
 │              Experiment artifact store (external)                │
 │   outputs/verification/<model>/<experiment_id>/                  │
-│   outputs/evaluation/<model>/<experiment_id>/                    │
+│   outputs/evaluation_protocol_v2/<model>/<experiment_id>/        │
 │   outputs/verification_ablation_<N>/  (overlay images)           │
 │   Precomputed by frozen pipeline — demo does not regenerate      │
 └─────────────────────────────────────────────────────────────────┘
@@ -556,7 +556,7 @@ The demo is conference-ready when a reviewer can, **without repository access**:
 2. See aggregate precision/recall/F1 and decision distributions for a chosen ablation.
 3. Open representative success and failure samples with orthomosaic context.
 4. Compare model predictions and reasoning on the **same** detection.
-5. Trust that numbers match the thesis evaluation exports (API serves the same artifacts as `outputs/evaluation/`).
+5. Trust that numbers match the thesis evaluation exports (API serves the same artifacts as `outputs/evaluation_protocol_v2/` by default; `DEMO_EVALUATION_ROOT=evaluation` selects the frozen Protocol v1 tree).
 
 ---
 

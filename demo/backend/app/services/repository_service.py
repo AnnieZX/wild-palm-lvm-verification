@@ -13,5 +13,5 @@ _repository: Optional[ExperimentRepository] = None
 def get_repository() -> ExperimentRepository:
     global _repository
     if _repository is None:
-        _repository = ExperimentRepository(settings.outputs_root)
+        _repository = ExperimentRepository(settings.outputs_root, settings.evaluation_root)
     return _repository

@@ -6,7 +6,7 @@
 **Experiment ID:** `20260708_0020`  
 **Dataset size:** 5747 YOLO detections  
 
-This document is the **canonical production record** for the completed Qwen full-dataset ablation (A1–A5). All metric values below were **independently recovered** from the experiment artifacts and recomputed with `scripts/compute_verification_metrics.py` / the same formulas. Numbers were **not** copied from chat prompts.
+This document is the **production run record** for the completed Qwen full-dataset ablation (A1–A5): canonical paths, integrity checks, evaluation semantics and Qwen-specific observations. **Metric tables live only in [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §5 (full scale) and §7 (@1000)**, scored under Evaluation Protocol v2. Numbers quoted below are Protocol v2 unless labelled otherwise.
 
 ---
 
@@ -15,7 +15,8 @@ This document is the **canonical production record** for the completed Qwen full
 | Role | Path |
 |------|------|
 | Verification (production) | `outputs/verification/qwen/20260708_0020/` |
-| Evaluation (production) | `outputs/evaluation/qwen/20260708_0020/` |
+| Evaluation (Protocol v2, current) | `outputs/evaluation_protocol_v2/qwen/20260708_0020/` |
+| Evaluation (Protocol v1, frozen) | `outputs/evaluation/qwen/20260708_0020/` |
 | Ablation inputs | `outputs/verification_ablation_5747/` |
 | GT matching | LabelMe GT vs YOLO bbox, **greedy one-to-one**, **IoU ≥ 0.5** (`scripts/evaluate_verification_against_groundtruth.py`, `IOU_THRESHOLD = 0.5`) |
 
@@ -41,10 +42,9 @@ For each of A1–A5 under the canonical roots:
 | Missing IDs | **0** |
 | Duplicate IDs | **0** |
 | Evaluation CSV rows | **5747** |
-| GT positive (`matched_gt`) | **4685** |
-| GT negative | **1062** |
+| GT positive / negative (`matched_gt`, Protocol v2) | **5109 / 638** (Protocol v1: 4685 / 1062) |
 | Parse failures / empty decisions | **0** |
-| Stored `*_metrics.json` vs recomputed TP/FP/TN/FN/P/R/F1/Acc/R/U/Ur | **match** |
+| Stored `*_metrics.json` vs recomputed TP/FP/TN/FN/P/R/F1/Acc/R/U/Ur | **match** (v1 audit 2026-09-27; v2 invariants checked by `scripts/rescore_protocol_v2.py`) |
 
 A5 completion job: **8318977** (exit 0), writing into the legacy production tree above.
 
@@ -78,8 +78,8 @@ Let \(B\) = rows with label ∈ {Reliable, Unreliable}.
 | Metric | Formula | Denominator / scope |
 |--------|---------|---------------------|
 | Precision | TP / (TP+FP) | Binary subset \(B\) |
-| Recall (sensitivity) | TP / (TP+FN) | Binary subset \(B\) (not all 4685 GT+) |
-| Specificity | TN / (TN+FP) | Binary subset \(B\) (not all 1062 GT−) |
+| Recall (sensitivity) | TP / (TP+FN) | Binary subset \(B\) (not all 5109 GT+) |
+| Specificity | TN / (TN+FP) | Binary subset \(B\) (not all 638 GT−) |
 | F1 | \(2PR/(P+R)\) | From binary Precision/Recall |
 | Accuracy | (TP+TN) / (TP+FP+TN+FN) | Binary \(N = \|B\|\) |
 | Balanced accuracy | (Recall + Specificity) / 2 | Binary subset |
@@ -89,7 +89,7 @@ Let \(B\) = rows with label ∈ {Reliable, Unreliable}.
 
 **Important:** binary Precision/Recall/F1/Accuracy/Specificity/Balanced accuracy **exclude Uncertain**. Their denominators are **not** 5747. Report Uncertain rate / Coverage separately and do not mix the two scopes.
 
-Specificity and balanced accuracy are **not** written into `*_metrics.json` by the metrics script; they are derived here from the same TP/FP/TN/FN the script stores.
+Under Protocol v2, `specificity` and `balanced_accuracy` are written into every `*_metrics.json` by the metrics script. Protocol v1 metrics JSONs do not contain them; derive them from the stored TP/FP/TN/FN.
 
 ---
 
@@ -109,56 +109,43 @@ Shared across A1–A5: same role text, palm morphology cues, decision definition
 
 ---
 
-## 5. Final metrics table (A1–A5 @5747)
+## 5. Metrics (Protocol v2)
 
-Binary metrics: Uncertain excluded. Uncertain rate & Coverage: over full 5747.
+Full A1–A5 metrics, confusion counts and failure counts: [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §5 (row group "Qwen2.5-VL-7B"). The @1000 experiment `20260706_2214` is in §7 of the same file.
 
-| Ablation | Reliable | Uncertain | Unreliable | Precision | Recall | Specificity | F1 | Accuracy | Balanced Accuracy | Uncertain Rate | Coverage |
-|----------|----------|-----------|------------|-----------|--------|-------------|-----|----------|-------------------|----------------|----------|
-| A1 | 3593 | 1775 | 379 | 0.8945 | 0.9381 | 0.3059 | 0.9158 | 0.8512 | 0.6220 | 0.3089 | 0.6911 |
-| A2 | 4268 | 1344 | 135 | 0.8796 | 0.9804 | 0.1045 | 0.9273 | 0.8662 | 0.5425 | 0.2339 | 0.7661 |
-| A3 | 4416 | 1313 | 18 | 0.8755 | 0.9979 | 0.0179 | 0.9327 | 0.8742 | 0.5079 | 0.2285 | 0.7715 |
-| A4 | 3570 | 1557 | 620 | 0.9067 | 0.8984 | 0.4327 | 0.9026 | 0.8332 | 0.6656 | 0.2709 | 0.7291 |
-| A5 | 3065 | 455 | 2227 | 0.9106 | 0.6470 | 0.7198 | 0.7565 | 0.6604 | 0.6834 | 0.0792 | 0.9208 |
+Uncertain answers split by GT class (Protocol v2; not reported elsewhere). Uncertain on GT+ is neither TP nor FN; Uncertain on GT− is neither FP nor TN.
 
-### Confusion table (binary subset)
-
-| Ablation | TP | FP | TN | FN | Binary N | Excluded Uncertain | GT+ Uncertain | GT− Uncertain |
-|----------|----|----|----|----|----------|--------------------|---------------|---------------|
-| A1 | 3214 | 379 | 167 | 212 | 3972 | 1775 | 1259 | 516 |
-| A2 | 3754 | 514 | 60 | 75 | 4403 | 1344 | 856 | 488 |
-| A3 | 3866 | 550 | 10 | 8 | 4434 | 1313 | 811 | 502 |
-| A4 | 3237 | 333 | 254 | 366 | 4190 | 1557 | 1082 | 475 |
-| A5 | 2791 | 274 | 704 | 1523 | 5292 | 455 | 371 | 84 |
+| Ablation | Binary N | Uncertain | GT+ Uncertain | GT− Uncertain |
+|----------|---------:|----------:|--------------:|--------------:|
+| A1 | 3972 | 1775 | 1421 | 354 |
+| A2 | 4403 | 1344 | 988 | 356 |
+| A3 | 4434 | 1313 | 940 | 373 |
+| A4 | 4190 | 1557 | 1221 | 336 |
+| A5 | 5292 | 455 | 400 | 55 |
 
 ---
 
-## 6. Key findings (from recovered numbers only)
+## 6. Key findings (Protocol v2)
 
 | Question | Answer (@5747) |
 |----------|----------------|
-| Highest F1 | **A3** (0.9327) |
-| Highest recall | **A3** (0.9979) |
-| Highest specificity | **A5** (0.7198) |
-| Highest balanced accuracy | **A5** (0.6834) |
+| Highest F1 | **A3** (0.9694) |
+| Highest recall | **A3** (0.9981) |
+| Highest specificity | **A5** (0.9005) |
+| Highest balanced accuracy | **A5** (0.7695), narrowly ahead of A4 (0.7628) |
 | Highest coverage | **A5** (0.9208); lowest Uncertain rate (0.0792) |
 
 **A5 vs A1–A4:** A5 is more conservative (fewest Reliable, most Unreliable), rejects negatives far better (highest Spec / TN), but at a clear recall and F1 cost. It also abstains least often (highest coverage).
 
-**Adding confidence / geometry (A1→A2→A3):** F1 and recall **rise**, but specificity **collapses** (0.31 → 0.10 → 0.02). Improvement is **not** monotonic for verification quality if negative discrimination matters. A3’s near-perfect recall with near-zero specificity is a warning that high F1 can coexist with almost no false-positive rejection.
+**Adding confidence / geometry (A1→A2→A3):** F1 and recall **rise**, but specificity **collapses** (0.42 → 0.18 → 0.04). Improvement is **not** monotonic for verification quality if negative discrimination matters. A3's near-perfect recall with near-zero specificity is a warning that high F1 can coexist with almost no false-positive rejection.
 
-**Why F1 alone misleads a second-stage FP verifier:** The set is heavily GT-positive (4685/5747 ≈ 81.5%). Policies that over-call Reliable inflate TP and F1 while failing to reject unmatched detections. Specificity and balanced accuracy expose that failure mode (especially A2/A3).
+**Why F1 alone misleads a second-stage FP verifier:** The set is heavily GT-positive (5109/5747 ≈ 88.9%). Policies that over-call Reliable inflate TP and F1 while failing to reject unmatched detections. Specificity and balanced accuracy expose that failure mode (especially A2/A3).
 
 ### A5 @1000 vs A5 @5747
 
-Recovered from canonical Qwen experiment `20260706_2214` (1000 verification JSONs `sample_000001`…`sample_001000`; evaluation rows restricted to those IDs):
+The @1000 slice (`20260706_2214`, `sample_000001`…`sample_001000`; unaffected by the v2 correction) has A5 Spec 0.8462, BalAcc 0.7546, F1 0.7918; the full set under Protocol v2 has A5 Spec 0.9005, BalAcc 0.7695, F1 0.7736.
 
-| Scale | Precision | Recall | F1 | Specificity | Balanced Acc |
-|-------|-----------|--------|-----|-------------|--------------|
-| A5 @1000 | 0.9825 | 0.6631 | 0.7918 | 0.8462 | 0.7546 |
-| A5 @5747 | 0.9106 | 0.6470 | 0.7565 | 0.7198 | 0.6834 |
-
-**Qualitative behavior reproduces:** high precision, lower recall, strong specificity relative to A1–A4. Absolute Spec/BA/F1 are somewhat milder on the full set than on the 1000-slice.
+**Qualitative behavior reproduces:** high precision, lower recall, strong specificity relative to A1–A4. Under Protocol v2, full-set specificity and balanced accuracy are slightly **higher** than on the 1000-slice and F1 is slightly lower. (Protocol v1 had reported the full-set values as milder; that comparison was affected by the case-sensitive GT label defect.)
 
 ---
 
@@ -184,9 +171,11 @@ Recovered from canonical Qwen experiment `20260706_2214` (1000 verification JSON
 
 ### Evaluation
 
-- `outputs/evaluation/qwen/20260708_0020/A{1–5}/A{1–5}_evaluation.csv`
-- `outputs/evaluation/qwen/20260708_0020/A{1–5}/A{1–5}_metrics.json`
-- `outputs/evaluation/qwen/20260708_0020/A{1–5}/summary.csv`
+- `outputs/evaluation_protocol_v2/qwen/20260708_0020/A{1–5}/A{1–5}_evaluation.csv` (Protocol v2, current)
+- `outputs/evaluation_protocol_v2/qwen/20260708_0020/A{1–5}/A{1–5}_metrics.json`
+- `outputs/evaluation_protocol_v2/qwen/20260708_0020/A{1–5}/summary.csv`
+- `outputs/evaluation_protocol_v2/qwen/20260708_0020/PROTOCOL.json`
+- `outputs/evaluation/qwen/20260708_0020/…` (same files, Protocol v1, frozen provenance)
 
 ### Code (frozen protocol references)
 
@@ -198,7 +187,7 @@ Recovered from canonical Qwen experiment `20260706_2214` (1000 verification JSON
 ### Related primary @1000 ablation (separate experiment)
 
 - `outputs/verification/qwen/20260706_2214/` (A1–A5 @1000)
-- `outputs/evaluation/qwen/20260706_2214/`
+- `outputs/evaluation_protocol_v2/qwen/20260706_2214/` (v1 twin: `outputs/evaluation/qwen/20260706_2214/`)
 
 ---
 
@@ -206,4 +195,4 @@ Recovered from canonical Qwen experiment `20260706_2214` (1000 verification JSON
 
 **`QWEN_FULL_A1_A5_COMPLETE`**
 
-Treat `outputs/verification/qwen/20260708_0020/` and `outputs/evaluation/qwen/20260708_0020/` as the production full-dataset Qwen A1–A5 results. Do not archive/delete other trees in this document’s scope without a separate explicit decision.
+Treat `outputs/verification/qwen/20260708_0020/` (predictions) and `outputs/evaluation_protocol_v2/qwen/20260708_0020/` (Protocol v2 evaluation) as the production full-dataset Qwen A1–A5 results; `outputs/evaluation/qwen/20260708_0020/` is the frozen Protocol v1 evaluation. Do not archive/delete other trees in this document’s scope without a separate explicit decision.

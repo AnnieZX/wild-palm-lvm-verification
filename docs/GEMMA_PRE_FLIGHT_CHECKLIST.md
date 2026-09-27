@@ -401,4 +401,4 @@ Each JSON should include: `sample_id`, `raw_response`, `decision`, `model_key` (
 
 ---
 
-See also: [`GEMMA_INTEGRATION_PLAN.md`](GEMMA_INTEGRATION_PLAN.md) · [`GEMMA_IMPLEMENTATION_REPORT.md`](GEMMA_IMPLEMENTATION_REPORT.md)
+See also: [`GEMMA_IMPLEMENTATION_REPORT.md`](../archive/docs/GEMMA_IMPLEMENTATION_REPORT.md) (archived). `GEMMA_INTEGRATION_PLAN.md` was removed on 2026-09-27 (recoverable from git history).

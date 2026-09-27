@@ -19,12 +19,18 @@ outputs/
 │           ├── A1/sample_*.json
 │           ├── A1/results_index.csv
 │           └── … A5/
-├── evaluation/
+├── evaluation_protocol_v2/      # CURRENT evaluation (Evaluation Protocol v2)
+│   ├── PROTOCOL.json            # protocol version, GT rule, base commit, timestamp
+│   ├── rescore_manifest.csv     # v1 vs v2 metrics + invariant checks per run
+│   ├── detection_metrics.json   # YOLO detection-level metrics (v2 GT)
 │   └── <model_key>/
 │       └── <experiment_id>/
+│           ├── PROTOCOL.json
 │           ├── A1/A1_evaluation.csv
 │           ├── A1/A1_metrics.json
 │           └── … A5/
+├── evaluation/                  # Protocol v1 (case-sensitive "palm"); FROZEN, do not write
+│   └── <model_key>/<experiment_id>/A*/…
 └── visualization/
     └── <model_key>/
         └── <experiment_id>/
@@ -39,10 +45,13 @@ Pre-freeze Qwen2.5 experiments may exist under:
 
 ```
 outputs/verification/qwen/<experiment_id>/
-outputs/evaluation/qwen/<experiment_id>/
+outputs/evaluation_protocol_v2/qwen/<experiment_id>/
+outputs/evaluation/qwen/<experiment_id>/            # Protocol v1
 ```
 
-Path helpers in `src/paths.py` detect these automatically for resume and visualization.
+Path helpers in `src/paths.py` detect these automatically for resume and visualization; `CURRENT_EVALUATION_ROOT` points at `evaluation_protocol_v2/`.
+
+`outputs/evaluation/` holds Protocol v1 results and is kept unmodified as provenance. Regenerate v2 metrics from stored predictions with `python scripts/rescore_protocol_v2.py` (no inference).
 
 Older folders (`verification_results/`, `verification_ablation_results/`, `yolo_gt_overlap_full/`) may still exist on disk from earlier experiments. They are not part of the current production pipeline.
 

@@ -4,7 +4,7 @@ Generate publication-quality qualitative figures for verification experiments.
 
 Input:
     - outputs/verification/<model_key>/<experiment_id>/A1..A5 inference results
-    - outputs/evaluation/<model_key>/<experiment_id>/A1..A5 evaluation CSVs
+    - outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/A1..A5 evaluation CSVs
     - outputs/verification_dataset/ images and index
     - Raw_Patches PNGs and LabelMe JSON
 

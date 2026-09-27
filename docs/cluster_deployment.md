@@ -90,8 +90,11 @@ Raw patches on the DEAC cluster: `/deac/csc/yangGrp/cuij/palm/Raw_Patches/`
 
 ```
 outputs/verification/<model_key>/<experiment_id>/A1/
-outputs/evaluation/<model_key>/<experiment_id>/A1/
+outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/A1/   # current evaluation
+outputs/evaluation/<model_key>/<experiment_id>/A1/               # Protocol v1, frozen
 ```
+
+Legacy per-model job scripts (marked `DEPRECATED` in their headers) still write evaluation to the frozen v1 tree `outputs/evaluation/`; re-score with `scripts/rescore_protocol_v2.py` or use `jobs/run_verification.slurm`, which defaults to the v2 tree.
 
 Legacy pre-freeze paths under `outputs/verification/qwen/` remain readable.
 
@@ -101,9 +104,9 @@ See [`outputs/README.md`](../outputs/README.md) and [`ARCHITECTURE.md`](ARCHITEC
 
 ## Future models
 
-Adding LLaVA, Gemma 4, or Qwen3-VL requires only verifier + adapter + config + registry entry.
+Adding a new VLM requires only verifier + adapter + config + registry entry (see [`FRAMEWORK_FREEZE.md`](FRAMEWORK_FREEZE.md) and [`SUPPORTED_MODELS.md`](SUPPORTED_MODELS.md)).
 
-Integration design: [`MULTI_MODEL_INTEGRATION_PLAN.md`](MULTI_MODEL_INTEGRATION_PLAN.md)
+Historical integration design (July 2026): [`archive/docs/MULTI_MODEL_INTEGRATION_PLAN.md`](../archive/docs/MULTI_MODEL_INTEGRATION_PLAN.md)
 
 ---
 

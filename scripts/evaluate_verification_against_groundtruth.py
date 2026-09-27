@@ -10,7 +10,10 @@ Input:
     - LabelMe JSON under Raw_Patches
 
 Output:
-    - outputs/evaluation/A1_evaluation.csv … A5_evaluation.csv
+    - <output-dir>/A1_evaluation.csv … A5_evaluation.csv
+      (default: outputs/evaluation_protocol_v2/; pipeline runs pass
+      outputs/evaluation_protocol_v2/<model>/<experiment>/<A*>. The Protocol v1
+      tree outputs/evaluation/ is frozen.)
 """
 
 from __future__ import annotations
@@ -28,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.paths import (
-    EVALUATION_DIR,
+    CURRENT_EVALUATION_ROOT,
     PREDICTIONS_FULL_JSON,
     RAW_PATCHES_ROOT,
     VERIFICATION_ABLATION_RESULTS_DIR,
@@ -87,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=EVALUATION_DIR,
+        default=CURRENT_EVALUATION_ROOT,
         help="Directory for per-ablation evaluation CSV files",
     )
     parser.add_argument(

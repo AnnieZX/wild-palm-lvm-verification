@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-09-27 — historical snapshot, not current.** Any numeric results here use **Evaluation Protocol v1** (case-sensitive `"palm"` GT label; GT+ 4,685 / GT− 1,062) and are superseded. Current results: [`docs/EXPERIMENT_RESULTS_CANONICAL.md`](../../docs/EXPERIMENT_RESULTS_CANONICAL.md) · current status: [`docs/EXPERIMENT_STATUS_CANONICAL.md`](../../docs/EXPERIMENT_STATUS_CANONICAL.md) · index: [`archive/docs/README.md`](README.md).
+
 # Full-Scale Model Comparison (N = 5,747)
 
 **Status date:** 2026-09-27 (canonicalization; all numbers re-derived from raw prediction + evaluation trees)  

@@ -20,7 +20,7 @@ The script resolves paths from `src/paths.py` and accepts `--model` (default: `q
 | Artifact | Location |
 |----------|----------|
 | Verification inference results | `outputs/verification/<model_key>/<experiment_id>/A1` … `A5` |
-| Evaluation CSVs | `outputs/evaluation/<model_key>/<experiment_id>/A1` … `A5` |
+| Evaluation CSVs | `outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/A1` … `A5` (Protocol v2; v1 frozen in `outputs/evaluation/`) |
 | Verification dataset overlays | `outputs/verification_dataset/images/` |
 | Raw patch images | `/deac/csc/yangGrp/cuij/palm/Raw_Patches/` |
 | LabelMe ground truth | Same `Raw_Patches` tree |

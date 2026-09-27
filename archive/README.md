@@ -29,7 +29,7 @@ Archived experiment outputs, evaluations, and Slurm logs are **excluded from sci
 | LLaVA A1 @1000 | `outputs/verification/llava/20260719_1734/` (degenerate all-Reliable; evidence only) |
 | Gemma A1 @1000 | `outputs/verification/gemma/20260802_1702/` (degenerate all-Reliable; evidence only) |
 
-Authoritative narrative: **`docs/EXPERIMENT_STATUS_CANONICAL.md`**.
+Authoritative run inventory: **`docs/EXPERIMENT_STATUS_CANONICAL.md`**. Authoritative numbers (Evaluation Protocol v2): **`docs/EXPERIMENT_RESULTS_CANONICAL.md`**.
 
 ## Layout (September 2026 audit categories)
 
@@ -42,6 +42,7 @@ Authoritative narrative: **`docs/EXPERIMENT_STATUS_CANONICAL.md`**.
 | `incomplete_experiments/` | Notes for incomplete work left in place (Qwen A5 @5747) |
 | `invalid_experiments/` | Notes for collapsed-model runs left in place (LLaVA/Gemma) |
 | `miscellaneous_runtime_artifacts/` | Accidental empty pip redirect files, etc. |
+| `docs/` | Documents superseded by the Evaluation Protocol v2 migration (2026-09-27); Protocol v1 numbers. Index: [`docs/README.md`](docs/README.md) |
 | `deprecated_scripts/`, `prototype/`, `experiments/`, `old_docs/`, `jobs/`, `scripts/`, `src/`, `old_labelme_ablation/`, `unused_data/` | Earlier (June 2026) cleanup |
 
 ## Manifest

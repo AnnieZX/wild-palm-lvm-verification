@@ -4,11 +4,14 @@ Purpose:
     Compute verification metrics from per-ablation GT evaluation CSVs.
 
 Input:
-    - outputs/evaluation/A1_evaluation.csv … A5_evaluation.csv
+    - <evaluation-dir>/A1_evaluation.csv … A5_evaluation.csv
 
 Output:
-    - outputs/evaluation/summary.csv
-    - outputs/evaluation/A1_metrics.json … (one JSON per ablation)
+    - <evaluation-dir>/summary.csv
+    - <evaluation-dir>/A1_metrics.json … (one JSON per ablation)
+
+Default evaluation-dir: outputs/evaluation_protocol_v2/ (Protocol v1 tree
+outputs/evaluation/ is frozen).
 """
 
 from __future__ import annotations
@@ -25,7 +28,8 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.paths import EVALUATION_DIR
+from src.paths import CURRENT_EVALUATION_ROOT
+from src.preprocessing.gt_palm_bboxes import EVALUATION_PROTOCOL_VERSION
 
 EVALUATION_CSV_PATTERN = re.compile(r"^(A\d+)_evaluation\.csv$")
 
@@ -56,7 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--evaluation-dir",
         type=Path,
-        default=EVALUATION_DIR,
+        default=CURRENT_EVALUATION_ROOT,
         help="Directory containing A*_evaluation.csv files",
     )
     return parser.parse_args()
@@ -139,6 +143,8 @@ def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
     recall = safe_divide(tp, tp + fn)
     f1 = safe_divide(2 * precision * recall, precision + recall)
     accuracy = safe_divide(tp + tn, tp + tn + fp + fn)
+    specificity = safe_divide(tn, tn + fp)
+    balanced_accuracy = (recall + specificity) / 2
 
     def pct(count: int) -> float:
         if total_samples == 0:
@@ -160,6 +166,8 @@ def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
         "recall": round(recall, 4),
         "f1": round(f1, 4),
         "accuracy": round(accuracy, 4),
+        "specificity": round(specificity, 4),
+        "balanced_accuracy": round(balanced_accuracy, 4),
         "average_iou": round(float(iou_values.mean()), 4) if not iou_values.dropna().empty else 0.0,
         "average_confidence": round(float(confidence_values.mean()), 4)
         if not confidence_values.dropna().empty
@@ -172,6 +180,7 @@ def compute_metrics(df: pd.DataFrame, ablation: str) -> dict[str, Any]:
         "unreliable_pct": pct(unreliable_count),
         "ground_truth_positive": int(gt_positive.sum()),
         "ground_truth_negative": int((~gt_positive).sum()),
+        "evaluation_protocol": EVALUATION_PROTOCOL_VERSION,
     }
 
 

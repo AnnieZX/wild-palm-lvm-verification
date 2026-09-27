@@ -53,6 +53,15 @@ VERIFICATION_ABLATION_ANALYSIS_MD = VERIFICATION_ABLATION_RESULTS_DIR / "ablatio
 EVALUATION_DIR = OUTPUTS_DIR / "evaluation"
 EVALUATION_SUMMARY_CSV = EVALUATION_DIR / "summary.csv"
 
+# Versioned evaluation trees (<root>/<model_key>/<experiment_id>/<A1..A5>/).
+# outputs/evaluation/ is frozen Evaluation Protocol v1 (case-sensitive "palm");
+# outputs/evaluation_protocol_v2/ is the current protocol. See
+# docs/EVALUATION_PROTOCOL.md.
+EVALUATION_PROTOCOL_V1_ROOT = EVALUATION_DIR
+EVALUATION_PROTOCOL_V2_ROOT = OUTPUTS_DIR / "evaluation_protocol_v2"
+CURRENT_EVALUATION_ROOT = EVALUATION_PROTOCOL_V2_ROOT
+DETECTION_METRICS_V2_JSON = EVALUATION_PROTOCOL_V2_ROOT / "detection_metrics.json"
+
 # Publication visualization
 VISUALIZATION_DIR = OUTPUTS_DIR / "visualization"
 
@@ -81,7 +90,7 @@ ABLATION_CODE_TO_CONDITION = {
 # Legacy Qwen output roots (pre-framework-freeze experiments under verification/qwen/)
 LEGACY_QWEN_MODEL_KEY = "qwen"
 QWEN_VERIFICATION_ROOT = OUTPUTS_DIR / "verification" / LEGACY_QWEN_MODEL_KEY
-QWEN_EVALUATION_ROOT = OUTPUTS_DIR / "evaluation" / LEGACY_QWEN_MODEL_KEY
+QWEN_EVALUATION_ROOT = CURRENT_EVALUATION_ROOT / LEGACY_QWEN_MODEL_KEY
 
 
 def _canonical_model_key(model_key: str) -> str:
@@ -96,8 +105,8 @@ def verification_root(model_key: str) -> Path:
 
 
 def evaluation_root(model_key: str) -> Path:
-    """Return outputs/evaluation/<registry_key>/ for a model."""
-    return OUTPUTS_DIR / "evaluation" / _canonical_model_key(model_key)
+    """Return <current evaluation root>/<registry_key>/ for a model (Protocol v2)."""
+    return CURRENT_EVALUATION_ROOT / _canonical_model_key(model_key)
 
 
 def _legacy_verification_experiment_dir(experiment_id: str) -> Path:

@@ -2,7 +2,7 @@
 
 Implementation status of VLM backends in the palm verification framework (updated 2026-09-27).
 
-This file lists **what is integrated** (adapter + config + registry). Experiment results, run status and scientific outcome live only in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md).
+This file lists **what is integrated** (adapter + config + registry). Run status and scientific outcome live in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md); numeric results live in [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md).
 
 Adding a new model requires only: verifier + adapter + config YAML + registry entry (+ optional runtime case in `jobs/lib/model_runtime.sh`). See [`FRAMEWORK_FREEZE.md`](FRAMEWORK_FREEZE.md). The shared prompts, parser, evaluator and GT matching are frozen and are not model-specific.
 
@@ -25,8 +25,8 @@ All keys below are registered in `src/verification/registry.py` and resolved by 
 | `llava` | — | `llava_onevision` | `llava_verifier.py` / `llava_verification_adapter.py` | `configs/models/llava.yaml` | no | — | A1 only (@1000) |
 | `gemma` (Gemma 3) | — | `gemma-3-12b-it` | `gemma_verifier.py` / `gemma_verification_adapter.py` | `configs/models/gemma.yaml` | no | 4.50.0 | A1 only (@1000) |
 | `gemma4` (Gemma 4 12B IT) | `gemma4_12b`, `gemma-4`, `gemma4_12b_it` | `gemma-4-12B-it` (`google/gemma-4-12B-it`) | `gemma4_verifier.py` / `gemma4_verification_adapter.py` | `configs/models/gemma4.yaml` | no | 5.10.1 (runs used 5.17.0 in `envs/wild-palm-gemma4`) | Complete |
-
-**Next candidate / not yet evaluated:** Llama-3.2-11B-Vision-Instruct — no registry key, adapter, config or job exists.
+| `llama3_2_11b_vision` | — | `Llama-3.2-11B-Vision-Instruct` (`meta-llama/Llama-3.2-11B-Vision-Instruct`) | `llama3_2_11b_vision_verifier.py` / `llama3_2_11b_vision_verification_adapter.py` | `configs/models/llama3_2_11b_vision.yaml` | no | 4.45.0 | Integrated; engineering qualification only |
+| `ministral3_8b` | — | `Ministral-3-8B-Instruct-2512-BF16` | `ministral3_8b_verifier.py` / `ministral3_8b_verification_adapter.py` | `configs/models/ministral3_8b.yaml` | no | 5.0.0 | Integrated; not evaluated |
 
 ---
 
@@ -37,6 +37,8 @@ All keys below are registered in `src/verification/registry.py` and resolved by 
 - **InternVL3.5-8B-HF** — HF-native `AutoProcessor` + `AutoModelForImageTextToText`; ran on the default cluster Python (3.9.25, transformers 4.57.6). Launched via `jobs/run_internvl3_5_hf_Ax_5747.slurm`.
 - **Gemma 4 12B IT** — `AutoModelForMultimodalLM` with `enable_thinking=False`; requires the isolated venv built by `jobs/setup_gemma4_env.slurm` (`GEMMA4_VENV`). Sample JSONs from the completed run have no `generation` metadata key.
 - **MiniCPM-V-4.5 / Molmo2-8B** — full-scale A1 ran on H200 (`gpu_small`); isolated venvs with exact transformers pins asserted at job start.
+- **Llama-3.2-11B-Vision-Instruct** — `MllamaForConditionalGeneration` + `MllamaProcessor`. Only an engineering Stage 0 run exists (`jobs/run_llama3_2_11b_vision_engqual.slurm`); the scientific gate (`jobs/run_llama3_2_11b_vision_qual.slurm`) has not been run.
+- **Ministral-3-8B** — `Mistral3ForConditionalGeneration` (transformers ≥ 5.0). Download and qualification jobs exist (`jobs/download_ministral3_8b.slurm`, `jobs/run_ministral3_8b_qual.slurm`); no experiment has been run.
 
 ---
 
@@ -44,11 +46,12 @@ All keys below are registered in `src/verification/registry.py` and resolved by 
 
 ```
 outputs/verification/<registry_key>/<experiment_id>/<A1..A5>/
-outputs/evaluation/<registry_key>/<experiment_id>/<A1..A5>/
+outputs/evaluation_protocol_v2/<registry_key>/<experiment_id>/<A1..A5>/   # current (Protocol v2)
+outputs/evaluation/<registry_key>/<experiment_id>/<A1..A5>/               # Protocol v1, frozen
 ```
 
-Both trees are gitignored; they are on-disk evidence only.
+All trees are gitignored; they are on-disk evidence only. Numeric results: [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md).
 
 ---
 
-See also: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`MULTI_MODEL_INTEGRATION_PLAN.md`](MULTI_MODEL_INTEGRATION_PLAN.md) (historical July 2026 design; its "planned" statuses are superseded)
+See also: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`archive/docs/MULTI_MODEL_INTEGRATION_PLAN.md`](../archive/docs/MULTI_MODEL_INTEGRATION_PLAN.md) (historical July 2026 design; its "planned" statuses are superseded)

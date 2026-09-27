@@ -3,6 +3,11 @@
 Purpose:
     Visualize random verification evaluation samples for publication.
 
+Legacy: expects the flat pre-framework layout. The default --evaluation-dir is the frozen
+Protocol v1 root; pass a Protocol v2 condition directory
+(outputs/evaluation_protocol_v2/<model>/<experiment_id>/<A*>/) for current GT labels.
+Superseded by scripts/visualization/visualize_verification.py.
+
 Input:
     - outputs/evaluation/A*_evaluation.csv
     - Raw patch PNGs and LabelMe JSON under Raw_Patches

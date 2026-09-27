@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from src.preprocessing.gt_palm_bboxes import is_palm_label
 from src.preprocessing.json_parser import load_json
 
 
@@ -126,7 +127,7 @@ def _build_palm_instance(
     default_confidence: float | None = None,
 ) -> PalmInstance | None:
     """Build one PalmInstance from all shapes in a group."""
-    palm_shapes = [shape for shape in shapes if shape.get("label") == "palm"]
+    palm_shapes = [shape for shape in shapes if is_palm_label(shape.get("label"))]
     if not palm_shapes:
         return None
 
@@ -211,7 +212,7 @@ def extract_palm_instances_in_annotation_order(json_path: Path | str) -> list[Pa
     for shape in data.get("shapes", []):
         if not isinstance(shape, dict):
             continue
-        if shape.get("label") != "palm":
+        if not is_palm_label(shape.get("label")):
             continue
         group_id = shape.get("group_id")
         if group_id is None:

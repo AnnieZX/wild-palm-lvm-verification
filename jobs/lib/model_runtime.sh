@@ -221,9 +221,12 @@ PY
 }
 
 # Refuse writes into known completed experiment trees (historical reproducibility).
+# outputs/evaluation/ is the frozen Evaluation Protocol v1 tree; v2 writes go to
+# outputs/evaluation_protocol_v2/.
 refuse_protected_results_path() {
     local results_dir="${1:?}"
     case "${results_dir}" in
+        */outputs/evaluation/*|\
         */outputs/verification/qwen/20260706_2214/*|\
         */outputs/verification/qwen/20260708_0020/*|\
         */outputs/evaluation/qwen/20260706_2214/*|\

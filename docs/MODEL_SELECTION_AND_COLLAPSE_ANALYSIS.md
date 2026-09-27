@@ -3,37 +3,45 @@
 **Original date:** 2026-09-09  
 **Consolidation update:** 2026-09-24 (evidence from raw `outputs/` + Slurm; historical sections below retained)  
 **Landscape research update:** 2026-09-24 (external HF / GitHub / tech-report verification of optional final model; **no downloads, inference, or jobs**)  
-**Canonicalization update:** 2026-09-27 (§00 below; InternVL3.5 and Gemma 4 full-scale outcomes)  
-**Related:** `docs/EXPERIMENT_STATUS_CANONICAL.md`, `docs/INTERNVL3_5_HF_QUALIFICATION.md`, `docs/FULL_SCALE_MODEL_COMPARISON.md`, `outputs/analysis/a1_1000_cross_model_audit/`
+**Canonicalization update:** 2026-09-27 (§00 below; InternVL3.5 and Gemma 4 full-scale outcomes; re-adjudicated under Evaluation Protocol v2)  
+**Related:** `docs/EXPERIMENT_RESULTS_CANONICAL.md`, `docs/EXPERIMENT_STATUS_CANONICAL.md`, `docs/INTERNVL3_5_HF_QUALIFICATION.md`, `archive/docs/FULL_SCALE_MODEL_COMPARISON.md` (Protocol v1), `outputs/analysis/a1_1000_cross_model_audit/`
 
-Current experiment state lives in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md). Sections §0 onward are dated analysis snapshots; where they say "running", "pending" or "do not run Gemma 4", §00 records what actually happened.
+Current experiment state lives in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md); numeric results live in [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md). Sections §0 onward are dated analysis snapshots; where they say "running", "pending" or "do not run Gemma 4", §00 records what actually happened.
+
+> **Protocol note.** §00 uses Evaluation Protocol v2 (case-insensitive palm label; GT+ 5,109 / GT− 638, prior 0.889). Sections §0 onward are **Protocol v1** snapshots (GT+ 4,685 / GT− 1,062, prior 0.815); their full-scale (@5747) specificity, accuracy and prior values are historical. @1000 and balanced-100 numbers are identical under both protocols.
 
 ---
 
 ## 00. Canonicalization update (2026-09-27)
 
-### Outcomes since the 2026-09-24 snapshot
+### Outcomes since the 2026-09-24 snapshot (Protocol v2)
 
-| 2026-09-24 expectation | Verified outcome (raw outputs) |
+| 2026-09-24 expectation | Verified outcome (raw outputs, Protocol v2) |
 |------------------------|--------------------------------|
-| InternVL3.5 full A1–A5 "CURRENTLY RUNNING"; hoped NON_COLLAPSED | **Complete** (`8351993`–`8351997`). **Abstention-heavy collapse**: Uncertain 38.96–70.96%, Unreliable 0.09–2.68%, Spec 0.0157–0.1436, BalAcc ≤ 0.565 on every condition. Balanced-100 PASS did not carry over. |
-| "Do not run Gemma 4" (stopping rule item 4) | Gemma 4 **12B IT** (`google/gemma-4-12B-it`, not the E4B stub) was integrated and run anyway: **Complete** A1–A5 @5747 (`8353160`–`8353164`). **Reliable-heavy collapse**: Reliable 91.54–97.36%, 0 Uncertain, Spec 0.0678–0.2363, Acc 0.8138–0.8253 vs prior 0.8152. |
-| Gemma 4 would follow Stage 0 → balanced-100 → A1@1000 | **Did not.** Only an unbalanced A1@100 pre-check (95/0/5 Reliable) preceded full scale — a result that meets the "≥95% one class" stop criterion. Documented as a gate deviation in canonical §6. |
+| InternVL3.5 full A1–A5 "CURRENTLY RUNNING"; hoped NON_COLLAPSED | **Complete** (`8351993`–`8351997`). **Abstention-heavy; moderate specificity on A1 and A3 at low coverage, with near-zero specificity on A2, A4, and A5.** Uncertain 38.96–70.96%, Unreliable 0.09–2.68%; Spec 0.366 (A1, coverage 0.55) and 0.242 (A3, coverage 0.60); 0.055–0.106 on A2/A4/A5. |
+| "Do not run Gemma 4" (stopping rule item 4) | Gemma 4 **12B IT** (`google/gemma-4-12B-it`, not the E4B stub) was integrated and run anyway: **Complete** A1–A5 @5747 (`8353160`–`8353164`). **Reliable-heavy collapse**: Reliable 91.54–97.36%, 0 Uncertain, Spec 0.091–0.332, Acc 0.878–0.895 vs prior 0.889. |
+| Gemma 4 would follow Stage 0 → balanced-100 → A1@1000 | **Did not.** Only an unbalanced A1@100 pre-check (95/0/5 Reliable) preceded full scale — a result that meets the "≥95% one class" stop criterion. Documented as a gate deviation in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md) §5. |
+
+Metric tables: [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §5–§9.
 
 ### Collapse taxonomy — current membership
 
 | Outcome | Models |
 |---------|--------|
 | **Useful verifier** | Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash, Phi-4 (all Complete @5747) |
+| **Abstention-heavy, condition-dependent** | InternVL3.5-8B-HF (A1–A5@5747) |
 | **Reliable-heavy collapse** | LLaVA-OV, Gemma 3 (single-class, A1@1000); MiniCPM-V-4.5 (partial, A1@5747); Gemma 4 12B IT (partial, A1–A5@5747) |
-| **Abstention-heavy collapse** | Molmo2-8B (A1@5747); InternVL3.5-8B-HF (A1–A5@5747) |
+| **Abstention-heavy collapse** | Molmo2-8B (A1@5747) |
 | **Technical failure** | InternVL3-8B (balanced-100) |
 
-The Google lineage is now collapsed across two generations (Gemma 3 single-class @1000; Gemma 4 partial @5747). The OpenGVLab lineage is technical failure (InternVL3) then abstention-heavy collapse (InternVL3.5).
+The Google lineage is collapsed across two generations (Gemma 3 single-class @1000; Gemma 4 partial @5747). The OpenGVLab lineage went from technical failure (InternVL3) to an abstention-heavy model whose specificity depends strongly on the condition (InternVL3.5).
 
-### Next candidate
+Under Protocol v1 InternVL3.5 had been classified as an abstention-heavy collapse in every condition; the Protocol v2 re-score (GT label casing fix) changed that classification. See [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §2.
 
-**Llama-3.2-11B-Vision-Instruct** — *next candidate / not yet evaluated*. No adapter, config, job, download or run exists. It is not integrated and is not scheduled for full scale; any future run should follow the preferred gate and record deviations.
+### Newly integrated models
+
+- **Llama-3.2-11B-Vision-Instruct** — *Integrated; engineering qualification only.* Adapter, config and jobs exist; one engineering Stage 0 run (10 samples) validated loading and parsing. No scientific evaluation; any future run should follow the preferred gate and record deviations.
+- **Ministral-3-8B** — *Integrated; not evaluated.*
 
 ---
 
@@ -47,7 +55,7 @@ The Google lineage is now collapsed across two generations (Gemma 3 single-class
 | Run Qwen3-VL as successor | **Complete** A1–A5 @5747 (`qwen3vl_A1A5_5747`) — do **not** re-recommend as “next” |
 | Phi-4 / Molmo as independent | Phi-4 **Complete** A1–A5 @5747; Molmo2 A1@5747 **PARTIAL_COLLAPSE** |
 | MiniCPM optional | MiniCPM-V-4.5 A1@5747 **PARTIAL_COLLAPSE** |
-| InternVL3.5 as alt if cleaner HF | Stage 1 **PASS**; full A1–A5 **Complete** (`8351993`–`8351997`) → abstention-heavy collapse (§00) |
+| InternVL3.5 as alt if cleaner HF | Stage 1 **PASS**; full A1–A5 **Complete** (`8351993`–`8351997`) → abstention-heavy, condition-dependent specificity (§00, Protocol v2) |
 
 ### Collapse taxonomy (operational)
 
@@ -56,14 +64,14 @@ The Google lineage is now collapsed across two generations (Gemma 3 single-class
 | **SINGLE_CLASS_COLLAPSE** | ≥95% one decision class; Acc ≈ class prior; Spec≈0 | LLaVA / Gemma A1@1000 (100% Reliable) |
 | **PARTIAL_COLLAPSE** | Inference+parse OK; multi-label possible; but Spec≈0 and/or Acc≈always-Reliable prior with near-degenerate Unreliable | MiniCPM A1@5747; Molmo2 A1@5747 |
 | **TECHNICAL_FAILURE** | Parse/inference failure rate or gate fail before scientific read | InternVL3 Stage 1 |
-| **NON_COLLAPSED** | Uses rejection/abstention with non-trivial Spec or clear three-way structure under protocol | Qwen2.5, Qwen3, GLM, Phi-4 (full); InternVL3.5 at QUAL-100 only (collapsed at full scale, §00) |
+| **NON_COLLAPSED** | Uses rejection/abstention with non-trivial Spec or clear three-way structure under protocol | Qwen2.5, Qwen3, GLM, Phi-4 (full); InternVL3.5 at QUAL-100 (full-scale outcome re-adjudicated under Protocol v2, §00) |
 
 Poor Acc/F1 alone is **not** collapse.
 
 ### MiniCPM-V-4.5 findings (raw)
 
 - Checkpoint: `…/models/MiniCPM-V-4_5`; job **8351080** H200; exp `20260923_minicpm_A1A5_5747` **A1 only**.
-- R/U/Ur = **5557/0/190**; Spec=**0.0782**; Acc=**0.811** ≈ prior **0.815**; parse/inference **0**.
+- R/U/Ur = **5557/0/190**; Protocol v1: Spec=**0.0782**, Acc=**0.811** ≈ prior **0.815** (Protocol v2: Spec 0.1129, Acc 0.881 ≈ prior 0.889); parse/inference **0**.
 - **PARTIAL_COLLAPSE** — not single-class (190 Unreliable), but near–always-Reliable verifier skill.
 
 ### Molmo2-8B findings (raw)
@@ -84,7 +92,7 @@ Same balanced-100 gate. Verified:
 | TP/TN/FP/FN | 35/0/21/0 | 27/3/12/0 |
 
 **Fact:** JSON serialization failures and zero-Unreliable disappeared on the 3.5-HF run; Uncertain dominates.  
-**Not proven:** whether improvement is model-version vs HF-native API (both changed). Full-scale (2026-09-25): abstention-heavy collapse — see §00.
+**Not proven:** whether improvement is model-version vs HF-native API (both changed). Full-scale (2026-09-25): abstention-heavy, with moderate specificity on A1 and A3 at low coverage and near-zero specificity on A2, A4, A5 (Protocol v2) — see §00.
 
 ### Usable / non-collapsed model families (scientific roles)
 
@@ -92,7 +100,8 @@ Same balanced-100 gate. Verified:
 |------|--------|
 | **PRIMARY** | Qwen2.5-VL-7B; GLM-4.6V-Flash; Phi-4-multimodal |
 | **SUPPORTING COMPARISON** | Qwen3-VL-8B (within-family) |
-| **FAILURE / NEGATIVE CONTROL** | LLaVA-OneVision; Gemma 3; InternVL3 (technical); MiniCPM / Molmo2 (partial collapse); InternVL3.5-HF and Gemma 4 12B IT (full-scale collapse, §00) |
+| **FAILURE / NEGATIVE CONTROL** | LLaVA-OneVision; Gemma 3; InternVL3 (technical); MiniCPM / Molmo2 (partial collapse); Gemma 4 12B IT (full-scale Reliable-heavy collapse, §00) |
+| **ABSTENTION-HEAVY, CONDITION-DEPENDENT** | InternVL3.5-HF (full scale, Protocol v2, §00) |
 
 ### Next-model shortlist (≤3; experimental value, not novelty)
 
@@ -625,7 +634,7 @@ Relative compute only: LOW / MEDIUM / HIGH (no invented GPU-hours).
 **SECOND:** Qwen3-VL-8B-Instruct — Qwen-family successor  
 **THIRD:** Phi-4-multimodal-instruct — low-cost independent screen  
 
-### End card (2026-09-24 landscape research — superseded by §00: InternVL3.5 finished and collapsed; Gemma 4 12B IT was run and collapsed; Llama-3.2-11B-Vision-Instruct is the next candidate, not yet evaluated)
+### End card (2026-09-24 landscape research — superseded by §00: InternVL3.5 finished (abstention-heavy, condition-dependent specificity under Protocol v2); Gemma 4 12B IT was run and collapsed; Llama-3.2-11B-Vision-Instruct and Ministral-3-8B are integrated but not scientifically evaluated)
 
 **FINISH FIRST:** InternVL3.5-8B-HF A1–A5 @5747 (`8351993`–`8351997`) — do not cancel  
 

@@ -21,6 +21,9 @@ class Settings(BaseSettings):
         "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
     )
     demo_outputs_root: Optional[str] = None
+    # Evaluation tree, absolute or relative to the outputs root. Default: evaluation_protocol_v2
+    # (Evaluation Protocol v2). Set DEMO_EVALUATION_ROOT=evaluation to browse frozen Protocol v1.
+    demo_evaluation_root: Optional[str] = None
 
     @property
     def outputs_root(self):
@@ -30,6 +33,12 @@ class Settings(BaseSettings):
             return Path(self.demo_outputs_root).resolve()
         project_root = Path(__file__).resolve().parents[3]
         return project_root / "outputs"
+
+    @property
+    def evaluation_root(self):
+        from pathlib import Path
+
+        return Path(self.demo_evaluation_root) if self.demo_evaluation_root else None
 
     @property
     def cors_origin_list(self) -> List[str]:

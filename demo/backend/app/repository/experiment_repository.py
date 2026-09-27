@@ -41,6 +41,7 @@ from app.repository.paths import (
     evaluation_condition_dir,
     list_experiment_dirs,
     list_verification_model_dirs,
+    resolve_evaluation_root,
     verification_condition_dir,
 )
 
@@ -48,8 +49,9 @@ from app.repository.paths import (
 class ExperimentRepository:
     """Discover and serve experiment artifacts from outputs/."""
 
-    def __init__(self, outputs_root: Path) -> None:
+    def __init__(self, outputs_root: Path, evaluation_root: Optional[Path] = None) -> None:
         self.outputs_root = outputs_root.resolve()
+        self.evaluation_root = resolve_evaluation_root(self.outputs_root, evaluation_root)
         self._catalog: Optional[List[ModelInfo]] = None
         self._evaluation_rows_cache: Dict[Tuple[str, str, str], List[Dict[str, str]]] = {}
         self._verification_json_cache: Dict[Tuple[str, str, str, str], Dict[str, Any]] = {}
@@ -212,6 +214,7 @@ class ExperimentRepository:
                     model_key,
                     experiment_id,
                     ablation.value,
+                    self.evaluation_root,
                 )
                 / f"{ablation.value}{METRICS_JSON_SUFFIX}"
             )
@@ -259,6 +262,7 @@ class ExperimentRepository:
             model_key,
             experiment_id,
             ablation.value,
+            self.evaluation_root,
         )
         metrics_path = evaluation_dir / f"{ablation.value}{METRICS_JSON_SUFFIX}"
         if metrics_path.exists():
@@ -397,6 +401,7 @@ class ExperimentRepository:
             model_key,
             experiment_id,
             ablation_code,
+            self.evaluation_root,
         )
         csv_path = discover_evaluation_csv(evaluation_dir)
         if csv_path is None:

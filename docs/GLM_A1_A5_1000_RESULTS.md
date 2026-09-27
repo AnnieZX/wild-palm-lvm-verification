@@ -27,12 +27,14 @@ GLM remains non-collapsed across A1–A5 and reproduces the Qwen A5 tradeoff: hi
 
 ## Source files (evaluation CSVs)
 
+These @1000 runs use samples `sample_000001`–`sample_001000` and are numerically identical under Evaluation Protocol v1 and v2. The paths below are the Protocol v2 files; the frozen Protocol v1 twins are at the same relative path under `outputs/evaluation/`. Canonical numbers: [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §7.
+
 | Abl. | Source |
 |------|--------|
-| A1 | `outputs/evaluation/glm_4_6v_flash/20260913_glm46v_flash_A1_1000/A1/A1_evaluation.csv` |
-| A2 | `outputs/evaluation/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A2/A2_evaluation.csv` |
-| A3 | `outputs/evaluation/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A3/A3_evaluation.csv` |
-| A4 | `outputs/evaluation/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A4/A4_evaluation.csv` |
-| A5 | `outputs/evaluation/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A5/A5_evaluation.csv` |
+| A1 | `outputs/evaluation_protocol_v2/glm_4_6v_flash/20260913_glm46v_flash_A1_1000/A1/A1_evaluation.csv` |
+| A2 | `outputs/evaluation_protocol_v2/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A2/A2_evaluation.csv` |
+| A3 | `outputs/evaluation_protocol_v2/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A3/A3_evaluation.csv` |
+| A4 | `outputs/evaluation_protocol_v2/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A4/A4_evaluation.csv` |
+| A5 | `outputs/evaluation_protocol_v2/glm_4_6v_flash/20260914_glm46v_flash_A2A5_1000/A5/A5_evaluation.csv` |
 
 Protocol: Reliable = predicted positive; Unreliable = predicted negative; Uncertain excluded from Prec/Rec/F1/Acc/Spec/BalAcc.

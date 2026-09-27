@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED (Evaluation Protocol v2, 2026-09-27): reproduces a completed experiment and
+# writes GT evaluation to the frozen Protocol v1 tree outputs/evaluation/. Do not use for
+# new runs; use scripts/submit_model_ablation.sh -> jobs/run_verification.slurm (v2 root).
+# Re-score existing predictions with scripts/rescore_protocol_v2.py.
 #SBATCH --job-name=llava_A1_1000
 #SBATCH --partition=yangGrp
 #SBATCH --account=yanggrp

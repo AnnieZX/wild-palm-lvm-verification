@@ -8,7 +8,8 @@ Input:
     - LabelMe JSON under Raw_Patches
 
 Output:
-    - outputs/evaluation/detection_metrics.json
+    - outputs/evaluation_protocol_v2/detection_metrics.json
+      (Protocol v1 result is frozen at outputs/evaluation/detection_metrics.json)
 """
 
 from __future__ import annotations
@@ -22,14 +23,14 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.paths import EVALUATION_DIR, PREDICTIONS_FULL_JSON, RAW_PATCHES_ROOT
-from src.preprocessing.gt_palm_bboxes import extract_gt_palm_bboxes
+from src.paths import DETECTION_METRICS_V2_JSON, PREDICTIONS_FULL_JSON, RAW_PATCHES_ROOT
+from src.preprocessing.gt_palm_bboxes import EVALUATION_PROTOCOL_VERSION, extract_gt_palm_bboxes
 from src.preprocessing.sequential_dataset import find_labelme_json_files
 from src.yolo.gt_matching import greedy_match_detections_to_gt
 from src.yolo.predictions_io import group_predictions_by_image, load_predictions
 
 IOU_THRESHOLD = 0.5
-DETECTION_METRICS_JSON = EVALUATION_DIR / "detection_metrics.json"
+DETECTION_METRICS_JSON = DETECTION_METRICS_V2_JSON
 
 
 def parse_args() -> argparse.Namespace:
@@ -209,6 +210,7 @@ def main() -> None:
         )
 
     metrics = aggregate_metrics(per_image_stats, args.iou_threshold)
+    metrics["evaluation_protocol"] = EVALUATION_PROTOCOL_VERSION
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as file:

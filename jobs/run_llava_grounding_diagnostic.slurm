@@ -1,4 +1,7 @@
 #!/bin/bash
+# LEGACY diagnostic: the optional --evaluation-csv lookup below reads the pre-framework
+# Protocol v1 layout (outputs/evaluation/...). For v2 GT labels pass a CSV from
+# outputs/evaluation_protocol_v2/<model>/<experiment_id>/A1/.
 #SBATCH --job-name=llava_ground
 #SBATCH --partition=yangGrp
 #SBATCH --account=yanggrp

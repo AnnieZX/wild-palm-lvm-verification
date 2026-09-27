@@ -18,7 +18,7 @@ demo/
 | **Backend** | Sole gateway to experiment artifacts. Exposes REST APIs only. |
 | **Shared** | TypeScript interfaces + Pydantic models kept in sync. |
 
-No business logic is implemented yet — the backend exposes a documented REST API with mock data in the final schema. See [`backend/API.md`](backend/API.md).
+The backend reads experiment artifacts read-only from `outputs/`: predictions from `outputs/verification/` and ground-truth labels and metrics from the **Evaluation Protocol v2** tree `outputs/evaluation_protocol_v2/` (configurable via `DEMO_EVALUATION_ROOT`; the frozen Protocol v1 tree `outputs/evaluation/` remains selectable). Some frontend views still use static mock fixtures; their numbers are placeholders, not experiment results. Canonical results: [`docs/EXPERIMENT_RESULTS_CANONICAL.md`](../docs/EXPERIMENT_RESULTS_CANONICAL.md). API reference: [`backend/API.md`](backend/API.md).
 
 ---
 
@@ -80,7 +80,8 @@ Environment variables (see `.env.example`):
 | `DEMO_API_HOST` | `0.0.0.0` | Bind address |
 | `DEMO_API_PORT` | `8000` | Bind port |
 | `DEMO_CORS_ORIGINS` | `http://localhost:3000` | Allowed frontend origins |
-| `DEMO_OUTPUTS_ROOT` | _(unset)_ | Reserved for future read-only output access |
+| `DEMO_OUTPUTS_ROOT` | `<repo>/outputs` | Read-only root for experiment outputs |
+| `DEMO_EVALUATION_ROOT` | `evaluation_protocol_v2` | Evaluation tree (absolute, or relative to the outputs root). `evaluation` selects the frozen Protocol v1 results |
 
 ---
 

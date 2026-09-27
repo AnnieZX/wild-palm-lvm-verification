@@ -38,7 +38,7 @@ OUTPUT_COLUMNS = [
 ]
 
 DEFAULT_EVALUATION_DIR = (
-    PROJECT_ROOT / "outputs" / "evaluation" / "llava" / "20260719_1734" / "A1"
+    PROJECT_ROOT / "outputs" / "evaluation_protocol_v2" / "llava" / "20260719_1734" / "A1"
 )
 
 

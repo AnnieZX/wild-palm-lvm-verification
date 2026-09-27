@@ -1,7 +1,7 @@
 # InternVL3.5-8B-HF Qualification Report
 
-**Status:** Stage 0 + Stage 1 **PASS** → full A1–A5 @5747 **Complete** (run status) · **Abstention-heavy collapse** (scientific outcome)  
-**Date:** 2026-09-24 (DEAC); full-scale outcome added 2026-09-27  
+**Status:** Stage 0 + Stage 1 **PASS** → full A1–A5 @5747 **Complete** (run status) · **Abstention-heavy; moderate specificity on A1 and A3 at low coverage, with near-zero specificity on A2, A4, and A5** (scientific outcome, Evaluation Protocol v2)  
+**Date:** 2026-09-24 (DEAC); full-scale outcome added 2026-09-27; re-adjudicated under Protocol v2 on 2026-09-27  
 **Experiment ID:** `20260924_internvl3_5_hf_qual`  
 **Related (failed prior stack):** [`INTERNVL3_QUALIFICATION.md`](INTERNVL3_QUALIFICATION.md)  
 **Full-scale:** `20260924_internvl3_5_hf_A1A5_5747` (jobs `8351993`–`8351997`, all COMPLETED) — see §6  
@@ -85,7 +85,7 @@ GT− destinations (n=50): Reliable 12 · Uncertain 35 · Unreliable 3.
 
 - Improvement cannot be attributed solely to **model version** vs **HF-native implementation** — **both changed**.
 - Uncertain-heavy behavior is **not** proven to be calibrated uncertainty; it is an observed abstention rate.
-- That the Stage 1 PASS predicts full-scale behavior — §6 shows it did not.
+- That the Stage 1 PASS predicts full-scale behavior — §6 shows the full-scale profile is only partly consistent with it (A1/A3 specificity is moderate, A2/A4/A5 near zero).
 
 ---
 
@@ -93,17 +93,18 @@ GT− destinations (n=50): Reliable 12 · Uncertain 35 · Unreliable 3.
 
 Experiment `20260924_internvl3_5_hf_A1A5_5747` · jobs `8351993`–`8351997` all COMPLETED (yanggrp / L40S / lovelace; cluster Python 3.9.25, transformers 4.57.6) · 5747 records per condition · **0 parse / 0 inference errors**.
 
-| Cond | R / U / Ur | TP / FP / FN / TN | Acc | Prec | Sens | Spec | F1 | BalAcc | Coverage |
-|------|-----------|-------------------|----:|-----:|-----:|-----:|---:|-------:|---------:|
-| A1 | 3085 / 2570 / 92 | 2775 / 310 / 40 / 52 | 0.8898 | 0.8995 | 0.9858 | 0.1436 | 0.9407 | 0.5647 | 0.5528 |
-| A2 | 3497 / 2239 / 11 | 3166 / 331 / 2 / 9 | 0.9051 | 0.9053 | 0.9994 | 0.0265 | 0.9500 | 0.5129 | 0.6104 |
-| A3 | 3420 / 2298 / 29 | 3104 / 316 / 7 / 22 | 0.9063 | 0.9076 | 0.9977 | 0.0651 | 0.9505 | 0.5314 | 0.6001 |
-| A4 | 3343 / 2399 / 5 | 3030 / 313 / 0 / 5 | 0.9065 | 0.9064 | 1.0000 | 0.0157 | 0.9509 | 0.5079 | 0.5826 |
-| A5 | 1515 / 4078 / 154 | 1398 / 117 / 137 / 17 | 0.8478 | 0.9228 | 0.9107 | 0.1269 | 0.9167 | 0.5188 | 0.2904 |
+Metrics under Evaluation Protocol v2: [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §5 (row group "InternVL3.5-8B-HF") and §9.
 
-Uncertain 38.96–70.96%; Unreliable 0.09–2.68%; Specificity 0.0157–0.1436. High Acc/F1 are computed on the non-Uncertain subset only and are **not** evidence of verification skill.
+Summary (Protocol v2):
 
-**Qualification path deviation:** InternVL3.5 went Stage 0 → balanced-100 PASS → full A1–A5 @5747 and **skipped A1@1000**. See [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md) §6.
+- **Decision mix (protocol-independent):** Uncertain 38.96–70.96%, Unreliable 0.09–2.68%, coverage 0.29–0.61.
+- **A1:** Spec 0.366, BalAcc 0.676 at coverage 0.55. **A3:** Spec 0.242, BalAcc 0.620 at coverage 0.60. These are moderate but rest on few decided GT− boxes (A1: 134; A3: 91).
+- **A2, A4, A5:** Spec 0.106, 0.055, 0.094 — near zero.
+- Acc 0.89–0.98 and F1 0.94–0.99 are computed on the non-Uncertain subset only and are **not** evidence of verification skill; the class prior is 0.889.
+
+Protocol v1 (case-sensitive GT label) had reported Specificity 0.0157–0.1436 and classified the run as an abstention-heavy collapse in every condition. That classification is superseded; see [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §2.
+
+**Qualification path deviation:** InternVL3.5 went Stage 0 → balanced-100 PASS → full A1–A5 @5747 and **skipped A1@1000**. See [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md) §5.
 
 ---
 
@@ -113,4 +114,4 @@ Uncertain 38.96–70.96%; Unreliable 0.09–2.68%; Specificity 0.0157–0.1436. 
 |-----|-----------|----------------|
 | Stage 0 | Complete | **PASS** |
 | Stage 1 balanced-100 | Complete | **PASS** (parse 100%; Spec≥0.20; BalAcc≥0.55; not ≥95% single class) |
-| Full A1–A5 @5747 | **Complete** | **Abstention-heavy collapse** (valid full-scale observation; not a Useful verifier) |
+| Full A1–A5 @5747 | **Complete** | **Abstention-heavy; moderate specificity on A1 and A3 at low coverage, with near-zero specificity on A2, A4, and A5** (valid full-scale observation; not classified as a Useful verifier) |

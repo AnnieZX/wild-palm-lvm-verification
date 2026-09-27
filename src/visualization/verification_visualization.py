@@ -10,7 +10,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from src.preprocessing.gt_palm_bboxes import axis_aligned_bbox_from_points
+from src.preprocessing.gt_palm_bboxes import axis_aligned_bbox_from_points, is_palm_label
 from src.preprocessing.json_parser import load_json
 from src.yolo.predictions_io import iou_xywh
 
@@ -65,7 +65,7 @@ def find_gt_center_for_bbox(
 
     for group_id in sorted(grouped):
         shapes = grouped[group_id]
-        palm_shapes = [shape for shape in shapes if shape.get("label") == "palm"]
+        palm_shapes = [shape for shape in shapes if is_palm_label(shape.get("label"))]
         if not palm_shapes:
             continue
 

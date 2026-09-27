@@ -51,7 +51,7 @@ ABLATION_SAMPLE_SIZE="${ABLATION_SAMPLE_SIZE:-1000}"
 
 PROMPT_INDEX="${PROMPT_INDEX:-${PROJECT_DIR}/outputs/verification_ablation_${ABLATION_SAMPLE_SIZE}/${CONDITION_DIR}/prompt_index.csv}"
 RESULTS_DIR="${RESULTS_DIR:-${PROJECT_DIR}/outputs/verification/${MODEL}/${EXPERIMENT_ID}/${CONDITION}}"
-EVAL_DIR="${EVAL_DIR:-${PROJECT_DIR}/outputs/evaluation/${MODEL}/${EXPERIMENT_ID}/${CONDITION}}"
+EVAL_DIR="${EVAL_DIR:-${PROJECT_DIR}/outputs/evaluation_protocol_v2/${MODEL}/${EXPERIMENT_ID}/${CONDITION}}"
 DATASET_INDEX="${DATASET_INDEX:-${PROJECT_DIR}/outputs/verification_dataset/index.csv}"
 MODEL_CONFIG="${MODEL_CONFIG:-${PROJECT_DIR}/configs/models/${MODEL}.yaml}"
 

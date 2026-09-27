@@ -151,7 +151,7 @@ JSON response template (frozen):
 
 Protocol: `docs/EVALUATION_PROTOCOL.md`
 
-- GT from LabelMe `label == "palm"`
+- GT from LabelMe shapes where `is_palm_label(label)` holds, i.e. `isinstance(label, str) and label.strip().lower() == "palm"` (Protocol v2; see [Amendment 2026-09-27](#amendment-2026-09-27--evaluation-protocol-v2))
 - Greedy IoU matching, threshold 0.5
 - Matched detection = GT positive; unmatched = GT negative
 - Uncertain predictions excluded from binary metrics
@@ -191,20 +191,18 @@ Legacy Qwen experiments under `outputs/verification/qwen/` are detected automati
 `scripts/visualization/visualize_verification.py` reads:
 
 - Verification JSON from `outputs/verification/<model_key>/<experiment_id>/A*`
-- Evaluation CSV from `outputs/evaluation/<model_key>/<experiment_id>/A*`
+- Evaluation CSV from `outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/A*` (current; Protocol v1 CSVs remain in `outputs/evaluation/`)
 - Shared dataset overlays and LabelMe GT
 
 ---
 
 ## Registry naming (frozen)
 
-| Registry key | Status | Notes |
-|--------------|--------|-------|
-| `qwen2_5_vl` | **Primary** | Qwen2.5-VL production baseline |
-| `qwen` | **Alias** | Maps to same adapter as `qwen2_5_vl` |
-| `llava` | Planned | Not yet implemented |
-| `gemma4` | Planned | Not yet implemented |
-| `qwen3_vl` | Planned | Not yet implemented |
+Canonical keys registered in `src/verification/registry.py` (aliases such as `qwen`, `phi4`, `gemma4_12b` map to them):
+
+`qwen2_5_vl` · `qwen3_vl` · `llava` · `gemma` · `gemma4` · `internvl3` · `internvl3_5_hf` · `glm_4_6v_flash` · `phi4_multimodal` · `molmo2_8b` · `minicpm_v4_5` · `llama3_2_11b_vision` · `ministral3_8b`
+
+Per-model status: [`SUPPORTED_MODELS.md`](SUPPORTED_MODELS.md) and [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md).
 
 Output directory name = canonical registry key (`normalize_model_key()`).
 
@@ -248,9 +246,10 @@ Output directory name = canonical registry key (`normalize_model_key()`).
 outputs/
   verification/
     qwen2_5_vl/<experiment_id>/A1/sample_*.json
-    llava/<experiment_id>/A1/          # future
-  evaluation/
+    llava/<experiment_id>/A1/
+  evaluation_protocol_v2/              # current evaluation (Protocol v2)
     qwen2_5_vl/<experiment_id>/A1/A1_evaluation.csv
+  evaluation/                          # Protocol v1, frozen provenance
   visualization/
     qwen2_5_vl/<experiment_id>/overlay/
 ```
@@ -271,4 +270,18 @@ Resolution order for checkpoint path:
 
 ---
 
-*Framework frozen July 2026. See `docs/SUPPORTED_MODELS.md` for per-model status.*
+## Amendment 2026-09-27 — Evaluation Protocol v2
+
+**Change.** The GT palm-label rule changed from the case-sensitive `label == "palm"` to `isinstance(label, str) and label.strip().lower() == "palm"`, implemented once as `is_palm_label()` in `src/preprocessing/gt_palm_bboxes.py` (`EVALUATION_PROTOCOL_VERSION = "v2"`).
+
+**Reason.** 70 LabelMe files (parents 0194–0205) label palms `"Palm"`; v1 silently dropped their 486 boxes, mislabeling 424 of the 5,747 verification detections as GT−.
+
+**Unchanged (still frozen).** Verification dataset, sample IDs, A1–A5 inputs and prompts, parser, output schema, decision labels, IoU threshold 0.5, greedy one-to-one matching, Uncertain exclusion, resume convention, and all stored predictions. No inference was rerun.
+
+**Additive.** `A*_metrics.json` gains `specificity`, `balanced_accuracy` and `evaluation_protocol`. Evaluation outputs are versioned: v2 in `outputs/evaluation_protocol_v2/` (with `PROTOCOL.json`), v1 frozen in `outputs/evaluation/`. `jobs/run_verification.slurm` refuses to write into the v1 tree.
+
+Details: [`EVALUATION_PROTOCOL.md`](EVALUATION_PROTOCOL.md) · [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md) §2.
+
+---
+
+*Framework frozen July 2026; amended 2026-09-27 (Protocol v2). See `docs/SUPPORTED_MODELS.md` for per-model status.*

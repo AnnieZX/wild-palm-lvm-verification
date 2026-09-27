@@ -10,25 +10,45 @@ from app.repository.constants import LEGACY_MODEL_DIR_ALIASES
 
 EVALUATION_CSV_PATTERN = re.compile(r"^(A\d+)_evaluation\.csv$")
 
+# Evaluation trees under outputs/: Protocol v2 is current; Protocol v1 is frozen provenance.
+DEFAULT_EVALUATION_DIRNAME = "evaluation_protocol_v2"
+PROTOCOL_V1_EVALUATION_DIRNAME = "evaluation"
+
 
 def canonical_model_key(model_key: str) -> str:
     return LEGACY_MODEL_DIR_ALIASES.get(model_key, model_key)
+
+
+def resolve_evaluation_root(outputs_root: Path, evaluation_root: Optional[Path] = None) -> Path:
+    """Return the evaluation tree; relative paths are resolved against outputs_root."""
+    if evaluation_root is None:
+        return outputs_root / DEFAULT_EVALUATION_DIRNAME
+    path = Path(evaluation_root)
+    return path if path.is_absolute() else outputs_root / path
 
 
 def verification_model_root(outputs_root: Path, model_key: str) -> Path:
     return outputs_root / "verification" / canonical_model_key(model_key)
 
 
-def evaluation_model_root(outputs_root: Path, model_key: str) -> Path:
-    return outputs_root / "evaluation" / canonical_model_key(model_key)
+def evaluation_model_root(
+    outputs_root: Path,
+    model_key: str,
+    evaluation_root: Optional[Path] = None,
+) -> Path:
+    return resolve_evaluation_root(outputs_root, evaluation_root) / canonical_model_key(model_key)
 
 
 def _legacy_qwen_verification_experiment(outputs_root: Path, experiment_id: str) -> Path:
     return outputs_root / "verification" / "qwen" / experiment_id
 
 
-def _legacy_qwen_evaluation_experiment(outputs_root: Path, experiment_id: str) -> Path:
-    return outputs_root / "evaluation" / "qwen" / experiment_id
+def _legacy_qwen_evaluation_experiment(
+    outputs_root: Path,
+    experiment_id: str,
+    evaluation_root: Optional[Path] = None,
+) -> Path:
+    return resolve_evaluation_root(outputs_root, evaluation_root) / "qwen" / experiment_id
 
 
 def verification_experiment_dir(
@@ -51,13 +71,16 @@ def evaluation_experiment_dir(
     outputs_root: Path,
     model_key: str,
     experiment_id: str,
+    evaluation_root: Optional[Path] = None,
 ) -> Path:
     canonical = canonical_model_key(model_key)
-    preferred = evaluation_model_root(outputs_root, canonical) / experiment_id
-    if preferred.exists():
+    preferred = evaluation_model_root(outputs_root, canonical, evaluation_root) / experiment_id
+    # The frozen v1 tree has a qwen2_5_vl/20260708_0020/ with only an empty A5/ next to the
+    # populated legacy qwen/ copy, so require evaluation files rather than mere existence.
+    if any(preferred.glob("A*/A*_evaluation.csv")) or any(preferred.glob("A*/A*_metrics.json")):
         return preferred
     if canonical == "qwen2_5_vl":
-        legacy = _legacy_qwen_evaluation_experiment(outputs_root, experiment_id)
+        legacy = _legacy_qwen_evaluation_experiment(outputs_root, experiment_id, evaluation_root)
         if legacy.exists():
             return legacy
     return preferred
@@ -77,8 +100,12 @@ def evaluation_condition_dir(
     model_key: str,
     experiment_id: str,
     ablation_code: str,
+    evaluation_root: Optional[Path] = None,
 ) -> Path:
-    return evaluation_experiment_dir(outputs_root, model_key, experiment_id) / ablation_code
+    return (
+        evaluation_experiment_dir(outputs_root, model_key, experiment_id, evaluation_root)
+        / ablation_code
+    )
 
 
 def discover_evaluation_csv(evaluation_dir: Path) -> Optional[Path]:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.preprocessing.gt_palm_bboxes import axis_aligned_bbox_from_points
+from src.preprocessing.gt_palm_bboxes import axis_aligned_bbox_from_points, is_palm_label
 from src.preprocessing.json_parser import load_json
 from src.yolo.predictions_io import iou_xywh
 
@@ -44,7 +44,7 @@ def extract_matched_palm_geometry(
     best_bbox: tuple[float, float, float, float] | None = None
 
     for group_id in sorted(grouped):
-        palm_shapes = [shape for shape in grouped[group_id] if shape.get("label") == "palm"]
+        palm_shapes = [shape for shape in grouped[group_id] if is_palm_label(shape.get("label"))]
         if not palm_shapes:
             continue
         palm_bbox = axis_aligned_bbox_from_points(palm_shapes[0].get("points", []))

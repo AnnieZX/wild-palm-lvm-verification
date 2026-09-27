@@ -145,7 +145,7 @@ graph TD
     RES[Verification results<br/>sample_*.json]
     IDX[verification_dataset/index.csv]
     PRED[YOLO predictions_full.json]
-    GT[LabelMe JSON<br/>label == palm]
+    GT[LabelMe JSON<br/>is_palm_label: strip + lower == palm]
 
     EVAL[evaluate_verification_against_groundtruth.py]
     MATCH[Greedy IoU matching<br/>gt_matching.py]
@@ -163,13 +163,15 @@ graph TD
     MET --> MJSON
 ```
 
-**Matching rules (frozen):**
+**Matching rules (frozen; Evaluation Protocol v2):**
 
+- GT palms: LabelMe shapes with `isinstance(label, str) and label.strip().lower() == "palm"` (`src/preprocessing/gt_palm_bboxes.py::is_palm_label`); Protocol v1 used case-sensitive `label == "palm"`
 - Per-image greedy one-to-one assignment
 - Sort candidate pairs by descending IoU
 - Accept match when IoU ≥ 0.5
 - Matched detection → GT positive; unmatched → GT negative
-- Uncertain predictions excluded from binary Precision / Recall / F1
+- Uncertain predictions excluded from binary Precision / Recall / Specificity / F1
+- Outputs go to `outputs/evaluation_protocol_v2/` (v1 frozen in `outputs/evaluation/`)
 
 ---
 
@@ -183,16 +185,16 @@ graph TD
     REG[Registry]
     CFG[configs/models/&lt;key&gt;.yaml]
 
-    subgraph implemented [Implemented]
+    subgraph implemented [Example: qwen2_5_vl]
         QW[qwen2_5_vl]
         QV[qwen_verifier.py]
         QA[qwen_verification_adapter.py]
     end
 
-    subgraph planned [Planned]
-        LV[llava]
-        GM[gemma4]
-        Q3[qwen3_vl]
+    subgraph others [Other registered keys]
+        LV[qwen3_vl · glm_4_6v_flash · phi4_multimodal · internvl3_5_hf]
+        GM[gemma4 · gemma · llava · internvl3 · minicpm_v4_5 · molmo2_8b]
+        Q3[llama3_2_11b_vision · ministral3_8b]
     end
 
     SHARED[Shared components]
@@ -224,7 +226,8 @@ graph TD
 
 ```
 outputs/verification/<registry_key>/<experiment_id>/A1/
-outputs/evaluation/<registry_key>/<experiment_id>/A1/
+outputs/evaluation_protocol_v2/<registry_key>/<experiment_id>/A1/   # current
+outputs/evaluation/<registry_key>/<experiment_id>/A1/               # Protocol v1, frozen
 ```
 
 Legacy: `outputs/verification/qwen/` (pre-freeze) remains readable.
@@ -433,10 +436,10 @@ flowchart TB
     end
 
     subgraph models [Model backends]
-        M1[qwen2_5_vl ✓]
-        M2[llava]
-        M3[gemma4]
-        M4[qwen3_vl]
+        M1[qwen2_5_vl · qwen3_vl · glm_4_6v_flash · phi4_multimodal]
+        M2[internvl3_5_hf · internvl3 · gemma4 · gemma · llava]
+        M3[minicpm_v4_5 · molmo2_8b]
+        M4[llama3_2_11b_vision · ministral3_8b]
     end
 
     fixed --> models

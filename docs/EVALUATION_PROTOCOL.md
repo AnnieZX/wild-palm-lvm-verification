@@ -2,17 +2,25 @@
 
 This document defines the official evaluation protocol for all experiments in this project.
 
+**Current version: Protocol v2** (effective 2026-09-27). Constant: `EVALUATION_PROTOCOL_VERSION = "v2"` in `src/preprocessing/gt_palm_bboxes.py`. Results: [EXPERIMENT_RESULTS_CANONICAL.md](EXPERIMENT_RESULTS_CANONICAL.md).
+
 ## 1. Ground Truth
 
-Ground truth annotations are LabelMe JSON files.
+Ground truth annotations are LabelMe JSON files (`/deac/csc/yangGrp/cuij/palm/Raw_Patches`, 880 files). They are used **for evaluation only** and are never shown to the model.
 
-Every annotation with
+### 1.1 Palm-label normalization (v2)
+
+A shape is a palm iff
 
 ```
-label == "palm"
+isinstance(label, str) and label.strip().lower() == "palm"
 ```
 
-is converted into an axis-aligned bounding box by taking
+implemented once as `is_palm_label()` in `src/preprocessing/gt_palm_bboxes.py` and used by every GT consumer. It accepts `palm`, `Palm`, `PALM`, and the same with surrounding whitespace; it rejects non-strings, empty labels and other words (`palms`, `palm tree`, …). Unit tests: `tests/test_gt_palm_bboxes.py`.
+
+### 1.2 Box conversion
+
+Every palm shape is converted into an axis-aligned bounding box by taking
 
 ```
 xmin = min(x)
@@ -21,7 +29,16 @@ xmax = max(x)
 ymax = max(y)
 ```
 
-This conversion is independent of LabelMe `shape_type` (rectangle, rotation, polygon, etc.).
+This conversion is independent of LabelMe `shape_type` (rectangle, rotation, polygon, point, etc.). Point-shaped annotations produce zero-area boxes; they are **kept**, are counted as GT palms, and can never be matched (IoU = 0).
+
+### 1.3 GT counts (Protocol v2)
+
+| Quantity | Value |
+|----------|------:|
+| GT palm boxes (880 LabelMe files) | 5,853 (5,367 `palm` + 486 `Palm`; 3,306 rotation, 2,544 rectangle, 3 point) |
+| Verification detections (YOLO confidence ≥ 0.5) | 5,747 |
+| GT+ (matched) / GT− (unmatched) | **5,109 / 638** |
+| Always-Reliable accuracy (class prior) | 0.8890 |
 
 ## 2. Detection Matching
 
@@ -44,7 +61,9 @@ A match is accepted only if
 IoU >= 0.5
 ```
 
-This follows the Pascal VOC / COCO greedy matching convention.
+This follows the Pascal VOC / COCO greedy matching convention. A detection with IoU ≥ 0.5 against a GT that is already taken by a better-overlapping detection is **unmatched** (GT−); 25 of the 5,747 verification detections are in this state (near-duplicate YOLO boxes).
+
+Implementation: `src/evaluation/gt_matching.py`.
 
 ## 3. Verification
 
@@ -60,89 +79,72 @@ For binary evaluation:
 
 | Model prediction | Evaluation role |
 |------------------|-----------------|
-| Reliable | Positive prediction |
-| Unreliable | Negative prediction |
-| Uncertain | Excluded from binary evaluation (requires human verification) |
+| Reliable (R) | Positive prediction |
+| Unreliable (Ur) | Negative prediction |
+| Uncertain (U) | Excluded from binary evaluation (requires human verification) |
 
-Binary verification metrics are computed only from definitive model decisions.
+Ground-truth polarity is determined by greedy one-to-one IoU matching: a matched detection (IoU ≥ 0.5) is GT+, an unmatched detection is GT−.
 
-Predictions labeled "Uncertain" are intentionally excluded from Precision, Recall, F1-score, and Accuracy because they indicate that the vision-language model cannot make a reliable automatic decision.
+| | GT+ | GT− |
+|---|---|---|
+| **Reliable** | TP | FP |
+| **Unreliable** | FN | TN |
+| **Uncertain** | excluded | excluded |
 
-These detections are considered candidates for manual human verification rather than automatic acceptance or rejection.
-
-Ground-truth polarity is determined by greedy one-to-one IoU matching.
-
-A matched detection (IoU >= 0.5) is considered a ground-truth positive.
-
-An unmatched detection is considered a ground-truth negative.
-
-Binary evaluation is then performed only for detections receiving a definitive model decision (Reliable or Unreliable).
-
-Detections predicted as Uncertain are excluded from binary metrics and reported separately.
+Uncertain is never counted as FN or TN. These detections are candidates for manual human verification and are reported separately.
 
 ## 4. Metrics
 
 ### Detection
 
-Report:
-
-- TP
-- FP
-- FN
-- Precision
-- Recall
-- F1
-- Average IoU (of matched detection–GT pairs)
-- Average YOLO confidence
+Report TP, FP, FN, Precision, Recall, F1, average IoU of matched pairs, and average YOLO confidence. Output: `outputs/evaluation_protocol_v2/detection_metrics.json` (`scripts/evaluate_detection_matching.py`).
 
 ### Verification
 
-The following metrics are computed using only definitive predictions (Reliable and Unreliable):
+Computed using only definitive predictions (Reliable and Unreliable):
 
-- True Positive
-- False Positive
-- False Negative
-- True Negative
-- Precision
-- Recall
-- F1-score
-- Accuracy
+| Metric | Definition |
+|--------|------------|
+| Accuracy | (TP + TN) / (TP + TN + FP + FN) |
+| Precision | TP / (TP + FP) |
+| Sensitivity (Recall) | TP / (TP + FN) |
+| **Specificity** | **TN / (TN + FP)** |
+| F1 | 2 · Precision · Sensitivity / (Precision + Sensitivity) |
+| **Balanced Accuracy** | **(Sensitivity + Specificity) / 2** |
 
-Also report separately:
+Specificity and balanced accuracy are written to every Protocol v2 `A*_metrics.json` by `scripts/compute_verification_metrics.py`.
 
-- Number of Uncertain predictions
-- Percentage of Uncertain predictions
-
-The Uncertain rate reflects the proportion of detections requiring manual verification.
-
-Additionally report the distribution of all model predictions:
-
-- Reliable %
-- Uncertain %
-- Unreliable %
+Also report the full prediction distribution over all N detections: Reliable %, Uncertain %, Unreliable %, and the descriptors **coverage** = (R + Ur) / N and **abstention** = U / N. Because Accuracy and F1 exclude Uncertain and the class prior is high (0.889), they must always be read together with specificity, balanced accuracy and coverage.
 
 ## 5. Experimental Consistency
 
 The same evaluation protocol is applied consistently across all evaluated vision-language models.
 
-Only definitive predictions (Reliable and Unreliable) participate in binary evaluation.
-
-Predictions labeled Uncertain are excluded from binary metrics and instead represent cases requiring human review.
-
 Only the verification model changes.
 
-The dataset, matching algorithm, IoU threshold, and evaluation metrics remain identical across experiments.
+The dataset, matching algorithm, IoU threshold, palm-label rule and evaluation metrics remain identical across experiments.
 
-## 6. Output Locations
-
-Verification results and evaluation outputs are organized by model registry key:
+## 6. Output Locations (versioned)
 
 ```
-outputs/verification/<model_key>/<experiment_id>/<A1..A5>/sample_*.json
-outputs/evaluation/<model_key>/<experiment_id>/<A1..A5>/<code>_evaluation.csv
-outputs/evaluation/<model_key>/<experiment_id>/<A1..A5>/<code>_metrics.json
+outputs/verification/<model_key>/<experiment_id>/<A1..A5>/sample_*.json            # predictions (protocol-independent)
+outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/<A1..A5>/<code>_evaluation.csv
+outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/<A1..A5>/<code>_metrics.json
+outputs/evaluation_protocol_v2/<model_key>/<experiment_id>/PROTOCOL.json
+outputs/evaluation_protocol_v2/{PROTOCOL.json, rescore_manifest.csv, detection_metrics.json}
+outputs/evaluation/...                                                                # Protocol v1, frozen
 ```
+
+- `src/paths.py`: `CURRENT_EVALUATION_ROOT = EVALUATION_PROTOCOL_V2_ROOT`; `EVALUATION_PROTOCOL_V1_ROOT = outputs/evaluation`.
+- `scripts/evaluate_verification_against_groundtruth.py`, `scripts/compute_verification_metrics.py` and `jobs/run_verification.slurm` default to the v2 root; `jobs/run_verification.slurm` refuses to write into `outputs/evaluation/`.
+- `scripts/rescore_protocol_v2.py` re-scores stored predictions into the v2 tree without inference and verifies that predictions, sample order and R/U/Ur are unchanged.
+- `PROTOCOL.json` records the protocol version, GT rule, IoU threshold, matching rule, generation time, base git commit and whether the working tree was dirty.
+- Legacy per-model Slurm scripts (header `DEPRECATED`) hardcode the v1 path `outputs/evaluation/`. Do not use them for new runs; use `scripts/submit_model_ablation.sh` → `jobs/run_verification.slurm`, or re-score stored predictions with `scripts/rescore_protocol_v2.py`.
 
 Legacy pre-freeze Qwen2.5 paths under `outputs/verification/qwen/` remain valid for evaluation.
+
+## 7. Protocol v1 (provenance)
+
+Protocol v1 (July 2026 – 2026-09-27) was identical except for the label rule: `label == "palm"` (case-sensitive). It dropped the 486 `Palm` boxes in 70 files (parents 0194–0205), giving 5,367 GT boxes and GT+ 4,685 / GT− 1,062 (prior 0.8152). 424 detections flip GT− → GT+ under v2, none flip the other way. v1 outputs are frozen, unmodified, in `outputs/evaluation/`. Full correction record: [EXPERIMENT_RESULTS_CANONICAL.md §2 and §13](EXPERIMENT_RESULTS_CANONICAL.md#2-protocol-v1--v2-correction).
 
 Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
