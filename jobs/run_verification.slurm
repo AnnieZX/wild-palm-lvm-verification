@@ -148,6 +148,24 @@ print("MOLMO2_TRANSFORMERS_PIN_OK", transformers.__version__)
 PY
 fi
 
+# Gemma 4: require transformers >= 5.10.1 (AutoModelForMultimodalLM / gemma4_unified).
+if [[ "${MODEL}" == "gemma4" ]]; then
+    python - <<'PY'
+import transformers
+from transformers import AutoModelForMultimodalLM, AutoProcessor  # noqa: F401
+
+def _ver(s: str) -> tuple[int, ...]:
+    parts = []
+    for tok in s.split(".")[:3]:
+        digits = "".join(ch for ch in tok if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
+
+assert _ver(transformers.__version__) >= (5, 10, 1), transformers.__version__
+print("GEMMA4_TRANSFORMERS_PIN_OK", transformers.__version__)
+PY
+fi
+
 if [[ ! -f "${PROMPT_INDEX}" ]]; then
     echo "ERROR: missing prompt index: ${PROMPT_INDEX}" >&2
     exit 1

@@ -128,6 +128,46 @@ class Phi4MultimodalVerifier:
                 moved[key] = value
         return moved
 
+    def _build_gen_kwargs(self, max_new_tokens: int) -> dict[str, Any]:
+        """
+        Build per-call generate kwargs.
+
+        Clone GenerationConfig so a prior call cannot mutate shared state.
+        Explicitly keep <|end|> (200020) and eos/pad (199999) as stop ids —
+        required for early stopping on Phi-4-multimodal.
+        """
+        from copy import deepcopy
+
+        gen_kwargs: dict[str, Any] = {
+            "max_new_tokens": max_new_tokens,
+            "do_sample": False,
+        }
+        eos_ids = [200020, 199999]
+        tokenizer = getattr(self.processor, "tokenizer", None)
+        if tokenizer is not None:
+            end_id = tokenizer.convert_tokens_to_ids("<|end|>")
+            if isinstance(end_id, int) and end_id >= 0:
+                eos_ids = [end_id]
+            tok_eos = getattr(tokenizer, "eos_token_id", None)
+            if isinstance(tok_eos, int) and tok_eos >= 0 and tok_eos not in eos_ids:
+                eos_ids.append(tok_eos)
+            pad_id = getattr(tokenizer, "pad_token_id", None)
+            if isinstance(pad_id, int) and pad_id >= 0:
+                gen_kwargs["pad_token_id"] = pad_id
+
+        if self.generation_config is not None:
+            cfg = deepcopy(self.generation_config)
+            cfg.max_new_tokens = max_new_tokens
+            cfg.do_sample = False
+            cfg.eos_token_id = eos_ids
+            if "pad_token_id" in gen_kwargs:
+                cfg.pad_token_id = gen_kwargs["pad_token_id"]
+            gen_kwargs["generation_config"] = cfg
+        else:
+            gen_kwargs["eos_token_id"] = eos_ids
+
+        return gen_kwargs
+
     def generate_response(
         self,
         *,
@@ -166,18 +206,24 @@ class Phi4MultimodalVerifier:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         inputs = self._move_inputs_to_device(inputs, device)
 
-        gen_kwargs: dict[str, Any] = {
-            "max_new_tokens": max_new_tokens,
-            "do_sample": False,
-        }
-        if self.generation_config is not None:
-            gen_kwargs["generation_config"] = self.generation_config
+        gen_kwargs = self._build_gen_kwargs(max_new_tokens)
 
         with torch.inference_mode():
             output_ids = self.model.generate(**inputs, **gen_kwargs)
 
         input_len = int(inputs["input_ids"].shape[-1])
         generated_ids = output_ids[:, input_len:]
+        n_new = int(generated_ids.shape[-1])
+        # Runtime diagnostic: flag near-max generations (historical A2 pathology).
+        if n_new >= max(1, max_new_tokens - 2):
+            print(
+                f"PHI4_GEN_WARN: generated {n_new}/{max_new_tokens} tokens "
+                f"(near max_new_tokens; possible missing EOS)",
+                flush=True,
+            )
+        else:
+            print(f"PHI4_GEN_TOKENS: {n_new}/{max_new_tokens}", flush=True)
+
         text = self.processor.batch_decode(
             generated_ids,
             skip_special_tokens=True,

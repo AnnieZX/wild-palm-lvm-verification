@@ -1,0 +1,19 @@
+# InternVL3.5-8B-HF verification (qualification candidate; HF-native Transformers API)
+registry_key: internvl3_5_hf
+model_label: InternVL3.5-8B-HF
+backend: local
+# Official HF repo: OpenGVLab/InternVL3_5-8B-HF
+# Cluster resolution uses model_path when set; model_id left null so local checkpoint wins.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/InternVL3_5-8B-HF
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+# HF-native InternVL (model_type=internvl); official Transformers docs do not require remote code.
+trust_remote_code: false
+# Optional: flash_attention_2 when available; default leaves Transformers default.
+attn_implementation: null
+min_transformers: "4.52.1"
+hf_repo: OpenGVLab/InternVL3_5-8B-HF
+# architecture: InternVLForConditionalGeneration (~8.5B: 0.3B vision + 8.2B language)

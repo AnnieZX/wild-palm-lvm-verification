@@ -1,12 +1,20 @@
-# Gemma 4 multimodal verification (planned — not yet implemented)
+# Gemma 4 12B Unified IT verification
+# Official HF: google/gemma-4-12B-it (Apache-2.0; NOT gated)
+# Requires transformers >= 5.10.1 (AutoModelForMultimodalLM / gemma4_unified)
 registry_key: gemma4
-model_label: Gemma 4
-model_id: google/gemma-4-E4B-it
+model_label: Gemma 4 12B Unified
+backend: local
+# Official HF repo: google/gemma-4-12B-it (Apache-2.0; NOT gated)
+# Cluster resolution uses model_path when set; model_id is fallback for download.
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/gemma-4-12B-it
+# Official repo id (documentation / DOWNLOAD_META): google/gemma-4-12B-it
 dtype: bfloat16
 device_map: auto
 max_new_tokens: 512
 do_sample: false
 trust_remote_code: false
+min_transformers: "5.10.1"
 thinking:
   enabled: false
 generation:

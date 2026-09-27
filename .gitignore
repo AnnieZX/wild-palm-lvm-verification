@@ -238,3 +238,10 @@ cluster_data/
 logs/slurm/
 slurm-*.out
 slurm-*.err
+
+# Archived runtime evidence (preserved on disk; indexed in archive/ARCHIVE_MANIFEST.csv)
+archive/debug_runs/
+archive/failed_runs/
+archive/miscellaneous_runtime_artifacts/
+archive/smoke_tests/
+archive/superseded_runs/

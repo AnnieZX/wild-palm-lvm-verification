@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GLM-4.6V-Flash results — A1–A5 @1000</title>
+  <style>
+    /* Presentation-friendly academic table; white page, black text */
+    :root {
+      --ink: #000000;
+      --rule: #000000;
+      --muted: #333333;
+      --page: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Times New Roman", Times, "Liberation Serif", serif;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 36px 28px 48px;
+      background: var(--page);
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .checkpoint {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: ui-monospace, "Courier New", monospace;
+    }
+    .note {
+      margin: 0 0 18px;
+      font-size: 12.5px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    table.metrics {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11.5px;
+    }
+    table.metrics th,
+    table.metrics td {
+      border: 1px solid var(--rule);
+      padding: 6px 5px;
+      vertical-align: middle;
+      height: 28px;
+    }
+    table.metrics th {
+      background: var(--page);
+      font-weight: 700;
+      text-align: center;
+      font-size: 11px;
+    }
+    table.metrics td.abl {
+      text-align: left;
+      font-weight: 700;
+      width: 36px;
+    }
+    table.metrics td.num {
+      text-align: right;
+    }
+    table.metrics td.mix {
+      text-align: center;
+      white-space: nowrap;
+    }
+    .finding {
+      margin: 18px 0 0;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14px;
+      max-width: 920px;
+    }
+    .finding strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>GLM-4.6V-Flash results</h1>
+    <p class="subtitle">A1–A5 @1000</p>
+    <p class="checkpoint">GLM-4.6V-Flash</p>
+    <p class="note">Qualification/comparison subset; metrics use the same verifier evaluation protocol as Qwen.</p>
+
+    <table class="metrics" aria-label="GLM-4.6V-Flash A1-A5 metrics at N=1000">
+      <thead>
+        <tr>
+          <th>Abl.</th>
+          <th>N</th>
+          <th>R / U / Ur</th>
+          <th>TP</th>
+          <th>FP</th>
+          <th>TN</th>
+          <th>FN</th>
+          <th>Prec</th>
+          <th>Rec</th>
+          <th>F1</th>
+          <th>Acc</th>
+          <th>Spec</th>
+          <th>BalAcc</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="abl">A1</td>
+          <td class="num">1000</td>
+          <td class="mix">641 / 8 / 351</td>
+          <td class="num">611</td>
+          <td class="num">30</td>
+          <td class="num">42</td>
+          <td class="num">309</td>
+          <td class="num">0.9532</td>
+          <td class="num">0.6641</td>
+          <td class="num">0.7828</td>
+          <td class="num">0.6583</td>
+          <td class="num">0.5833</td>
+          <td class="num">0.6237</td>
+        </tr>
+        <tr>
+          <td class="abl">A2</td>
+          <td class="num">1000</td>
+          <td class="mix">650 / 7 / 343</td>
+          <td class="num">620</td>
+          <td class="num">30</td>
+          <td class="num">42</td>
+          <td class="num">301</td>
+          <td class="num">0.9538</td>
+          <td class="num">0.6732</td>
+          <td class="num">0.7893</td>
+          <td class="num">0.6667</td>
+          <td class="num">0.5833</td>
+          <td class="num">0.6283</td>
+        </tr>
+        <tr>
+          <td class="abl">A3</td>
+          <td class="num">1000</td>
+          <td class="mix">638 / 11 / 351</td>
+          <td class="num">618</td>
+          <td class="num">20</td>
+          <td class="num">51</td>
+          <td class="num">300</td>
+          <td class="num">0.9687</td>
+          <td class="num">0.6732</td>
+          <td class="num">0.7943</td>
+          <td class="num">0.6764</td>
+          <td class="num">0.7183</td>
+          <td class="num">0.6958</td>
+        </tr>
+        <tr>
+          <td class="abl">A4</td>
+          <td class="num">1000</td>
+          <td class="mix">676 / 7 / 317</td>
+          <td class="num">653</td>
+          <td class="num">23</td>
+          <td class="num">49</td>
+          <td class="num">268</td>
+          <td class="num">0.9660</td>
+          <td class="num">0.7090</td>
+          <td class="num">0.8178</td>
+          <td class="num">0.7069</td>
+          <td class="num">0.6806</td>
+          <td class="num">0.6948</td>
+        </tr>
+        <tr>
+          <td class="abl">A5</td>
+          <td class="num">1000</td>
+          <td class="mix">400 / 179 / 421</td>
+          <td class="num">392</td>
+          <td class="num">8</td>
+          <td class="num">36</td>
+          <td class="num">385</td>
+          <td class="num">0.9800</td>
+          <td class="num">0.5045</td>
+          <td class="num">0.6661</td>
+          <td class="num">0.5213</td>
+          <td class="num">0.8182</td>
+          <td class="num">0.6613</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="finding">
+      <strong>Key finding.</strong>
+      GLM remains non-collapsed across A1–A5 and reproduces the Qwen A5 tradeoff:
+      higher precision but substantially lower recall and F1
+      (best A4 F1&nbsp;=&nbsp;0.8178; A4→A5: F1&nbsp;0.8178→0.6661, Prec&nbsp;0.9660→0.9800, Rec&nbsp;0.7090→0.5045).
+    </p>
+  </div>
+</body>
+</html>

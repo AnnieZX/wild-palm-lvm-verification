@@ -10,15 +10,17 @@ canonicalize_model_key() {
         qwen|qwen25_vl_7b|qwen2_5_vl_7b|qwen2_5_vl) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
         internvl|internvl3_8b|internvl3) echo "internvl3" ;;
+        internvl3_5_hf|internvl35_hf|internvl3.5_hf) echo "internvl3_5_hf" ;;
         phi4|phi4_multimodal) echo "phi4_multimodal" ;;
         glm46v_flash|glm_4_6v_flash) echo "glm_4_6v_flash" ;;
         molmo2|molmo2_8b|molmo2-8b) echo "molmo2_8b" ;;
         minicpm_v4_5|minicpm45|minicpm-v-4.5|minicpm_v45) echo "minicpm_v4_5" ;;
         llava) echo "llava" ;;
         gemma) echo "gemma" ;;
+        gemma4|gemma4_12b|gemma-4|gemma4_12b_it) echo "gemma4" ;;
         *)
             echo "ERROR: unsupported model key: ${raw}" >&2
-            echo "Supported: qwen2_5_vl, qwen3_vl, phi4_multimodal, glm_4_6v_flash, internvl3, llava, gemma, molmo2_8b, minicpm_v4_5" >&2
+            echo "Supported: qwen2_5_vl, qwen3_vl, phi4_multimodal, glm_4_6v_flash, internvl3, internvl3_5_hf, llava, gemma, gemma4, molmo2_8b, minicpm_v4_5" >&2
             return 1
             ;;
     esac
@@ -48,6 +50,7 @@ model_venv_path() {
         qwen3_vl) echo "${QWEN3_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl}" ;;
         molmo2_8b) echo "${MOLMO2_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-molmo2}" ;;
         minicpm_v4_5) echo "${MINICPM_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-minicpm45}" ;;
+        gemma4) echo "${GEMMA4_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4}" ;;
         *) echo "" ;;
     esac
 }
@@ -55,7 +58,7 @@ model_venv_path() {
 # Default batch size per model (historical: Phi/GLM/InternVL often 1; Qwen/LLaVA 4).
 model_default_batch_size() {
     case "$(canonicalize_model_key "$1")" in
-        phi4_multimodal|glm_4_6v_flash|internvl3|qwen3_vl|molmo2_8b|minicpm_v4_5) echo "1" ;;
+        phi4_multimodal|glm_4_6v_flash|internvl3|internvl3_5_hf|qwen3_vl|molmo2_8b|minicpm_v4_5|gemma4) echo "1" ;;
         *) echo "4" ;;
     esac
 }
@@ -68,8 +71,10 @@ model_default_checkpoint() {
         phi4_multimodal) echo "/deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct" ;;
         glm_4_6v_flash) echo "/deac/csc/yangGrp/luoz23/models/GLM-4.6V-Flash" ;;
         internvl3) echo "/deac/csc/yangGrp/luoz23/models/InternVL3-8B-Instruct" ;;
+        internvl3_5_hf) echo "/deac/csc/yangGrp/luoz23/models/InternVL3_5-8B-HF" ;;
         llava) echo "/deac/csc/yangGrp/luoz23/models/llava_onevision" ;;
         gemma) echo "/deac/csc/yangGrp/luoz23/models/gemma-3-12b-it" ;;
+        gemma4) echo "/deac/csc/yangGrp/luoz23/models/gemma-4-12B-it" ;;
         molmo2_8b) echo "/deac/csc/yangGrp/luoz23/models/Molmo2-8B" ;;
         minicpm_v4_5) echo "/deac/csc/yangGrp/luoz23/models/MiniCPM-V-4_5" ;;
         *) echo "" ;;
@@ -174,6 +179,29 @@ print("MINICPM_TORCH_OK", torch.__version__)
 assert transformers.__version__.startswith("4.51"), (
     f"MiniCPM-V-4.5 requires transformers==4.51.0, got {transformers.__version__}"
 )
+PY
+                ;;
+            gemma4)
+                case "$(which python)" in
+                    */envs/wild-palm-gemma4/*) ;;
+                    *)
+                        echo "ERROR: python is not from wild-palm-gemma4: $(which python)" >&2
+                        return 1
+                        ;;
+                esac
+                python - <<'PY'
+import transformers
+from transformers import AutoModelForMultimodalLM, AutoProcessor  # noqa: F401
+
+def _ver(s: str) -> tuple[int, ...]:
+    parts = []
+    for tok in s.split(".")[:3]:
+        digits = "".join(ch for ch in tok if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
+
+assert _ver(transformers.__version__) >= (5, 10, 1), transformers.__version__
+print("GEMMA4_TRANSFORMERS_OK", transformers.__version__)
 PY
                 ;;
         esac

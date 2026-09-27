@@ -1,23 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=phi4_Ax_1k
+#SBATCH --job-name=phi4_Ax_5747
 #SBATCH --account=yanggrp
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
-#SBATCH --time=08:00:00
-#SBATCH --output=logs/slurm/phi4_A%a_1000_%j.out
-#SBATCH --error=logs/slurm/phi4_A%a_1000_%j.err
+#SBATCH --time=24:00:00
+#SBATCH --output=logs/slurm/phi4_A%a_5747_%j.out
+#SBATCH --error=logs/slurm/phi4_A%a_5747_%j.err
 #
-# Gate 2: Phi-4 Multimodal Instruct frozen A1–A5 @1000 ONLY (no 5747).
-# Prefer L40S (yangGrp). Avoid V100s with uncorrected ECC (A2-1000 pathology).
-# Submit one ablation at a time:
+# Phi-4 Multimodal Instruct canonical A1–A5 @5747 (full verification set).
+# PREPARED but submit only AFTER A2 @1000 screening passes.
+# Submit one ablation at a time (preferred: L40S):
 #   sbatch --partition=yangGrp --gres=gpu:L40S:1 \
-#     --export=ALL,EXPERIMENT_ID=YYYYMMDD_HHMM_phi4_A1A5_1000,ABLATION=A1 \
-#     --job-name=phi4_A1_1k \
-#     --output=logs/slurm/phi4_A1_1000_%j.out \
-#     --error=logs/slurm/phi4_A1_1000_%j.err \
-#     jobs/run_phi4_Ax_1000.slurm
+#     --export=ALL,EXPERIMENT_ID=YYYYMMDD_phi4_A1A5_5747,ABLATION=A1 \
+#     --job-name=phi4_A1_5747 \
+#     --output=logs/slurm/phi4_A1_5747_%j.out \
+#     --error=logs/slurm/phi4_A1_5747_%j.err \
+#     jobs/run_phi4_Ax_5747.slurm
 
 set -euo pipefail
 
@@ -46,27 +46,28 @@ unset PYTHONPATH || true
 export PATH="${PHI_VENV}/bin:${PATH}"
 export PYTHONPATH="${PROJECT_DIR}"
 
-EXPERIMENT_ID="${EXPERIMENT_ID:-$(date +%Y%m%d_%H%M)_phi4_A1A5_1000}"
+EXPERIMENT_ID="${EXPERIMENT_ID:-$(date +%Y%m%d_%H%M)_phi4_A1A5_5747}"
 MODEL="${MODEL:-phi4_multimodal}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
 RESUME="${RESUME:-0}"
 MODEL_PATH="${MODEL_PATH:-/deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct}"
-SAMPLE_SIZE=1000
+SAMPLE_SIZE=5747
 
-PROMPT_INDEX="${PROJECT_DIR}/outputs/verification_ablation_1000/${CONDITION_DIR}/prompt_index.csv"
+PROMPT_INDEX="${PROJECT_DIR}/outputs/verification_ablation_5747/${CONDITION_DIR}/prompt_index.csv"
 RESULTS_DIR="${PROJECT_DIR}/outputs/verification/${MODEL}/${EXPERIMENT_ID}/${ABLATION}"
 EVAL_DIR="${PROJECT_DIR}/outputs/evaluation/${MODEL}/${EXPERIMENT_ID}/${ABLATION}"
 DATASET_INDEX="${PROJECT_DIR}/outputs/verification_dataset/index.csv"
 
 mkdir -p logs/slurm "${RESULTS_DIR}" "${EVAL_DIR}"
 
-echo "===== Phi-4 Multimodal Canonical ${ABLATION}-1000 ====="
+echo "===== Phi-4 Multimodal Canonical ${ABLATION}-5747 ====="
 echo "Job ID:        ${SLURM_JOB_ID:-local}"
 echo "Node:          ${SLURMD_NODENAME:-unknown}"
 echo "CUDA_VISIBLE:  ${CUDA_VISIBLE_DEVICES:-unset}"
 echo "Model:         ${MODEL}"
 echo "Experiment:    ${EXPERIMENT_ID}"
 echo "Ablation:      ${ABLATION} (${CONDITION_DIR})"
+echo "Sample size:   ${SAMPLE_SIZE}"
 echo "Prompt index:  ${PROMPT_INDEX}"
 echo "Results:       ${RESULTS_DIR}"
 echo "Evaluation:    ${EVAL_DIR}"
@@ -99,7 +100,7 @@ python -c 'import transformers,torch,peft; print("transformers",transformers.__v
 nvidia-smi
 echo
 
-# Fail fast on GPUs with active uncorrectable ECC (A2 @1000 root cause).
+# Fail fast on GPUs with active uncorrectable ECC.
 python - <<'PY'
 import subprocess, sys
 out = subprocess.check_output(
@@ -135,31 +136,16 @@ if [[ ! -d "${MODEL_PATH}" ]]; then
     exit 1
 fi
 
-# Canonical 1000-sample parity vs A1 (no resampling)
+# Full-set integrity + parity vs A1 @5747
 python - <<PY
-from pathlib import Path
 import pandas as pd
-a1 = set(pd.read_csv("outputs/verification_ablation_1000/A1_overlay_only/prompt_index.csv").sample_id.astype(str))
+a1 = set(pd.read_csv("outputs/verification_ablation_5747/A1_overlay_only/prompt_index.csv").sample_id.astype(str))
 idx = pd.read_csv("${PROMPT_INDEX}")
-assert len(idx) == 1000 and idx.sample_id.nunique() == 1000
+assert len(idx) == 5747 and idx.sample_id.nunique() == 5747
 assert set(idx.sample_id.astype(str)) == a1
 assert set(idx.condition.unique()) == {"${CONDITION_DIR}"}
-print("PARITY_PASS: ${ABLATION} IDs identical to A1; N=1000")
-print("FIRST5:", ",".join(idx.head(5)["sample_id"].astype(str).tolist()))
+print("PARITY_PASS: ${ABLATION} IDs identical to A1; N=5747")
 PY
-
-# Lightweight peak-VRAM sampler (job-local; does not touch protocol code)
-VRAM_LOG="${RESULTS_DIR}/peak_vram_monitor.csv"
-(
-  echo "timestamp,memory_used_mib"
-  while true; do
-    used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
-    echo "$(date -Iseconds),${used:-NA}"
-    sleep 30
-  done
-) >"${VRAM_LOG}" &
-VRAM_PID=$!
-trap 'kill ${VRAM_PID} 2>/dev/null || true' EXIT
 
 VERIFICATION_ARGS=(
     --model phi4_multimodal
@@ -177,30 +163,8 @@ if [[ "${RESUME}" == "1" ]]; then
     VERIFICATION_ARGS+=(--resume)
 fi
 
-echo "===== Inference (${ABLATION}-1000 ONLY; no 5747) ====="
+echo "===== Inference (${ABLATION}-5747) ====="
 python -u scripts/run_verification.py "${VERIFICATION_ARGS[@]}"
-
-kill "${VRAM_PID}" 2>/dev/null || true
-trap - EXIT
-
-echo
-echo "===== Peak VRAM (monitor) ====="
-python - <<PY
-from pathlib import Path
-p = Path("${VRAM_LOG}")
-vals = []
-if p.exists():
-    for line in p.read_text().splitlines()[1:]:
-        parts = line.split(",")
-        if len(parts) >= 2 and parts[1].isdigit():
-            vals.append(int(parts[1]))
-if vals:
-    print(f"peak_vram_used_mib: {max(vals)}")
-    print(f"peak_vram_used_gb: {max(vals)/1024:.3f}")
-else:
-    print("peak_vram_used_mib: NA")
-PY
-nvidia-smi --query-gpu=memory.used,memory.total --format=csv || true
 
 echo
 echo "===== Canonical evaluation ====="
@@ -214,30 +178,7 @@ python -u scripts/compute_verification_metrics.py \
     --evaluation-dir "${EVAL_DIR}"
 
 echo
-python - <<PY
-import json
-from collections import Counter
-from pathlib import Path
-root = Path("${RESULTS_DIR}")
-files = sorted(root.glob("sample_*.json"))
-c = Counter()
-parse = infer = ok = 0
-for f in files:
-    data = json.loads(f.read_text())
-    if data.get("parse_error"):
-        parse += 1
-    elif data.get("inference_error"):
-        infer += 1
-    else:
-        ok += 1
-    c[data.get("decision") or "(empty)"] += 1
-print("N=", len(files))
-print("status ok/parse/infer =", ok, parse, infer)
-print("decisions=", dict(c))
-print("${ABLATION}_1000_SUMMARY_DONE")
-PY
-
 echo "End time: $(date)"
 echo "Results: ${RESULTS_DIR}"
 echo "Evaluation: ${EVAL_DIR}"
-echo "${ABLATION}_1000_COMPLETE — hard stop (no 5747)"
+echo "${ABLATION}_5747_COMPLETE"

@@ -25,7 +25,7 @@ Archived experiment outputs, evaluations, and Slurm logs are **excluded from sci
 | Production dataset | `outputs/verification_dataset/` (5747) |
 | Shared A1–A5 inputs | `outputs/verification_ablation_{10,100,1000,5747}/` |
 | Qwen A1–A5 @1000 | `outputs/verification/qwen/20260706_2214/` |
-| Qwen A1–A4 @5747 | `outputs/verification/qwen/20260708_0020/` (A5 partial, incomplete) |
+| Qwen A1–A5 @5747 | `outputs/verification/qwen/20260708_0020/` (A5 completed by resume job `8318977`) |
 | LLaVA A1 @1000 | `outputs/verification/llava/20260719_1734/` (degenerate all-Reliable; evidence only) |
 | Gemma A1 @1000 | `outputs/verification/gemma/20260802_1702/` (degenerate all-Reliable; evidence only) |
 

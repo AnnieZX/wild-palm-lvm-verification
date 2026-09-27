@@ -1,102 +1,54 @@
 # Supported Models
 
-Status of VLM backends for the palm verification framework.
+Implementation status of VLM backends in the palm verification framework (updated 2026-09-27).
 
-Adding a new model requires only: verifier + adapter + config YAML + registry entry. See `docs/FRAMEWORK_FREEZE.md`.
+This file lists **what is integrated** (adapter + config + registry). Experiment results, run status and scientific outcome live only in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md).
 
----
-
-## Qwen2.5-VL
-
-| Item | Value |
-|------|-------|
-| **Registry key** | `qwen2_5_vl` (alias: `qwen`) |
-| **Config** | `configs/models/qwen2_5_vl.yaml` |
-| **Legacy config** | `configs/model.yaml` (`active_model` fallback) |
-| **Adapter** | `src/lvm/qwen_verification_adapter.py` |
-| **Verifier** | `src/lvm/qwen_verifier.py` |
-| **Min Transformers** | Qwen2.5-VL support (cluster pin in `requirements_cluster.txt`) |
-| **Extra deps** | `qwen-vl-utils` |
-| **Status** | **Production — active baseline** |
-| **Phase** | Complete |
-
-```bash
-python scripts/run_verification.py \
-  --model qwen2_5_vl \
-  --prompt-index outputs/verification_ablation_1000/A1_overlay_only/prompt_index.csv \
-  --results-dir outputs/verification/qwen2_5_vl/my_run/A1
-```
-
----
-
-## LLaVA
-
-| Item | Value |
-|------|-------|
-| **Registry key** | `llava` |
-| **Config** | `configs/models/llava.yaml` |
-| **Adapter** | `src/lvm/llava_verification_adapter.py` *(planned)* |
-| **Verifier** | `src/lvm/llava_verifier.py` *(planned)* |
-| **Min Transformers** | LLaVA-NeXT support (≥4.48 recommended) |
-| **Proposed checkpoint** | `llava-hf/llava-v1.6-mistral-7b-hf` |
-| **Status** | **Planned** |
-| **Phase** | Phase 1 (first architecture-diverse backend) |
-
----
-
-## Gemma 4
-
-| Item | Value |
-|------|-------|
-| **Registry key** | `gemma4` |
-| **Config** | `configs/models/gemma4.yaml` |
-| **Adapter** | `src/lvm/gemma4_verification_adapter.py` *(planned)* |
-| **Verifier** | `src/lvm/gemma4_verifier.py` *(planned)* |
-| **Min Transformers** | Gemma 4 support (likely newer than cluster pin — verify at implementation) |
-| **Proposed checkpoint** | `google/gemma-4-E4B-it` |
-| **Status** | **Planned** |
-| **Phase** | Phase 2 |
-
----
-
-## Qwen3-VL
-
-| Item | Value |
-|------|-------|
-| **Registry key** | `qwen3_vl` |
-| **Config** | `configs/models/qwen3_vl.yaml` |
-| **Adapter** | `src/lvm/qwen3_vl_verification_adapter.py` *(planned)* |
-| **Verifier** | `src/lvm/qwen3_vl_verifier.py` *(planned)* |
-| **Min Transformers** | Qwen3-VL support (≥4.57 or install from source — verify at implementation) |
-| **Proposed checkpoint** | `Qwen/Qwen3-VL-8B-Instruct` |
-| **Status** | **Planned** |
-| **Phase** | Phase 3 (generational comparison vs Qwen2.5-VL) |
+Adding a new model requires only: verifier + adapter + config YAML + registry entry (+ optional runtime case in `jobs/lib/model_runtime.sh`). See [`FRAMEWORK_FREEZE.md`](FRAMEWORK_FREEZE.md). The shared prompts, parser, evaluator and GT matching are frozen and are not model-specific.
 
 ---
 
 ## Registry summary
 
-| Key | Alias | Adapter registered | Implemented |
-|-----|-------|-------------------|-------------|
-| `qwen2_5_vl` | — | Yes | Yes |
-| `qwen` | → `qwen2_5_vl` | Yes | Yes |
-| `llava` | — | No | No |
-| `gemma4` | — | No | No |
-| `qwen3_vl` | — | No | No |
+All keys below are registered in `src/verification/registry.py` and resolved by `src/config/model_config.py` / `jobs/lib/model_runtime.sh`.
+
+| Registry key | Aliases | Checkpoint (local, `/deac/csc/yangGrp/luoz23/models/…`) | Verifier / adapter (`src/lvm/`) | Config | `trust_remote_code` | Min transformers | Run status |
+|--------------|---------|-------------------------------------------------------|----------------------------------|--------|:---:|------------------|-----------|
+| `qwen2_5_vl` | `qwen`, `qwen25_vl_7b`, `qwen2_5_vl_7b` | `Qwen2.5-VL-7B-Instruct` | `qwen_verifier.py` / `qwen_verification_adapter.py` | `configs/models/qwen2_5_vl.yaml` | no | cluster pin (`requirements_cluster.txt`) | Complete |
+| `qwen3_vl` | `qwen3_vl_8b`, `qwen3vl`, `qwen3vl_8b` | `Qwen3-VL-8B-Instruct` | `qwen3_vl_verifier.py` / `qwen3_vl_verification_adapter.py` | `configs/models/qwen3_vl.yaml` | no | 4.57.0 | Complete |
+| `glm_4_6v_flash` | `glm46v_flash` | `GLM-4.6V-Flash` | `glm_4_6v_flash_verifier.py` / `glm_4_6v_flash_verification_adapter.py` | `configs/models/glm_4_6v_flash.yaml` | no | 4.57.0 (runs pinned 5.17.0) | Complete |
+| `phi4_multimodal` | `phi4` | `Phi-4-multimodal-instruct` | `phi4_multimodal_verifier.py` / `phi4_multimodal_verification_adapter.py` | `configs/models/phi4_multimodal.yaml` | yes | 4.48.2 | Complete |
+| `internvl3_5_hf` | `internvl35_hf`, `internvl3.5_hf` | `InternVL3_5-8B-HF` (`OpenGVLab/InternVL3_5-8B-HF`) | `internvl3_5_hf_verifier.py` / `internvl3_5_hf_verification_adapter.py` | `configs/models/internvl3_5_hf.yaml` | no | 4.52.1 | Complete |
+| `internvl3` | `internvl`, `internvl3_8b` | `InternVL3-8B-Instruct` | `internvl_verifier.py` / `internvl_verification_adapter.py` | `configs/models/internvl3.yaml` | yes | 4.37.2 | Qualification failed / stopped |
+| `minicpm_v4_5` | `minicpm45`, `minicpm-v-4.5`, `minicpm_v45` | `MiniCPM-V-4_5` | `minicpm_v4_5_verifier.py` / `minicpm_v4_5_verification_adapter.py` | `configs/models/minicpm_v4_5.yaml` | yes | 4.51.0 (pinned) | A1 only |
+| `molmo2_8b` | `molmo2`, `molmo2-8b` | `Molmo2-8B` | `molmo2_verifier.py` / `molmo2_verification_adapter.py` | `configs/models/molmo2_8b.yaml` | yes | 4.57.1 (pinned) | A1 only |
+| `llava` | — | `llava_onevision` | `llava_verifier.py` / `llava_verification_adapter.py` | `configs/models/llava.yaml` | no | — | A1 only (@1000) |
+| `gemma` (Gemma 3) | — | `gemma-3-12b-it` | `gemma_verifier.py` / `gemma_verification_adapter.py` | `configs/models/gemma.yaml` | no | 4.50.0 | A1 only (@1000) |
+| `gemma4` (Gemma 4 12B IT) | `gemma4_12b`, `gemma-4`, `gemma4_12b_it` | `gemma-4-12B-it` (`google/gemma-4-12B-it`) | `gemma4_verifier.py` / `gemma4_verification_adapter.py` | `configs/models/gemma4.yaml` | no | 5.10.1 (runs used 5.17.0 in `envs/wild-palm-gemma4`) | Complete |
+
+**Next candidate / not yet evaluated:** Llama-3.2-11B-Vision-Instruct — no registry key, adapter, config or job exists.
+
+---
+
+## Model-specific notes
+
+- **Qwen2.5-VL** — production experiments predate the per-model output namespace and live under the legacy key `outputs/verification/qwen/`. Path helpers read these automatically.
+- **Phi-4** — the verifier explicitly sets `<|end|>` / EOS stop ids and logs `PHI4_GEN_TOKENS` per sample; this fix produced the completed A2@1000 re-run and all A1–A5@5747 runs. Jobs refuse GPUs with uncorrected ECC errors.
+- **InternVL3.5-8B-HF** — HF-native `AutoProcessor` + `AutoModelForImageTextToText`; ran on the default cluster Python (3.9.25, transformers 4.57.6). Launched via `jobs/run_internvl3_5_hf_Ax_5747.slurm`.
+- **Gemma 4 12B IT** — `AutoModelForMultimodalLM` with `enable_thinking=False`; requires the isolated venv built by `jobs/setup_gemma4_env.slurm` (`GEMMA4_VENV`). Sample JSONs from the completed run have no `generation` metadata key.
+- **MiniCPM-V-4.5 / Molmo2-8B** — full-scale A1 ran on H200 (`gpu_small`); isolated venvs with exact transformers pins asserted at job start.
 
 ---
 
 ## Output paths
-
-All models write to:
 
 ```
 outputs/verification/<registry_key>/<experiment_id>/<A1..A5>/
 outputs/evaluation/<registry_key>/<experiment_id>/<A1..A5>/
 ```
 
-Legacy Qwen2.5 experiments may exist under `outputs/verification/qwen/` (pre-freeze). The path helpers detect and read these automatically.
+Both trees are gitignored; they are on-disk evidence only.
 
 ---
 
-See also: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MULTI_MODEL_INTEGRATION_PLAN.md`](docs/MULTI_MODEL_INTEGRATION_PLAN.md)
+See also: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`MULTI_MODEL_INTEGRATION_PLAN.md`](MULTI_MODEL_INTEGRATION_PLAN.md) (historical July 2026 design; its "planned" statuses are superseded)

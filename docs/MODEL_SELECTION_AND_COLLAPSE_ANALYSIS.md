@@ -1,12 +1,168 @@
 # Model Selection and Majority-Class Collapse Analysis
 
-**Date:** 2026-09-09  
-**Scope:** Research and experimental design only. No production inference changes, no Slurm submissions, no model downloads, no GPU inference in this phase.  
-**Related:** `docs/EXPERIMENT_STATUS_CANONICAL.md`, `outputs/analysis/a1_1000_cross_model_audit/`
+**Original date:** 2026-09-09  
+**Consolidation update:** 2026-09-24 (evidence from raw `outputs/` + Slurm; historical sections below retained)  
+**Landscape research update:** 2026-09-24 (external HF / GitHub / tech-report verification of optional final model; **no downloads, inference, or jobs**)  
+**Canonicalization update:** 2026-09-27 (§00 below; InternVL3.5 and Gemma 4 full-scale outcomes)  
+**Related:** `docs/EXPERIMENT_STATUS_CANONICAL.md`, `docs/INTERNVL3_5_HF_QUALIFICATION.md`, `docs/FULL_SCALE_MODEL_COMPARISON.md`, `outputs/analysis/a1_1000_cross_model_audit/`
+
+Current experiment state lives in [`EXPERIMENT_STATUS_CANONICAL.md`](EXPERIMENT_STATUS_CANONICAL.md). Sections §0 onward are dated analysis snapshots; where they say "running", "pending" or "do not run Gemma 4", §00 records what actually happened.
 
 ---
 
-## 1. Executive Summary
+## 00. Canonicalization update (2026-09-27)
+
+### Outcomes since the 2026-09-24 snapshot
+
+| 2026-09-24 expectation | Verified outcome (raw outputs) |
+|------------------------|--------------------------------|
+| InternVL3.5 full A1–A5 "CURRENTLY RUNNING"; hoped NON_COLLAPSED | **Complete** (`8351993`–`8351997`). **Abstention-heavy collapse**: Uncertain 38.96–70.96%, Unreliable 0.09–2.68%, Spec 0.0157–0.1436, BalAcc ≤ 0.565 on every condition. Balanced-100 PASS did not carry over. |
+| "Do not run Gemma 4" (stopping rule item 4) | Gemma 4 **12B IT** (`google/gemma-4-12B-it`, not the E4B stub) was integrated and run anyway: **Complete** A1–A5 @5747 (`8353160`–`8353164`). **Reliable-heavy collapse**: Reliable 91.54–97.36%, 0 Uncertain, Spec 0.0678–0.2363, Acc 0.8138–0.8253 vs prior 0.8152. |
+| Gemma 4 would follow Stage 0 → balanced-100 → A1@1000 | **Did not.** Only an unbalanced A1@100 pre-check (95/0/5 Reliable) preceded full scale — a result that meets the "≥95% one class" stop criterion. Documented as a gate deviation in canonical §6. |
+
+### Collapse taxonomy — current membership
+
+| Outcome | Models |
+|---------|--------|
+| **Useful verifier** | Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash, Phi-4 (all Complete @5747) |
+| **Reliable-heavy collapse** | LLaVA-OV, Gemma 3 (single-class, A1@1000); MiniCPM-V-4.5 (partial, A1@5747); Gemma 4 12B IT (partial, A1–A5@5747) |
+| **Abstention-heavy collapse** | Molmo2-8B (A1@5747); InternVL3.5-8B-HF (A1–A5@5747) |
+| **Technical failure** | InternVL3-8B (balanced-100) |
+
+The Google lineage is now collapsed across two generations (Gemma 3 single-class @1000; Gemma 4 partial @5747). The OpenGVLab lineage is technical failure (InternVL3) then abstention-heavy collapse (InternVL3.5).
+
+### Next candidate
+
+**Llama-3.2-11B-Vision-Instruct** — *next candidate / not yet evaluated*. No adapter, config, job, download or run exists. It is not integrated and is not scheduled for full scale; any future run should follow the preferred gate and record deviations.
+
+---
+
+## 0. Consolidation update (2026-09-24 snapshot — partially superseded by §00)
+
+### What changed since the original recommendation
+
+| Original recommendation | Verified outcome |
+|-------------------------|------------------|
+| Prefer InternVL3-8B Stage 0+1 | Stage 1 **FAIL_TECHNICAL** (13% parse fail; Spec=0) |
+| Run Qwen3-VL as successor | **Complete** A1–A5 @5747 (`qwen3vl_A1A5_5747`) — do **not** re-recommend as “next” |
+| Phi-4 / Molmo as independent | Phi-4 **Complete** A1–A5 @5747; Molmo2 A1@5747 **PARTIAL_COLLAPSE** |
+| MiniCPM optional | MiniCPM-V-4.5 A1@5747 **PARTIAL_COLLAPSE** |
+| InternVL3.5 as alt if cleaner HF | Stage 1 **PASS**; full A1–A5 **Complete** (`8351993`–`8351997`) → abstention-heavy collapse (§00) |
+
+### Collapse taxonomy (operational)
+
+| Label | Definition (this project) | Examples |
+|-------|---------------------------|----------|
+| **SINGLE_CLASS_COLLAPSE** | ≥95% one decision class; Acc ≈ class prior; Spec≈0 | LLaVA / Gemma A1@1000 (100% Reliable) |
+| **PARTIAL_COLLAPSE** | Inference+parse OK; multi-label possible; but Spec≈0 and/or Acc≈always-Reliable prior with near-degenerate Unreliable | MiniCPM A1@5747; Molmo2 A1@5747 |
+| **TECHNICAL_FAILURE** | Parse/inference failure rate or gate fail before scientific read | InternVL3 Stage 1 |
+| **NON_COLLAPSED** | Uses rejection/abstention with non-trivial Spec or clear three-way structure under protocol | Qwen2.5, Qwen3, GLM, Phi-4 (full); InternVL3.5 at QUAL-100 only (collapsed at full scale, §00) |
+
+Poor Acc/F1 alone is **not** collapse.
+
+### MiniCPM-V-4.5 findings (raw)
+
+- Checkpoint: `…/models/MiniCPM-V-4_5`; job **8351080** H200; exp `20260923_minicpm_A1A5_5747` **A1 only**.
+- R/U/Ur = **5557/0/190**; Spec=**0.0782**; Acc=**0.811** ≈ prior **0.815**; parse/inference **0**.
+- **PARTIAL_COLLAPSE** — not single-class (190 Unreliable), but near–always-Reliable verifier skill.
+
+### Molmo2-8B findings (raw)
+
+- Checkpoint: `…/models/Molmo2-8B`; job **8351081** H200; exp `20260923_molmo2_A1A5_5747` **A1 only**.
+- R/U/Ur = **1209/4537/1**; Spec=**0.0000** (TN=0 on binary subset); parse/inference **0**.
+- **PARTIAL_COLLAPSE** — Uncertain-dominant abstention with essentially no Unreliable; high binary Acc is **not** verification skill.
+
+### InternVL3 → InternVL3.5 controlled comparison
+
+Same balanced-100 gate. Verified:
+
+| | InternVL3 | InternVL3.5-HF |
+|--|----------:|---------------:|
+| Parse success | 87% | **100%** |
+| R/U/Ur | 56/31/0 | 39/58/3 |
+| Spec / BalAcc | 0.00 / 0.50 | **0.20 / 0.60** |
+| TP/TN/FP/FN | 35/0/21/0 | 27/3/12/0 |
+
+**Fact:** JSON serialization failures and zero-Unreliable disappeared on the 3.5-HF run; Uncertain dominates.  
+**Not proven:** whether improvement is model-version vs HF-native API (both changed). Full-scale (2026-09-25): abstention-heavy collapse — see §00.
+
+### Usable / non-collapsed model families (scientific roles)
+
+| Role | Models |
+|------|--------|
+| **PRIMARY** | Qwen2.5-VL-7B; GLM-4.6V-Flash; Phi-4-multimodal |
+| **SUPPORTING COMPARISON** | Qwen3-VL-8B (within-family) |
+| **FAILURE / NEGATIVE CONTROL** | LLaVA-OneVision; Gemma 3; InternVL3 (technical); MiniCPM / Molmo2 (partial collapse); InternVL3.5-HF and Gemma 4 12B IT (full-scale collapse, §00) |
+
+### Next-model shortlist (≤3; experimental value, not novelty)
+
+**Do not recommend Qwen3-VL again** — already Complete @5747.
+
+| Priority | Candidate | Why new information | Overlap | Impl. | L40S | H200 | Priority |
+|----------|-----------|---------------------|---------|-------|------|------|----------|
+| 1 | **Defer until InternVL3.5 A1–A5 finishes** | OpenGVLab full-matrix is the active diversity slot | — | done | yes | yes | **HIGH** (finish first) |
+| 2 | **Kimi-VL-A3B-Instruct** | Independent MoE + MoonViT + grounding; not in current complete set | Low vs Qwen/GLM/Phi/InternVL | Med | Yes (~16B BF16) | Yes | **HIGH** if post-InternVL MoE gap remains |
+| 3 | **Gemma 4 E4B-it** (only if Google lineage needed) | Real model (`google/gemma-4-E4B-it`); Gemma 3 collapsed → **high lineage risk** | Vision lineage risk | Med–Low (HF-native) | Yes | Yes | **LOW** |
+| — | NVIDIA Llama-3.1-Nemotron-Nano-VL-8B | Llama + C-RADIO (Meta/NVIDIA not in pool) | Doc/OCR-centric; remote-code | Med–High | Likely | Yes | **MEDIUM** runner-up |
+| — | DeepSeek-VL2-Small | MoE + grounding; DeepSeek stack | MoE slot overlaps Kimi; custom API | High | Marginal | Yes | **LOW** (prefer Kimi) |
+| — | InternVL3-14B / Qwen3.5-* / Ovis2.5 / LLaVA-OV-1.5 | Scale or novelty | Same family already covered / LLaVA collapse risk | — | ? | ? | **DO NOT** for diversity |
+
+**Verified landscape notes (2026-09-24 research):**
+
+| Claim | Status | Source |
+|-------|--------|--------|
+| Kimi-VL-A3B-Instruct is current practical Moonshot open VLM | **Confirmed** (16B total / ~2.8B act.; MoonViT + Moonlight MoE; MIT) | [HF](https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct), [GitHub](https://github.com/MoonshotAI/Kimi-VL), arXiv:2504.07491 |
+| Kimi successor beyond A3B for our size band | **Not found** as of research date; Thinking-2506 is a reasoning variant, not a new family | Moonshot HF / GitHub |
+| Gemma 4 E4B exists (config stub is **not** stale) | **Confirmed** open multimodal; E4B ≈4.5B effective | [Google model card](https://ai.google.dev/gemma/docs/core/model_card_4), `google/gemma-4-E4B-it` |
+| Gemma 4 as scientific priority | **Low** — Gemma 3 already SINGLE_CLASS_COLLAPSE; E4B tests “did Google fix affirmative collapse?” not a new architecture class | Internal Gemma A1@1000 |
+| Janus-Pro / DeepSeek unified gen | Available but **generation+understanding**, custom API, SigLIP | DeepSeek Janus GitHub |
+| Aya Vision 8B | Real; Command-R / Aya + SigLIP2; **CC-BY-NC** | CohereLabs HF |
+| SmolVLM2 | Real but **~2B efficiency** class; weak expected payoff for aerial verification | HuggingFaceTB |
+| Llama 4 Scout/Maverick | Real native multimodal MoE but **109B/400B total** — not single-L40S practical | Meta Llama 4 card |
+| NVLM-D-72B | Too large | NVIDIA HF |
+| Pixtral 12B | Open weights exist but **officially deprecated** by Mistral | mistral.ai Pixtral page |
+
+**Scientific sufficiency:** Four Complete non-collapsed full-scale models already support a meaningful multi-model paper comparison (Qwen lineage × GLM × Phi). InternVL3.5 completion fills the main OpenGVLab gap. Another model is justified **only** if it adds an architecture class not already represented — primarily **independent MoE + non-Qwen/GLM/Phi/InternVL stack** (Kimi), not because it is newer or higher on generic VLM leaderboards.
+
+### Explicit stopping rule (post-InternVL3.5)
+
+1. Finish InternVL3.5-HF full A1–A5 @5747 without canceling jobs.  
+2. **If** InternVL3.5 is NON_COLLAPSED at full scale **and** shows a decision profile distinct from Qwen / GLM / Phi (three-way structure and Spec not ≈0), treat the primary scientific matrix as **sufficient**.  
+3. Run **at most one** optional final model — **Kimi-VL-A3B-Instruct** — **only if** the thesis/paper still lacks an independent MoE / Moonshot architecture comparison.  
+4. **Do not** run Gemma 4, Aya, SmolVLM, Janus, Llama 4, DeepSeek-VL2, or another Qwen/InternVL scale variant unless a new research question is written first.  
+5. **Stop model expansion** after that optional Kimi gate (even if Kimi fails Stage 1): negative MoE evidence still closes the architecture gap.
+
+### Proposed future coverage gate (does **not** change historical qualification)
+
+Canonical Stage 1 gates remain: parse ≥95%; not ≥95% single-class; Spec ≥0.20; BalAcc ≥0.55.
+
+**Proposed future add-on** (post-Molmo2 lesson; label clearly as new):
+
+| Post-hoc rate | Definition | Proposed Stage 1 advisory |
+|---------------|------------|---------------------------|
+| Decision Coverage | (R + Ur) / N | Prefer Coverage ≥ 0.40 on balanced-100 (else flag abstention-heavy risk) |
+| Abstention Rate | U / N | Report always; Molmo2 A1@5747 ≈ 0.79 shows Acc/F1 can look strong while Spec=0 |
+
+Do **not** rewrite historical InternVL / MiniCPM / Molmo pass-fail labels using this gate.
+
+---
+
+## 0b. Optional #1 qualification plan (Kimi-VL-A3B-Instruct) — NOT EXECUTED
+
+Preserve frozen prompts / parser / evaluator. Prefer Instruct (not Thinking-2506) for structured JSON under greedy / low-temp decoding.
+
+| Stage | N | Actions | Stop if |
+|-------|---|---------|---------|
+| 0 | 10 deliberate | Load `moonshotai/Kimi-VL-A3B-Instruct` with `trust_remote_code=True`; image+JSON path | Load/OOM; parse >20%; all same label with clear GT− |
+| 1 | Balanced 100 | Canonical gates + **report** Coverage/Abstention | Parse <95%; ≥95% one class; Spec <0.20; BalAcc <0.55 |
+| 2 | A1@1000 | Only if Stage 1 pass | SINGLE_CLASS or PARTIAL_COLLAPSE patterns |
+| 3 | Full A1–A5@5747 | Only if Stage 2 non-collapse **and** MoE diversity still needed | — |
+
+Hardware expectation: **single L40S 48GB** feasible (16B total BF16 ≈32GB weights); H200 comfortable. Impl. risk: **medium** (remote-code MoE; similar class to Phi/InternVL remote-code adapters).
+
+---
+
+## 1. Executive Summary (original 2026-09-09)
 
 On the shared A1-1000 verification set (928 GT-positive / 72 GT-negative), **Qwen2.5-VL-7B-Instruct** produces a non-degenerate three-way decision distribution and non-zero specificity. **LLaVA-OneVision (7B, Qwen2 LLM + SigLIP)** and **Gemma 3 12B IT** both predict **Reliable on all 1000 samples**, yielding accuracy = majority baseline (0.928), specificity = 0, balanced accuracy = 0.5.
 
@@ -19,7 +175,7 @@ We previously ruled out sample-ID mismatch, missing images, prompt-file drift, G
 3. LLaVA-OneVision shares a **Qwen2 language backbone** but a **different vision stack** (SigLIP + AnyRes MLP projector) and LLaVA-style instruction tuning; on our disagreements it emits **highly templated “Reliable”** text that echoes prompt palm traits even when Qwen (and GT) reject the detection.
 4. Gemma 3 uses SigLIP@896 with a Gemma text backbone; raw responses also assert Reliable with prompt-like morphology language on GT-negatives—consistent with **prior / affirmative collapse**, not calibrated rejection.
 
-**Recommendation:** Screen new models on a **balanced 50/50 diagnostic gate** before A1-1000. Prefer **InternVL3-8B** (independent family, grounding emphasis) as the next comparison model; treat **Qwen3-VL-8B** as Qwen-family successor, not as independent diversity. Do **not** expand LLaVA/Gemma to full ablations until a non-collapse intervention is demonstrated.
+**Historical recommendation (superseded by §0):** Screen new models on a **balanced 50/50 diagnostic gate** before A1-1000. Prefer **InternVL3-8B** as next comparison; treat **Qwen3-VL-8B** as Qwen-family successor. Do **not** expand LLaVA/Gemma to full ablations until a non-collapse intervention is demonstrated.
 
 ---
 
@@ -370,7 +526,9 @@ Only models with Stage 2 non-collapse + scientific need.
 
 ### Named slots
 
-| Slot | Choice |
+> **Superseded 2026-09-24:** see §0 consolidation update. InternVL3-8B failed Stage 1; Qwen3-VL and Phi-4 are Complete; InternVL3.5-HF is the active OpenGVLab track.
+
+| Slot | Choice (2026-09-09 historical) |
 |------|--------|
 | **BEST NEXT MODEL** | InternVL3-8B-Instruct |
 | **BEST INDEPENDENT COMPARISON MODEL** | Molmo-7B **or** Phi-4-multimodal (pick after Stage 0 load test) |
@@ -461,12 +619,32 @@ Relative compute only: LOW / MEDIUM / HIGH (no invented GPU-hours).
 
 ## End card
 
+### Historical end card (2026-09-09) — superseded
+
 **TOP RECOMMENDATION:** InternVL3-8B-Instruct — Stage 0+1 balanced gate first  
-
-**SECOND:** Qwen3-VL-8B-Instruct — Qwen-family successor (report separately from “independent” comparisons)  
-
+**SECOND:** Qwen3-VL-8B-Instruct — Qwen-family successor  
 **THIRD:** Phi-4-multimodal-instruct — low-cost independent screen  
 
-**DO NOT RUN:** LLaVA/Gemma full A2–A5 or 5747; any new model’s A1-1000/full ablations before Stage 1 pass; treating Acc/F1 alone as qualification  
+### End card (2026-09-24 landscape research — superseded by §00: InternVL3.5 finished and collapsed; Gemma 4 12B IT was run and collapsed; Llama-3.2-11B-Vision-Instruct is the next candidate, not yet evaluated)
 
-**NEXT EXPERIMENT:** Build a **fixed 50/50 diagnostic subset** from existing A1-1000 GT labels and run **Stage 0+1 on InternVL3-8B** (after download/integration)—still **before** any full A1-1000 for new models. Parallel track: finish Qwen A5@5747 when GPU time allows.
+**FINISH FIRST:** InternVL3.5-8B-HF A1–A5 @5747 (`8351993`–`8351997`) — do not cancel  
+
+**IS ANOTHER MODEL NECESSARY?** Optional, not required. Primary story already stands with Qwen × GLM × Phi (+ InternVL pending).  
+
+**IF exactly one more after InternVL:** **Kimi-VL-A3B-Instruct** (`moonshotai/Kimi-VL-A3B-Instruct`) — only MoE / MoonViT / Moonshot architecture not already represented  
+
+**DO NOT:** re-run Qwen3-VL; expand MiniCPM/Molmo A2–A5 without a new question; expand LLaVA/Gemma; treat Acc/F1 alone as skill; prioritize Gemma 4 solely because the stub exists; run Llama 4 / NVLM-72B / Janus for this thesis  
+
+**ALREADY COMPLETE PRIMARY SET:** Qwen2.5-VL, GLM-4.6V-Flash, Phi-4 (+ Qwen3-VL as within-family support)
+
+### External sources added in landscape pass
+
+- Kimi-VL: https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct · https://github.com/MoonshotAI/Kimi-VL · arXiv:2504.07491  
+- Gemma 4: https://ai.google.dev/gemma/docs/core/model_card_4 · `google/gemma-4-E4B-it`  
+- DeepSeek-VL2: https://github.com/deepseek-ai/DeepSeek-VL2 · arXiv:2412.10302  
+- Janus-Pro: https://github.com/deepseek-ai/Janus · arXiv:2501.17811  
+- Aya Vision: https://huggingface.co/CohereLabs/aya-vision-8b  
+- SmolVLM2: https://huggingface.co/HuggingFaceTB/SmolVLM2-2.2B-Instruct  
+- Nemotron Nano VL: https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1  
+- Llama 4: https://ai.meta.com/blog/Llama-4-multimodal-intelligence/  
+- Pixtral (deprecated): https://mistral.ai/news/pixtral-12b/

@@ -48,12 +48,28 @@ MODEL_CONFIG="${MODEL_CONFIG:-}"
 DATASET_DIR="${DATASET_DIR:-${PROJECT_DIR}/outputs/verification_dataset}"
 ABLATION_INPUTS_DIR="${ABLATION_INPUTS_DIR:-${PROJECT_DIR}/outputs/verification_ablation_${SAMPLE_SIZE}}"
 
+# Capture explicit overrides BEFORE computing defaults. Callers (including Slurm)
+# must set these to force an existing experiment root; do not mkdir preferred first.
+EXPLICIT_VERIFICATION_ROOT="${VERIFICATION_ROOT:-}"
+EXPLICIT_EVALUATION_ROOT="${EVALUATION_ROOT:-}"
+
 PREFERRED_VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/${MODEL}/${EXPERIMENT_ID}"
 PREFERRED_EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/${MODEL}/${EXPERIMENT_ID}"
 LEGACY_VERIFICATION_ROOT="${PROJECT_DIR}/outputs/verification/qwen/${EXPERIMENT_ID}"
 LEGACY_EVALUATION_ROOT="${PROJECT_DIR}/outputs/evaluation/qwen/${EXPERIMENT_ID}"
 
-if [[ "${MODEL}" == "qwen2_5_vl" ]] \
+if [[ -n "${EXPLICIT_VERIFICATION_ROOT}" ]]; then
+    VERIFICATION_ROOT="${EXPLICIT_VERIFICATION_ROOT}"
+    EVALUATION_ROOT="${EXPLICIT_EVALUATION_ROOT:-${LEGACY_EVALUATION_ROOT}}"
+elif [[ "${MODEL}" == "qwen2_5_vl" ]] \
+    && [[ -d "${LEGACY_VERIFICATION_ROOT}" ]] \
+    && [[ "${RESUME}" == "1" ]]; then
+    # Resume of an existing Qwen experiment always prefers the legacy namespace
+    # when it exists, even if an empty/partial preferred qwen2_5_vl/ dir was
+    # created by a prior wrapper mkdir.
+    VERIFICATION_ROOT="${LEGACY_VERIFICATION_ROOT}"
+    EVALUATION_ROOT="${LEGACY_EVALUATION_ROOT}"
+elif [[ "${MODEL}" == "qwen2_5_vl" ]] \
     && [[ -d "${LEGACY_VERIFICATION_ROOT}" ]] \
     && [[ ! -d "${PREFERRED_VERIFICATION_ROOT}" ]]; then
     VERIFICATION_ROOT="${LEGACY_VERIFICATION_ROOT}"

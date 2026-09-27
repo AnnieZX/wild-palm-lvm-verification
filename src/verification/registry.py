@@ -19,6 +19,9 @@ _REGISTRY_ALIASES: dict[str, str] = {
     "qwen3vl": "qwen3_vl",
     "qwen3vl_8b": "qwen3_vl",
     "internvl3_8b": "internvl3",
+    "internvl3_5_hf": "internvl3_5_hf",
+    "internvl35_hf": "internvl3_5_hf",
+    "internvl3.5_hf": "internvl3_5_hf",
     "phi4": "phi4_multimodal",
     "glm46v_flash": "glm_4_6v_flash",
     "molmo2": "molmo2_8b",
@@ -26,6 +29,9 @@ _REGISTRY_ALIASES: dict[str, str] = {
     "minicpm45": "minicpm_v4_5",
     "minicpm-v-4.5": "minicpm_v4_5",
     "minicpm_v45": "minicpm_v4_5",
+    "gemma4_12b": "gemma4",
+    "gemma-4": "gemma4",
+    "gemma4_12b_it": "gemma4",
 }
 
 
@@ -57,8 +63,10 @@ def create_adapter(model: str, **kwargs: Any) -> BaseVerificationAdapter:
 
 def _register_builtin_adapters() -> None:
     from src.lvm.gemma_verification_adapter import build_gemma_adapter
+    from src.lvm.gemma4_verification_adapter import build_gemma4_adapter
     from src.lvm.glm_4_6v_flash_verification_adapter import build_glm_4_6v_flash_adapter
     from src.lvm.internvl_verification_adapter import build_internvl_adapter
+    from src.lvm.internvl3_5_hf_verification_adapter import build_internvl3_5_hf_adapter
     from src.lvm.llava_verification_adapter import build_llava_adapter
     from src.lvm.minicpm_v4_5_verification_adapter import build_minicpm_v4_5_adapter
     from src.lvm.molmo2_verification_adapter import build_molmo2_adapter
@@ -74,8 +82,13 @@ def _register_builtin_adapters() -> None:
     register_adapter("qwen3vl_8b", build_qwen3_vl_adapter)
     register_adapter("llava", build_llava_adapter)
     register_adapter("gemma", build_gemma_adapter)
+    register_adapter("gemma4", build_gemma4_adapter)
+    register_adapter("gemma4_12b", build_gemma4_adapter)
+    register_adapter("gemma-4", build_gemma4_adapter)
     register_adapter("internvl3", build_internvl_adapter)
     register_adapter("internvl", build_internvl_adapter)
+    register_adapter("internvl3_5_hf", build_internvl3_5_hf_adapter)
+    register_adapter("internvl35_hf", build_internvl3_5_hf_adapter)
     register_adapter("glm_4_6v_flash", build_glm_4_6v_flash_adapter)
     register_adapter("glm46v_flash", build_glm_4_6v_flash_adapter)
     register_adapter("phi4_multimodal", build_phi4_multimodal_adapter)
