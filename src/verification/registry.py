@@ -67,8 +67,10 @@ def _register_builtin_adapters() -> None:
     from src.lvm.glm_4_6v_flash_verification_adapter import build_glm_4_6v_flash_adapter
     from src.lvm.internvl_verification_adapter import build_internvl_adapter
     from src.lvm.internvl3_5_hf_verification_adapter import build_internvl3_5_hf_adapter
+    from src.lvm.llama3_2_11b_vision_verification_adapter import build_llama3_2_11b_vision_adapter
     from src.lvm.llava_verification_adapter import build_llava_adapter
     from src.lvm.minicpm_v4_5_verification_adapter import build_minicpm_v4_5_adapter
+    from src.lvm.ministral3_8b_verification_adapter import build_ministral3_8b_adapter
     from src.lvm.molmo2_verification_adapter import build_molmo2_adapter
     from src.lvm.phi4_multimodal_verification_adapter import build_phi4_multimodal_adapter
     from src.lvm.qwen_verification_adapter import build_qwen_adapter
@@ -99,6 +101,8 @@ def _register_builtin_adapters() -> None:
     register_adapter("minicpm_v4_5", build_minicpm_v4_5_adapter)
     register_adapter("minicpm45", build_minicpm_v4_5_adapter)
     register_adapter("minicpm-v-4.5", build_minicpm_v4_5_adapter)
+    register_adapter("ministral3_8b", build_ministral3_8b_adapter)
+    register_adapter("llama3_2_11b_vision", build_llama3_2_11b_vision_adapter)
 
 
 _register_builtin_adapters()

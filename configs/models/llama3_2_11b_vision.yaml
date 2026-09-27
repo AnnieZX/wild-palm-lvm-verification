@@ -1,0 +1,22 @@
+# Llama 3.2 11B Vision Instruct verification
+# Official HF: meta-llama/Llama-3.2-11B-Vision-Instruct (Llama 3.2 Community License; GATED, manual approval)
+# Pinned revision: 9eb2daaa8597bf192a8b0e73f848f3a102794df5
+# Transformers-native: MllamaProcessor + MllamaForConditionalGeneration (transformers >= 4.45)
+registry_key: llama3_2_11b_vision
+model_label: Llama 3.2 11B Vision Instruct
+backend: local
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/Llama-3.2-11B-Vision-Instruct
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+# Checkpoint generation_config defaults to do_sample=true, temperature=0.6, top_p=0.9;
+# the verifier overrides these with greedy decoding.
+do_sample: false
+trust_remote_code: false
+min_transformers: "4.45.0"
+hf_repo: meta-llama/Llama-3.2-11B-Vision-Instruct
+# Official chat template, image + text user turn, no system message (no system header emitted);
+# see src/lvm/llama3_2_11b_vision_verifier.py.
+generation:
+  attn_implementation: sdpa
