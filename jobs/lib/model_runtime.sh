@@ -34,7 +34,11 @@ canonicalize_model_key() {
 # and default batch size, but never an output namespace or checkpoint.
 model_family() {
     local key
-    key="$(canonicalize_model_key "${1:?model key required}")" || return 1
+    if [[ "${1:?model key required}" == "ministral3" ]]; then
+        echo "ministral3"
+        return 0
+    fi
+    key="$(canonicalize_model_key "$1")" || return 1
     case "${key}" in
         qwen2_5_vl|qwen2_5_vl_*) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_*) echo "qwen3_vl" ;;

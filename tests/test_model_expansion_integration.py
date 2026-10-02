@@ -309,6 +309,21 @@ class TestShellRuntime(unittest.TestCase):
                 checkpoints.add(checkpoint)
             self.assertEqual(len(checkpoints), len(sizes) + 1, family)
 
+    def test_family_name_resolves_like_activate_model_environment(self):
+        expected = {
+            "qwen3_vl_4b": "/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl",
+            "internvl3_5_hf_4b": "",
+            "qwen2_5_vl_3b": "",
+            "ministral3_3b": "/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4",
+            "ministral3_8b": "/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4",
+            "ministral3_14b": "/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4",
+        }
+        for key, env in expected.items():
+            self.assertEqual(run_shell(f'model_venv_path "$(model_family {key})"'), env, key)
+        self.assertNotEqual(subprocess.run(
+            ["bash", "-c", f"source {RUNTIME_SH}; canonicalize_model_key ministral3"],
+            capture_output=True).returncode, 0)
+
 
 MINISTRAL_FAILING_RAW = (
     '```json\n{\n  "decision": "Unreliable",\n  "confidence_reasoning": "",\n'
