@@ -6,6 +6,7 @@ import time
 import traceback
 
 from src.lvm.minicpm_v4_5_verifier import MiniCpmV45Verifier
+from src.lvm.model_settings import run_provenance
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
 from src.verification.jobs import VerificationJob
@@ -79,6 +80,8 @@ class MiniCpmV45VerificationAdapter(BaseVerificationAdapter):
             trust_remote_code=trust_remote_code,
             enable_thinking=enable_thinking,
         )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
@@ -133,6 +136,7 @@ class MiniCpmV45VerificationAdapter(BaseVerificationAdapter):
                 "dtype": self.dtype,
                 "attn_implementation": self.attn_implementation,
                 "trust_remote_code": self.trust_remote_code,
+                **self._provenance,
             }
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)

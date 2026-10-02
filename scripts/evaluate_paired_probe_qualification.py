@@ -55,7 +55,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--model-config", type=Path, default=None)
     parser.add_argument("--gpu-mem-log", type=Path, default=None)
+    parser.add_argument(
+        "--reference-experiment-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="Stored run(s) of the same model; probe agreement on shared IDs is reported (not gated)",
+    )
     return parser.parse_args()
+
+
+def reference_agreement(experiment_dir: Path, reference_dir: Path) -> dict:
+    """Per-condition agreement between probe records and a stored run on shared sample IDs."""
+    result: dict[str, dict] = {}
+    for code in CONDITIONS:
+        ref_dir = reference_dir / code
+        if not ref_dir.is_dir():
+            continue
+        probe = load_condition(experiment_dir / code)
+        shared = [s for s in probe if (ref_dir / f"{s}.json").is_file()]
+        if not shared:
+            continue
+        ref = {s: json.loads((ref_dir / f"{s}.json").read_text(encoding="utf-8")) for s in shared}
+        result[code] = {
+            "n_shared": len(shared),
+            "decision_identical": sum(probe[s].get("decision") == ref[s].get("decision") for s in shared),
+            "raw_identical": sum(probe[s].get("raw_response") == ref[s].get("raw_response") for s in shared),
+        }
+    return result
 
 
 def classify_record(record: dict) -> str:
@@ -279,6 +306,13 @@ def render_markdown(report: dict) -> str:
             f"- Determinism re-run (A1): raw identical {det['raw_identical']}/{det['n_compared']}, "
             f"decision identical {det['decision_identical']}/{det['n_compared']}"
         )
+    for ref, per_condition in (report.get("reference_agreement") or {}).items():
+        lines += ["", f"## Agreement with stored run `{ref}` (reported, not gated)", ""]
+        for code, row in per_condition.items():
+            lines.append(
+                f"- {code}: decision identical {row['decision_identical']}/{row['n_shared']}, "
+                f"raw identical {row['raw_identical']}/{row['n_shared']}"
+            )
     if report["failures"]:
         lines += ["", "## Gate failures", ""] + [f"- {f}" for f in report["failures"]]
     if report["warnings"]:
@@ -292,6 +326,9 @@ def main() -> int:
     if args.model_config is not None:
         config = yaml.safe_load(args.model_config.read_text(encoding="utf-8")) or {}
     report = evaluate(args.experiment_dir, args.probe_root, config, args.gpu_mem_log)
+    report["reference_agreement"] = {
+        str(ref): reference_agreement(args.experiment_dir, ref) for ref in args.reference_experiment_dir
+    }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "qualification_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (args.output_dir / "qualification_report.md").write_text(render_markdown(report), encoding="utf-8")

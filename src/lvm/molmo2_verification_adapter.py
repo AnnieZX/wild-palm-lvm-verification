@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 import traceback
 
+from src.lvm.model_settings import run_provenance
 from src.lvm.molmo2_verifier import Molmo2Verifier
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
@@ -73,6 +74,8 @@ class Molmo2VerificationAdapter(BaseVerificationAdapter):
             dtype=dtype,
             trust_remote_code=trust_remote_code,
         )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
@@ -122,6 +125,7 @@ class Molmo2VerificationAdapter(BaseVerificationAdapter):
                 "do_sample": False,
                 "dtype": self.dtype,
                 "trust_remote_code": self.trust_remote_code,
+                **self._provenance,
             }
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)

@@ -489,6 +489,16 @@ class TestPairedProbeEvaluator(unittest.TestCase):
         self.assertEqual(report["behavior"]["paired_transitions"]["A1->A5"]["changed"], 10)
         self.assertEqual(report["behavior"]["responsive_samples"], 10)
 
+    def test_reference_agreement_reports_shared_ids_only(self):
+        self.build()
+        ref = self.root / "ref"
+        write_records(ref / "A1", {s: {} for s in self.ids[:20]})
+        (ref / "A1" / f"{self.ids[0]}.json").write_text(json.dumps({"decision": "Unreliable"}))
+        agreement = probe_eval.reference_agreement(self.exp, ref)
+        self.assertEqual(set(agreement), {"A1"})
+        self.assertEqual(agreement["A1"]["n_shared"], 20)
+        self.assertEqual(agreement["A1"]["decision_identical"], 19)
+
 
 class TestDownloadVerifier(unittest.TestCase):
     def test_detects_missing_and_size_mismatch(self):

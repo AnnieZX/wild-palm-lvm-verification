@@ -26,6 +26,8 @@
 #     jobs/run_paired_probe_qual.slurm
 #
 # The verdict is written by scripts/evaluate_paired_probe_qualification.py.
+# Optional REFERENCE_DIRS="outputs/verification/<key>/<exp> ..." reports agreement with
+# stored runs of the same model on the probe IDs (not gated).
 
 set -euo pipefail
 
@@ -114,12 +116,17 @@ run_probe A1 A1_overlay_only "${EXP_ROOT}/determinism_A1" "${DETERMINISM_N}"
 
 kill "${GPU_MEM_PID}" 2>/dev/null || true
 
+REFERENCE_ARGS=()
+for ref in ${REFERENCE_DIRS:-}; do
+    REFERENCE_ARGS+=(--reference-experiment-dir "${ref}")
+done
 python -u scripts/evaluate_paired_probe_qualification.py \
     --experiment-dir "${EXP_ROOT}" \
     --probe-root "${PROBE_ROOT}" \
     --gpu-mem-log "${GPU_MEM_LOG}" \
     --model-config "${MODEL_CONFIG}" \
-    --output-dir "${REPORT_DIR}"
+    --output-dir "${REPORT_DIR}" \
+    "${REFERENCE_ARGS[@]}"
 
 echo "End: $(date)"
 echo "PAIRED_PROBE_COMPLETE ${MODEL} ${EXPERIMENT_ID}"
