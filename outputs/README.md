@@ -29,6 +29,9 @@ outputs/
 │           ├── A1/A1_evaluation.csv
 │           ├── A1/A1_metrics.json
 │           └── … A5/
+├── semantic_gt_review/          # OFFICIAL human semantic labels + read-only archive/ (docs/SEMANTIC_VALIDITY_AUDIT.md)
+├── semantic_candidate_audit/    # Lower-confidence blind pilot design, manifest, sealed reference, analysis
+├── semantic_gt_evaluation/      # SUPERSEDED / NOT FOR CURRENT RESULTS (never read the official labels; docs/SEMANTIC_GT_EVALUATION.md)
 ├── evaluation/                  # Protocol v1 (case-sensitive "palm"); FROZEN, do not write
 │   └── <model_key>/<experiment_id>/A*/…
 └── visualization/

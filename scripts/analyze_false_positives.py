@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
 Purpose:
-    List false-positive verification samples from an existing evaluation CSV.
+    List Protocol-v2 alignment false positives (Reliable on a LabelMe-unmatched
+    detection) from an existing evaluation CSV.
 
 Uses the same TP/FP/FN assignment rules as compute_verification_metrics.py
-without recomputing IoU or GT matching.
+without recomputing IoU or GT matching. "FP" and gt_label="negative" are
+Protocol-v2 annotation-alignment labels: LabelMe-unmatched is not the same as
+human-confirmed non-palm (see docs/SEMANTIC_VALIDITY_AUDIT.md).
 """
 
 from __future__ import annotations
@@ -44,7 +47,10 @@ DEFAULT_EVALUATION_DIR = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Identify false-positive samples from evaluation CSV output.",
+        description=(
+            "Identify Protocol-v2 alignment false positives "
+            "(Reliable on LabelMe-unmatched detections) from evaluation CSV output."
+        ),
     )
     parser.add_argument(
         "--evaluation-dir",
@@ -75,8 +81,9 @@ def identify_false_positives(df: pd.DataFrame) -> pd.DataFrame:
     """
     Return rows classified as false positives by compute_verification_metrics.py.
 
-    FP = predicted Reliable on a ground-truth-negative detection (matched_gt=False),
-    among rows with definitive verification labels (Reliable or Unreliable).
+    FP = predicted Reliable on a LabelMe-unmatched detection (matched_gt=False,
+    Protocol-v2 alignment negative), among rows with definitive verification
+    labels (Reliable or Unreliable).
     """
     labels = df["verification_label"].map(normalize_verification_label)
     gt_positive = df["matched_gt"].map(normalize_matched_gt)
@@ -137,11 +144,12 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fp_df.to_csv(output_path, index=False)
 
-    print("False positive analysis")
+    print("Protocol-v2 alignment false positives (Reliable on LabelMe-unmatched detections)")
+    print("  Note: LabelMe-unmatched is not human-confirmed non-palm.")
     print(f"  Evaluation CSV: {evaluation_csv}")
     print(f"  TP={metrics['true_positive']} FP={metrics['false_positive']} "
           f"FN={metrics['false_negative']} TN={metrics['true_negative']}")
-    print(f"  Saved {len(fp_df)} false positives: {output_path}")
+    print(f"  Saved {len(fp_df)} alignment false positives: {output_path}")
     print()
     print("First 10 sample_ids:")
     for sample_id in fp_df["sample_id"].head(10):

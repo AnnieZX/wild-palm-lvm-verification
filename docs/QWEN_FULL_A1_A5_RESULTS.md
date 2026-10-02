@@ -1,5 +1,8 @@
 # Qwen2.5-VL Full A1–A5 Results (@5747)
 
+> [!WARNING]
+> **Construct note (2026-10-01).** In this document, Protocol-v2 GT− / "negative" / "false positive" and specificity refer to **LabelMe annotation alignment** (LabelMe-unmatched detections), not semantic non-palms. LabelMe-unmatched is **not** equivalent to non-palm: the official human review of all 638 found 619 palm / 19 ambiguous / 0 non-palm. Historical conclusions below (e.g. which condition "rejects" best) should be read as **alignment behavior**. Semantic conclusions must use [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md). Content below is preserved unchanged for provenance.
+
 **Status:** `QWEN_FULL_A1_A5_COMPLETE`  
 **Model:** Qwen2.5-VL-7B-Instruct  
 **Checkpoint:** `/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct`  

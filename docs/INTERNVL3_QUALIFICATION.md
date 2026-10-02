@@ -1,5 +1,8 @@
 # InternVL3 Qualification Report
 
+> [!WARNING]
+> **Construct note (2026-10-01).** In this document, Protocol-v2 GT− / "negative" / "false positive" and specificity refer to **LabelMe annotation alignment** (LabelMe-unmatched detections), not semantic non-palms. LabelMe-unmatched is **not** equivalent to non-palm: the official human review of all 638 found 619 palm / 19 ambiguous / 0 non-palm, and the 50 balanced-100 "negatives" used by this gate were 45 palm / 5 ambiguous / 0 non-palm. Gate conclusions below should be read as **alignment behavior**; the FAIL_TECHNICAL verdict rests mainly on parse failures and stands independently. Semantic conclusions must use [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md). Content below is preserved unchanged for provenance.
+
 **Status:** Stage 1 complete — **FAIL_TECHNICAL** (not authorized for A1-1000)  
 **Date:** 2026-09-09 (DEAC)  
 **Experiment ID:** `20260909_internvl3_qual`

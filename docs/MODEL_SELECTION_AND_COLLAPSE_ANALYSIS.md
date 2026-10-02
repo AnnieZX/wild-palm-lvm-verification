@@ -1,5 +1,8 @@
 # Model Selection and Majority-Class Collapse Analysis
 
+> [!WARNING]
+> **Construct note (2026-10-01).** In this document, Protocol-v2 GT− / "negative" / "false positive" and specificity refer to **LabelMe annotation alignment** (LabelMe-unmatched detections), not semantic non-palms. LabelMe-unmatched is **not** equivalent to non-palm: the official human review of all 638 found 619 palm / 19 ambiguous / 0 non-palm. Historical gate verdicts, rankings and "useful verifier" conclusions below should be read as **alignment behavior**. Semantic conclusions must use [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md). Content below is preserved unchanged for provenance.
+
 **Original date:** 2026-09-09  
 **Consolidation update:** 2026-09-24 (evidence from raw `outputs/` + Slurm; historical sections below retained)  
 **Landscape research update:** 2026-09-24 (external HF / GitHub / tech-report verification of optional final model; **no downloads, inference, or jobs**)  

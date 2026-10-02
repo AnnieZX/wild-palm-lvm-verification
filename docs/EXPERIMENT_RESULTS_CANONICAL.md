@@ -5,6 +5,16 @@
 
 Every number in this document was regenerated from stored VLM predictions by `scripts/rescore_protocol_v2.py` and read from `outputs/evaluation_protocol_v2/**/A*_metrics.json` (manifest: `outputs/evaluation_protocol_v2/rescore_manifest.csv`). No inference was run. If this document and those artifacts disagree, the artifacts win.
 
+> [!IMPORTANT]
+> **Construct correction — 2026-10-01 (interpretation only; no number in this document changed).**
+>
+> - **Protocol v2 is retained unchanged** (same label rule, greedy one-to-one matching, IoU ≥ 0.5, evaluator and metrics).
+> - Protocol v2 is an **annotation-alignment reference**: of the 5,747 detections, **5,109 are LabelMe-matched** (GT+) and **638 are LabelMe-unmatched** (GT−).
+> - **LabelMe-unmatched does not mean human-confirmed non-palm.** The official human review of all 638 LabelMe-unmatched detections found **619 palm, 19 ambiguous, 0 non-palm** ([`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md)).
+> - Therefore every GT+/GT−, TP/TN/FP/FN, sensitivity, **specificity** and balanced-accuracy value below is a **Protocol-v2 alignment** metric. "Specificity" = share of decided LabelMe-unmatched detections classified Unreliable; it is **not** semantic non-palm specificity, and "FP" is not a semantically confirmed detector false positive. Field names (`true_negative`, `false_positive`, `matched_gt`, `gt_label`) are kept for schema stability.
+> - The primary research question is now **how A1–A5 input conditions change VLM verification behavior** (R/U/Ur, coverage, consistency) on the fixed 5,747-detection cohort; alignment metrics are secondary and the semantic audit is a separate validity check.
+> - Historical sections below (§2, §9, §10, qualification gates) are preserved as written for provenance; where their wording implies semantic rejection, read it through this note. Inline "Interpretation (2026-10-01)" notes mark the main places.
+
 ---
 
 ## 1. Current evaluation protocol (v2)
@@ -13,7 +23,7 @@ Every number in this document was regenerated from stored VLM predictions by `sc
 |------|------------|
 | Detections | **5,747** frozen YOLO detections with confidence ≥ 0.5 (`outputs/verification_dataset/index.csv`) |
 | Ground truth | LabelMe shapes whose label satisfies `isinstance(label, str) and label.strip().lower() == "palm"`, converted to the axis-aligned envelope of all shape points (any `shape_type`) |
-| Matching | Per image, pairwise IoU, sorted descending, **greedy one-to-one**; a pair matches iff **IoU ≥ 0.5**. Matched detection = GT+, unmatched = GT− |
+| Matching | Per image, pairwise IoU, sorted descending, **greedy one-to-one**; a pair matches iff **IoU ≥ 0.5**. Matched detection = GT+ (LabelMe-matched), unmatched = GT− (LabelMe-unmatched). These are annotation-alignment labels, not semantic palm / non-palm labels |
 | Decisions | **Reliable** = positive prediction · **Unreliable** = negative prediction · **Uncertain** = abstention, **excluded** from binary metrics |
 | Confusion | TP = GT+ ∧ Reliable · FP = GT− ∧ Reliable · FN = GT+ ∧ Unreliable · TN = GT− ∧ Unreliable |
 | Metrics | Accuracy = (TP+TN)/(TP+TN+FP+FN) · Precision = TP/(TP+FP) · Sensitivity = TP/(TP+FN) · **Specificity = TN/(TN+FP)** · F1 · **Balanced Accuracy = (Sensitivity + Specificity)/2** |
@@ -187,13 +197,15 @@ These runs use only `sample_000001`–`sample_001000` (A1@1000 slice prior 0.928
 
 Smoke/sanity runs (≤ 20 samples: MiniCPM, Molmo2, Phi-4, Qwen3-VL, Qwen2.5-VL, Qwen A5′ smoke) are engineering checks and are not scientific results; their re-scored artifacts are in the v2 tree.
 
-**Qualification gates (unchanged; drawn from the A1@1000 slice):**
+**Qualification gates — historical ALIGNMENT-BASED gate outcomes (unchanged; drawn from the A1@1000 slice):**
 
-| Model | Gate | R / U / Ur | Parse fail | Spec | BalAcc | Verdict |
+| Model | Gate | R / U / Ur | Parse fail | Alignment Spec | Alignment BalAcc | Historical alignment-gate verdict |
 |---|---|---|--:|--:|--:|---|
 | GLM-4.6V-Flash | Balanced-100 (`20260913_glm46v_flash_stage1_balanced100`) | 52 / 2 / 46 | 0 | 0.56 | 0.59 | Pass |
 | InternVL3.5-8B-HF | Balanced-100 (`20260924_internvl3_5_hf_qual`) | 39 / 58 / 3 | 0 | 0.20 | 0.60 | Pass |
 | InternVL3-8B-Instruct | Balanced-100 (`20260909_internvl3_qual`) | 56 / 31 / 0 | 13 | 0.00 | 0.50 | Fail (technical) |
+
+**Interpretation (2026-10-01).** The balanced-100 set is 50 LabelMe-matched + 50 LabelMe-unmatched detections. The official semantic review later labelled the **50 nominal "negative" examples as 45 palm / 5 ambiguous / 0 non-palm** (the full 72 LabelMe-unmatched detections in the A1@1000 slice: 65 palm / 7 ambiguous / 0 non-palm). The Spec and BalAcc gates therefore measured agreement with LabelMe alignment, **not** the ability to reject non-palms. The PASS/FAIL records above are kept as historical alignment-gate outcomes. InternVL3's failure is driven by 13% unparsable replies and is a technical failure independent of this construct question.
 
 ---
 
@@ -209,6 +221,8 @@ Smoke/sanity runs (≤ 20 samples: MiniCPM, Molmo2, Phi-4, Qwen3-VL, Qwen2.5-VL,
 
 Outcome labels describe the observed decision mix; they are not a pass/fail gate and do not change the evaluator.
 
+**Interpretation (2026-10-01).** "Specificity" in this table is Protocol-v2 alignment specificity. "Useful verifier" is a historical label meaning *uses Unreliable substantively and is not dominated by one class, with high alignment specificity in some condition*; it is **not** a claim that the model correctly rejects non-palms (0 of the 638 LabelMe-unmatched detections were human-reviewed as non-palm).
+
 | Class | Models | Evidence (v2) |
 |---|---|---|
 | **Useful verifier** | Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash, Phi-4 | Use rejection with substantial specificity in at least one condition (best Spec 0.90 / 0.95 / 0.91 / 0.86; best BalAcc 0.770 / 0.813 / 0.723 / 0.760) |
@@ -223,6 +237,8 @@ InternVL3.5 is deliberately **not** grouped with the Reliable-output collapse mo
 ---
 
 ## 10. A1–A5 findings (full scale, v2)
+
+**Interpretation (2026-10-01).** Finding 1's original heading ("best rejection") is preserved for provenance. Its current reading is descriptive: **A4/A5 produce higher Unreliable rates on LabelMe-unmatched detections** for these four models, and usually also more Unreliable decisions on LabelMe-matched detections (lower alignment sensitivity; e.g. Qwen2.5-VL A5 FN 1,702 vs A1 259). Because the LabelMe-unmatched set is semantically almost all palm (619 palm / 19 ambiguous / 0 non-palm), higher alignment specificity is not evidence of better semantic rejection. All "specificity" values in §10 are alignment specificity.
 
 1. **Crop-based context gives the best rejection.** Every useful verifier reaches its highest specificity on a crop-based condition — Qwen2.5-VL A5 (0.901), Qwen3-VL A5 (0.950), GLM A5 (0.906), Phi-4 A4 (0.857) — and its highest balanced accuracy on A4 or A5 (Qwen2.5-VL A5 0.770, Qwen3-VL A5 0.813, GLM A4 0.723, Phi-4 A4 0.760). This usually costs sensitivity.
 2. **No condition is best for everything.** Qwen2.5-VL has its highest F1 and sensitivity on A3 (0.969 / 0.998) but its lowest specificity there (0.038). The A5 vs A4 balanced-accuracy lead for Qwen2.5-VL is narrow (0.770 vs 0.763).
@@ -255,6 +271,7 @@ InternVL3.5 is deliberately **not** grouped with the Reliable-output collapse mo
 | Issue | Classification | Effect |
 |---|---|---|
 | Case-sensitive palm label (Protocol v1) | Protocol bug — **fixed in v2** | 486 boxes, 424 detection labels |
+| LabelMe-unmatched (GT−) detections are semantically almost all palms: 619 palm / 19 ambiguous / 0 non-palm of 638 (human review, 2026-10-01) | Construct limitation — Protocol v2 kept as an alignment reference | GT−, FP/TN and specificity are alignment quantities, not semantic non-palm quantities; see [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md) |
 | 25 detections with IoU ≥ 0.5 that lose greedy one-to-one matching (24 under v1) | Expected protocol behavior (VOC/COCO) | Near-duplicate YOLO boxes of an already-matched palm are GT−; a verifier answering Reliable on them scores an FP |
 | 3 point-shaped `palm` annotations: `100_0003_0028_2` (6.60, 695.16), `100_0003_0032_3` (282.51, 271.06), `100_0003_0350_8` (5.40, 602.39) | Data-quality issue (kept in v2) | Zero-area GT boxes, never matchable; add 3 detection-level FNs; **no effect** on the 5,747 verification labels |
 | Rotated palm shapes (3,306) scored by their axis-aligned envelope | Expected protocol behavior | Same in v1 and v2 |

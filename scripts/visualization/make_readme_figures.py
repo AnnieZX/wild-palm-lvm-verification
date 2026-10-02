@@ -4,7 +4,8 @@ Generate the README figures under docs/assets/readme/ (light + dark variants).
 Figures:
   ablation_inputs_{light,dark}.png   A1–A5 inputs rendered with the repo's own builders
   decision_mix_{light,dark}.png      R/U/Ur distribution per model × condition @5747 (all 6 complete models)
-  specificity_{light,dark}.png       Specificity heatmap per model × condition @5747 (all 6 complete models)
+  specificity_{light,dark}.png       Protocol-v2 alignment specificity (share of decided LabelMe-unmatched
+                                     detections answered Unreliable) per model × condition @5747
   a1_behavior_{light,dark}.png       A1 decision mix across every A1-evaluated model
 
 Numbers are transcribed from docs/EXPERIMENT_RESULTS_CANONICAL.md (Evaluation
@@ -80,7 +81,7 @@ DECISIONS = {
     "Gemma 4 12B": [(5583, 0, 164), (5595, 0, 152), (5424, 0, 323), (5547, 0, 200), (5261, 0, 486)],
 }
 
-# Specificity @5747, Protocol v2 — docs/EXPERIMENT_RESULTS_CANONICAL.md §5
+# Protocol-v2 alignment specificity @5747 — docs/EXPERIMENT_RESULTS_CANONICAL.md §5
 SPECIFICITY = {
     "Qwen2.5-VL": [0.4225, 0.1773, 0.0377, 0.6358, 0.9005],
     "Qwen3-VL": [0.5453, 0.3887, 0.5402, 0.1241, 0.9495],
@@ -294,7 +295,7 @@ def specificity(theme: str) -> None:
         ax.text(1.01, y, label, va="center", ha="left", fontsize=8.5,
                 color=t["muted"], style="italic", transform=ax.get_yaxis_transform())
     ax.xaxis.tick_top()
-    ax.set_title("Specificity (Protocol v2): share of detector false positives rejected",
+    ax.set_title("Protocol-v2 alignment specificity\n(LabelMe-unmatched classified Unreliable)",
                  loc="left", fontsize=12, fontweight="bold", color=t["text"], pad=30)
     _save(fig, "specificity", theme)
 

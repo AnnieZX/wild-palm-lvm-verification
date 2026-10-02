@@ -1,12 +1,21 @@
 # Experiment Status — Canonical Run Inventory
 
 **Date of original audit:** 2026-09-09 (DEAC cluster)  
-**Last status update:** 2026-09-27 (Evaluation Protocol v2 migration; no inference run)  
+**Last status update:** 2026-10-01 (construct correction: Protocol v2 reframed as LabelMe annotation alignment; no inference run, no run status changed)  
+**Previous update:** 2026-09-27 (Evaluation Protocol v2 migration; no inference run)  
 **Scope:** This file owns **run inventory, run status, scientific-outcome labels, reproducibility metadata and qualification history**. It deliberately contains no metric tables.
 
 **Numeric results (single source of truth):** [`EXPERIMENT_RESULTS_CANONICAL.md`](EXPERIMENT_RESULTS_CANONICAL.md)  
 **Protocol:** [`EVALUATION_PROTOCOL.md`](EVALUATION_PROTOCOL.md) (current: **v2**) · [`ABLATION_STUDY.md`](ABLATION_STUDY.md) · [`FRAMEWORK_FREEZE.md`](FRAMEWORK_FREEZE.md)  
-**Supporting analyses:** [`INTERNVL3_5_HF_QUALIFICATION.md`](INTERNVL3_5_HF_QUALIFICATION.md) · [`MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md`](MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md)
+**Supporting analyses:** [`INTERNVL3_5_HF_QUALIFICATION.md`](INTERNVL3_5_HF_QUALIFICATION.md) · [`MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md`](MODEL_SELECTION_AND_COLLAPSE_ANALYSIS.md) · [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md)
+
+> [!IMPORTANT]
+> **Construct correction — 2026-10-01 (interpretation only; no run status, verdict or number changed).**
+>
+> - **Protocol v2 is retained** as an **annotation-alignment reference**: 5,109 detections are LabelMe-matched (GT+), 638 are LabelMe-unmatched (GT−).
+> - **LabelMe-unmatched does not mean human-confirmed non-palm.** The official human review of all 638 found **619 palm, 19 ambiguous, 0 non-palm** ([`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md)).
+> - "Specificity" anywhere in this file means Protocol-v2 alignment specificity. Scientific-outcome labels (§0) are historical decision-mix descriptors under alignment scoring, not semantic-accuracy rankings.
+> - **Qualification gates were alignment-based.** The 50 nominal "negative" examples of the Stage-1 balanced-100 set were later human-reviewed as **45 palm / 5 ambiguous / 0 non-palm**. Historical PASS/FAIL records in §5 are preserved as **alignment-gate outcomes**; they must not be read as semantic non-palm rejection tests (see §5, "Current scientific interpretation").
 
 ---
 
@@ -26,7 +35,7 @@
 
 | Label | Operational meaning in this project |
 |-------|-------------------------------------|
-| **Useful verifier** | Uses rejection (and/or abstention) with substantial specificity in at least one condition; not dominated by one class |
+| **Useful verifier** | Uses rejection (and/or abstention) with substantial Protocol-v2 alignment specificity in at least one condition; not dominated by one class. Historical label; not a semantic-accuracy claim |
 | **Abstention-heavy, condition-dependent** | Uncertain dominates and Unreliable is rare, but specificity on the decided subset is moderate in some conditions and near zero in others |
 | **Reliable-heavy collapse** | Near-always-Reliable. *Single-class* = 100% Reliable (LLaVA, Gemma 3). *Partial* = Reliable ≥ ~91%, low specificity, accuracy ≈ always-Reliable prior |
 | **Abstention-heavy collapse** | Uncertain dominates and Unreliable is essentially absent, so specificity on the scored subset is ≈ 0 |
@@ -127,7 +136,7 @@ Decoding for all adapters: greedy (`do_sample=False`), `max_new_tokens=512`. Gem
 
 ## 5. Qualification path and historical gate deviations
 
-The **preferred** gate for new models (documented after the InternVL3 audit) is: Stage 0 (~10 deliberate samples) → Stage 1 balanced-100 (50 GT+ / 50 GT−; parse ≥95%, not ≥95% one class, Spec ≥0.20, BalAcc ≥0.55) → A1@1000 → full A1–A5 @5747. **It was not applied uniformly.** Nothing below is retroactively changed; this section exists for transparency. All gate runs use samples from the first 1,000 detections and are unaffected by the Protocol v1 → v2 correction.
+The **preferred** gate for new models (documented after the InternVL3 audit) is: Stage 0 (~10 deliberate samples) → Stage 1 balanced-100 (50 GT+ / 50 GT− by Protocol-v2 alignment; parse ≥95%, not ≥95% one class, alignment Spec ≥0.20, alignment BalAcc ≥0.55) → A1@1000 → full A1–A5 @5747. **It was not applied uniformly.** Nothing below is retroactively changed; this section exists for transparency. All gate runs use samples from the first 1,000 detections and are unaffected by the Protocol v1 → v2 correction.
 
 | Model | Actual path (evidence) | Balanced-100? | A1@1000? |
 |-------|------------------------|:-------------:|:--------:|
@@ -153,6 +162,18 @@ Documented deviations:
 4. **A1 weakness alone does not imply failure.** Phi-4's A1 specificity is below the Stage 1 floor at @1000, yet its A4 condition at full scale is among the strongest rejection profiles (results doc §5). Models stopped after A1 (MiniCPM, Molmo2, LLaVA, Gemma 3) were not tested on A2–A5.
 5. **Llama-3.2-11B-Vision's Stage 0 run is engineering-only** (10 samples, 1 parse failure). It validates loading and parsing and is not a qualification verdict.
 
+**Historical alignment-gate outcome vs current scientific interpretation (2026-10-01).**
+
+| | Historical alignment-gate outcome (preserved) | Current scientific interpretation |
+|---|---|---|
+| What the gate measured | Parse rate, single-class share, and Spec / BalAcc against Protocol-v2 GT on 50 LabelMe-matched + 50 LabelMe-unmatched detections | Parse rate and single-class share are construct-neutral engineering/behavior checks. Spec / BalAcc measured agreement with LabelMe alignment only |
+| The 50 "negatives" | Treated as GT− (assumed detector false positives) | Human-reviewed as **45 palm / 5 ambiguous / 0 non-palm**; not a non-palm rejection test |
+| GLM-4.6V-Flash | PASS | Passed the alignment gate; says nothing about semantic non-palm rejection |
+| InternVL3.5-8B-HF | PASS | Passed the alignment gate; says nothing about semantic non-palm rejection |
+| InternVL3-8B | FAIL_TECHNICAL | Still a technical failure (13/100 unparsable), independent of the construct question |
+
+No verdict is retroactively changed. Future gates should separate construct-neutral behavior checks from alignment-based checks and should not use LabelMe-unmatched detections as presumed non-palms.
+
 ---
 
 ## 6. Canonical datasets
@@ -161,7 +182,9 @@ Documented deviations:
 |-------|------|------:|
 | Production verification detections | `outputs/verification_dataset/` | **5747** |
 | Shared ablation inputs | `outputs/verification_ablation_{10,100,1000,5747}/` | A1–A5 at each N |
-| Balanced qualification gate | `outputs/diagnostics/model_qualification/balanced_A1_100/` | 50 / 50 |
+| Balanced qualification gate | `outputs/diagnostics/model_qualification/balanced_A1_100/` | 50 LabelMe-matched / 50 LabelMe-unmatched (the 50 unmatched: 45 palm / 5 ambiguous / 0 non-palm by human review) |
+| Official semantic audit (638 LabelMe-unmatched) | `outputs/semantic_gt_review/human_review.csv`; frozen copy `outputs/semantic_gt_review/archive/official_638_unmatched_review_completed_20261001T215529Z/` | 619 palm / 19 ambiguous / 0 non-palm |
+| Lower-confidence semantic pilot (blind, stratified) | `outputs/semantic_gt_review/human_confidence_pilot.csv`; frozen copy `outputs/semantic_gt_review/archive/confidence_pilot_official_completed_20261001T172808Z/` | 400 (318 palm / 9 non-palm / 73 ambiguous) |
 | Stage 0 deliberate set | `outputs/diagnostics/model_qualification/stage0_A1_10/` | 10 |
 | Protocol v2 evaluation tree | `outputs/evaluation_protocol_v2/` | 60 runs (32 full-scale) |
 | Protocol v1 evaluation tree (frozen) | `outputs/evaluation/` | 60 runs |
@@ -176,10 +199,14 @@ Documented deviations:
 4. **LLaVA / Gemma 3** — retained as negative controls only.
 5. **Legacy per-model Slurm scripts** (`jobs/run_*_Ax_5747.slurm`, `jobs/run_qwen_ablation.slurm`, etc.) still default to the v1 path `outputs/evaluation/`; they carry a `DEPRECATED` header and are kept only to document how completed runs were launched. `jobs/run_verification.slurm` now defaults to v2 and refuses to write into `outputs/evaluation/`. For new runs use `scripts/submit_model_ablation.sh` → `jobs/run_verification.slurm`; re-score stored predictions with `scripts/rescore_protocol_v2.py`.
 6. **Historical design docs** are archived under [`archive/docs/`](../archive/docs/README.md); their numbers are Protocol v1 and their plans are superseded.
+7. **GT-independent A1–A5 behavior analysis** (primary analysis: R/U/Ur by model × condition, coverage/abstention, per-detection consistency, A1→A5 change rates, transition matrices, context sensitivity) — planned as a separate task from stored predictions only.
+8. **Earlier semantic-GT pipeline** (`src/evaluation/semantic_gt.py`, `scripts/evaluate_semantic_gt.py`, `outputs/semantic_gt_evaluation/`) is **SUPERSEDED / NOT FOR CURRENT RESULTS**: it predates the official review workflow and never consumed its labels. See [`SEMANTIC_GT_EVALUATION.md`](SEMANTIC_GT_EVALUATION.md).
 
 ---
 
 ## End summary
+
+<sub>Outcome labels below are historical decision-mix descriptors under Protocol-v2 alignment scoring (see the 2026-10-01 construct correction at the top).</sub>
 
 **Complete (A1–A5 @5747), Useful verifier:** Qwen2.5-VL, Qwen3-VL, GLM-4.6V-Flash, Phi-4.  
 **Complete (A1–A5 @5747), abstention-heavy / condition-dependent:** InternVL3.5-8B-HF.  

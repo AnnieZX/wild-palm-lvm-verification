@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Evaluate InternVL qualification Stage 0 / Stage 1 results (CPU-only)."""
+"""Evaluate InternVL qualification Stage 0 / Stage 1 results (CPU-only).
+
+gt_label positive/negative and the derived FP/TN/specificity are Protocol-v2
+annotation-alignment labels (LabelMe-matched / LabelMe-unmatched), not semantic
+palm / non-palm labels; see docs/SEMANTIC_VALIDITY_AUDIT.md.
+"""
 
 from __future__ import annotations
 
@@ -101,19 +106,24 @@ def main() -> None:
         / 2.0
     )
 
-    print("\nconfusion (Reliable=pos, Unreliable=neg; Uncertain excluded):")
+    print(
+        "\nconfusion vs Protocol-v2 alignment labels "
+        "(Reliable=pos, Unreliable=neg; Uncertain excluded; "
+        "GT- = LabelMe-unmatched, not semantic non-palm):"
+    )
     print(f"TP={tp} FP={fp} TN={tn} FN={fn} scored_n={len(scored)}")
     print(
         f"Precision={precision:.4f} Recall={recall:.4f} F1={f1:.4f} "
-        f"Accuracy={accuracy:.4f} Specificity={specificity:.4f} BalancedAccuracy={bal_acc:.4f}"
+        f"Accuracy={accuracy:.4f} AlignmentSpecificity={specificity:.4f} "
+        f"BalancedAccuracy={bal_acc:.4f}"
     )
 
-    # Diagnostic rejection rate: Uncertain OR Unreliable as flagging
+    # Diagnostic flag rate: Uncertain OR Unreliable on LabelMe-unmatched rows
     neg = merged[merged["gt_label"] == "negative"]
     flagged = neg["decision"].isin(["Uncertain", "Unreliable"]).sum()
     print(
-        f"\ndiagnostic_negative_detection_rate "
-        f"(Uncertain|Unreliable)/GT-: {flagged}/{len(neg)} = "
+        f"\ndiagnostic_labelme_unmatched_flag_rate "
+        f"(Uncertain|Unreliable)/LabelMe-unmatched: {flagged}/{len(neg)} = "
         f"{(flagged / len(neg) if len(neg) else float('nan')):.4f}"
     )
 

@@ -4,9 +4,24 @@ This document defines the official evaluation protocol for all experiments in th
 
 **Current version: Protocol v2** (effective 2026-09-27). Constant: `EVALUATION_PROTOCOL_VERSION = "v2"` in `src/preprocessing/gt_palm_bboxes.py`. Results: [EXPERIMENT_RESULTS_CANONICAL.md](EXPERIMENT_RESULTS_CANONICAL.md).
 
-## 1. Ground Truth
+> [!IMPORTANT]
+> **What Protocol v2 measures (terminology clarified 2026-10-01; algorithm unchanged).** Protocol v2 is an **annotation-alignment reference**: it asks whether a YOLO detection is matched to a LabelMe `palm` box (greedy one-to-one, IoU ≥ 0.5). It does **not** establish whether a detection is semantically a palm.
+>
+> Throughout this document and its outputs, the legacy notation is kept and means:
+>
+> | Legacy term | Meaning under Protocol v2 |
+> |---|---|
+> | GT+ / "positive" / `matched_gt = True` / `gt_label = positive` | **LabelMe-matched** detection (annotation-alignment positive) |
+> | GT− / "negative" / `matched_gt = False` / `gt_label = negative` / `ground_truth_negative` | **LabelMe-unmatched** detection (annotation-alignment negative) — **not** a human-confirmed non-palm |
+> | FP / `false_positive` | Reliable on a LabelMe-unmatched detection |
+> | TN / `true_negative` | Unreliable on a LabelMe-unmatched detection |
+> | Specificity | **Protocol-v2 alignment specificity** = share of decided LabelMe-unmatched detections classified Unreliable |
+>
+> Semantic validity is a separate construct. The official human review of all 638 LabelMe-unmatched detections found **619 palm, 19 ambiguous, 0 non-palm** (§8, [SEMANTIC_VALIDITY_AUDIT.md](SEMANTIC_VALIDITY_AUDIT.md)).
 
-Ground truth annotations are LabelMe JSON files (`/deac/csc/yangGrp/cuij/palm/Raw_Patches`, 880 files). They are used **for evaluation only** and are never shown to the model.
+## 1. Ground Truth (LabelMe annotation-alignment reference)
+
+The reference annotations ("ground truth" in legacy wording) are LabelMe JSON files (`/deac/csc/yangGrp/cuij/palm/Raw_Patches`, 880 files). They are used **for evaluation only** and are never shown to the model. They are treated as an alignment reference; they are not documented as exhaustive, so a real palm can be LabelMe-unmatched.
 
 ### 1.1 Palm-label normalization (v2)
 
@@ -37,8 +52,9 @@ This conversion is independent of LabelMe `shape_type` (rectangle, rotation, pol
 |----------|------:|
 | GT palm boxes (880 LabelMe files) | 5,853 (5,367 `palm` + 486 `Palm`; 3,306 rotation, 2,544 rectangle, 3 point) |
 | Verification detections (YOLO confidence ≥ 0.5) | 5,747 |
-| GT+ (matched) / GT− (unmatched) | **5,109 / 638** |
-| Always-Reliable accuracy (class prior) | 0.8890 |
+| GT+ (LabelMe-matched) / GT− (LabelMe-unmatched) | **5,109 / 638** |
+| Always-Reliable alignment accuracy (class prior) | 0.8890 |
+| Human semantic audit of the 638 GT− | 619 palm / 19 ambiguous / 0 non-palm |
 
 ## 2. Detection Matching
 
@@ -83,9 +99,9 @@ For binary evaluation:
 | Unreliable (Ur) | Negative prediction |
 | Uncertain (U) | Excluded from binary evaluation (requires human verification) |
 
-Ground-truth polarity is determined by greedy one-to-one IoU matching: a matched detection (IoU ≥ 0.5) is GT+, an unmatched detection is GT−.
+Alignment polarity is determined by greedy one-to-one IoU matching: a matched detection (IoU ≥ 0.5) is GT+ (LabelMe-matched), an unmatched detection is GT− (LabelMe-unmatched).
 
-| | GT+ | GT− |
+| | GT+ (LabelMe-matched) | GT− (LabelMe-unmatched) |
 |---|---|---|
 | **Reliable** | TP | FP |
 | **Unreliable** | FN | TN |
@@ -99,9 +115,9 @@ Uncertain is never counted as FN or TN. These detections are candidates for manu
 
 Report TP, FP, FN, Precision, Recall, F1, average IoU of matched pairs, and average YOLO confidence. Output: `outputs/evaluation_protocol_v2/detection_metrics.json` (`scripts/evaluate_detection_matching.py`).
 
-### Verification
+### Verification (Protocol-v2 alignment metrics)
 
-Computed using only definitive predictions (Reliable and Unreliable):
+Computed using only definitive predictions (Reliable and Unreliable), against LabelMe alignment labels. Every metric in this table is an alignment metric; "Specificity" is reported as **Protocol-v2 alignment specificity** and must not be described as semantic non-palm specificity.
 
 | Metric | Definition |
 |--------|------------|
@@ -146,5 +162,18 @@ Legacy pre-freeze Qwen2.5 paths under `outputs/verification/qwen/` remain valid 
 ## 7. Protocol v1 (provenance)
 
 Protocol v1 (July 2026 – 2026-09-27) was identical except for the label rule: `label == "palm"` (case-sensitive). It dropped the 486 `Palm` boxes in 70 files (parents 0194–0205), giving 5,367 GT boxes and GT+ 4,685 / GT− 1,062 (prior 0.8152). 424 detections flip GT− → GT+ under v2, none flip the other way. v1 outputs are frozen, unmodified, in `outputs/evaluation/`. Full correction record: [EXPERIMENT_RESULTS_CANONICAL.md §2 and §13](EXPERIMENT_RESULTS_CANONICAL.md#2-protocol-v1--v2-correction).
+
+## 8. Semantic validity (separate construct)
+
+Protocol v2 GT is annotation alignment: an unmatched detection is GT−, which does not by itself mean it is not a palm. Semantic validity is audited separately by human visual review and leaves this protocol, its labels and its outputs unchanged.
+
+**Official result (2026-10-01):** all 638 Protocol-v2 LabelMe-unmatched detections were reviewed: **619 palm, 19 ambiguous, 0 non-palm**. A blind, confidence-stratified pilot of 400 lower-confidence YOLO detections (0.10–0.50, below this cohort) found 318 palm, 9 non-palm and 73 ambiguous. Canonical write-up, limitations and provenance: [SEMANTIC_VALIDITY_AUDIT.md](SEMANTIC_VALIDITY_AUDIT.md).
+
+Consequences for this protocol:
+
+- Protocol v2 metrics remain valid **as annotation-alignment metrics** and are not recomputed.
+- Alignment specificity on this cohort cannot be read as non-palm rejection: semantic non-palm specificity is not estimable for the ≥ 0.5 cohort (0 confirmed non-palms).
+
+The earlier semantic-GT evaluation design ([SEMANTIC_GT_EVALUATION.md](SEMANTIC_GT_EVALUATION.md), `scripts/evaluate_semantic_gt.py`) is **SUPERSEDED / NOT FOR CURRENT RESULTS**; it predates the official review workflow and does not consume its labels.
 
 Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)

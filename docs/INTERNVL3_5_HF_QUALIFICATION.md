@@ -1,5 +1,8 @@
 # InternVL3.5-8B-HF Qualification Report
 
+> [!WARNING]
+> **Construct note (2026-10-01).** In this document, Protocol-v2 GT− / "negative" / "false positive" and specificity refer to **LabelMe annotation alignment** (LabelMe-unmatched detections), not semantic non-palms. LabelMe-unmatched is **not** equivalent to non-palm: the official human review of all 638 found 619 palm / 19 ambiguous / 0 non-palm, and the 50 balanced-100 "negatives" used by this gate were 45 palm / 5 ambiguous / 0 non-palm. The PASS verdict below is a historical **alignment-gate** outcome. Semantic conclusions must use [`SEMANTIC_VALIDITY_AUDIT.md`](SEMANTIC_VALIDITY_AUDIT.md). Content below is preserved unchanged for provenance.
+
 **Status:** Stage 0 + Stage 1 **PASS** → full A1–A5 @5747 **Complete** (run status) · **Abstention-heavy; moderate specificity on A1 and A3 at low coverage, with near-zero specificity on A2, A4, and A5** (scientific outcome, Evaluation Protocol v2)  
 **Date:** 2026-09-24 (DEAC); full-scale outcome added 2026-09-27; re-adjudicated under Protocol v2 on 2026-09-27  
 **Experiment ID:** `20260924_internvl3_5_hf_qual`  
