@@ -72,6 +72,14 @@ elif [[ -d "${EXP_DIR}" ]]; then
     exit 1
 fi
 
+for c in "${CONDITIONS[@]}"; do
+    ACTIVE="$(squeue -u "${USER}" -h -n "${MODEL}_${c}_5747" -o %i 2>/dev/null || true)"
+    if [[ -n "${ACTIVE}" ]]; then
+        echo "ERROR: ${MODEL}_${c}_5747 is already queued/running (job ${ACTIVE//$'\n'/ }); refusing duplicate." >&2
+        exit 1
+    fi
+done
+
 GIT_COMMIT="$(git rev-parse HEAD)"
 REVISION="$(sed -n 's/^revision: *//p' "configs/models/${MODEL}.yaml" | head -1)"
 echo "MODEL=${MODEL} COMMIT=${GIT_COMMIT} REVISION=${REVISION}"
