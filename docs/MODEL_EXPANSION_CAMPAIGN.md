@@ -53,6 +53,10 @@ backend.
 - Qwen3-VL sizes: `/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl` (transformers 4.57.6, torch 2.8.0+cu128), same as the 8B anchor.
 - InternVL3.5-HF sizes: `/usr/bin/python` 3.9 (transformers 4.57.6), same interpreter as the 8B anchor;
   `model_runtime.sh` pins it for the family and asserts the transformers version.
+- Qwen2.5-VL sizes: `/usr/bin/python` 3.9 (transformers 4.57.6, qwen-vl-utils), the interpreter
+  the 7B anchor logged; its transformers version at the time (July 2026) was not logged. `dtype: auto`
+  as for the anchor (resolves to bfloat16; recorded as `torch_dtype_resolved`). The 7B anchor's
+  revision was not recorded; its local shard sizes match upstream `cc594898`.
 - Ministral 3 sizes: `/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4` (transformers 5.17.0,
   torch 2.11.0+cu128), the env the 8B integration already used; reused unchanged.
 
@@ -84,3 +88,6 @@ backend.
 | `ministral3_8b` | Ministral 3 / 8B | `f6fae979` | L40S | pending | requalify | — | — | — | — | — | integrating |
 | `ministral3_3b` | Ministral 3 / 3B | `b6d637be` | L40S | pending | pending | — | — | — | — | — | integrating |
 | `ministral3_14b` | Ministral 3 / 14B | `3cea74c1` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `qwen2_5_vl` | Qwen2.5-VL / 7B | unrecorded | L40S | (historical) | anchor | historical | | | | 8318977 (A5 resume) | Complete — do not rerun |
+| `qwen2_5_vl_3b` | Qwen2.5-VL / 3B | `66285546` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `qwen2_5_vl_32b` | Qwen2.5-VL / 32B | `7cfb30d7` | H200 | pending | pending | — | — | — | — | — | integrating |

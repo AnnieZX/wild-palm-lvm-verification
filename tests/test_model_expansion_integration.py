@@ -45,6 +45,10 @@ INTERNVL35_SIZES = {
     "internvl3_5_hf_4b": ("OpenGVLab/InternVL3_5-4B-HF", "4B", "L40S"),
     "internvl3_5_hf_14b": ("OpenGVLab/InternVL3_5-14B-HF", "14B", "L40S"),
 }
+QWEN25_SIZES = {
+    "qwen2_5_vl_3b": ("Qwen/Qwen2.5-VL-3B-Instruct", "3B", "L40S"),
+    "qwen2_5_vl_32b": ("Qwen/Qwen2.5-VL-32B-Instruct", "32B", "H200"),
+}
 MINISTRAL3_SIZES = {
     "ministral3_3b": ("mistralai/Ministral-3-3B-Instruct-2512-BF16", "3B", "L40S"),
     "ministral3_14b": ("mistralai/Ministral-3-14B-Instruct-2512-BF16", "14B", "L40S"),
@@ -194,6 +198,47 @@ class TestQwen3FamilyAdapter(unittest.TestCase):
         self.assertEqual(generation["checkpoint_revision"], cfg["revision"])
         self.assertEqual(generation["git_commit"], "abc123")
         self.assertEqual(outcome.record["model_key"], "qwen3_vl_2b")
+
+
+class TestQwen25Family(unittest.TestCase):
+    def test_configs_pinned_and_distinct(self):
+        anchor = yaml.safe_load((CONFIG_DIR / "qwen2_5_vl.yaml").read_text())
+        self.assertEqual(anchor["dtype"], "auto")
+        self.assertNotIn("attn_implementation", anchor)
+        paths = {run_shell("model_default_checkpoint qwen2_5_vl")}
+        for key, (repo, size, gpu) in QWEN25_SIZES.items():
+            cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
+            self.assertEqual((cfg["registry_key"], cfg["hf_repo"], cfg["parameter_size"]), (key, repo, size))
+            self.assertEqual((cfg["family"], cfg["gpu_class"], cfg["dtype"]), ("qwen2_5_vl", gpu, "auto"))
+            self.assertEqual(cfg["attn_implementation"], "sdpa")
+            self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")
+            self.assertEqual(resolve_registry_key(key), key)
+            self.assertEqual(normalize_model_key(key), key)
+            self.assertEqual(run_shell(f"model_family {key}"), "qwen2_5_vl")
+            self.assertEqual(run_shell(f"model_venv_path {key}"), "")
+            self.assertEqual(run_shell(f"model_default_checkpoint {key}"), cfg["model_path"])
+            paths.add(cfg["model_path"])
+        self.assertEqual(len(paths), 3)
+        self.assertEqual(run_shell("model_family qwen"), "qwen2_5_vl")
+        self.assertEqual(run_shell("canonicalize_model_key qwen"), "qwen2_5_vl")
+
+    def test_adapter_settings(self):
+        from src.lvm import qwen_verification_adapter as qwen25_adapter
+
+        FakeVerifier.instances.clear()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(qwen25_adapter, "QwenVerifier", FakeVerifier):
+            anchor = qwen25_adapter.build_qwen_adapter(model_name=tmp, model_key="qwen2_5_vl")
+            self.assertEqual(anchor.model_label, "Qwen2.5-VL")
+            self.assertEqual(FakeVerifier.instances[-1].kwargs["dtype"], "auto")
+            self.assertIsNone(FakeVerifier.instances[-1].kwargs["attn_implementation"])
+            cfg = yaml.safe_load((CONFIG_DIR / "qwen2_5_vl_3b.yaml").read_text())
+            (Path(tmp) / "DOWNLOAD_META.txt").write_text(f"revision={cfg['revision']}\n")
+            sized = qwen25_adapter.build_qwen_adapter(model_name=tmp, model_key="qwen2_5_vl_3b")
+            self.assertEqual(sized.model_label, "Qwen2.5-VL-3B-Instruct")
+            self.assertEqual(FakeVerifier.instances[-1].kwargs["attn_implementation"], "sdpa")
+            with self.assertRaises(ValueError):
+                qwen25_adapter.build_qwen_adapter(model_name=tmp, model_key="qwen2_5_vl_32b")
 
 
 class TestInternVL35FamilyAdapter(unittest.TestCase):

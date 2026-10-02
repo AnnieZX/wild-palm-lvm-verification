@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from src.lvm.model_settings import load_model_settings, read_download_revision, run_provenance
 from src.lvm.qwen_verifier import QwenVerifier
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
@@ -47,7 +48,12 @@ def build_qwen_adapter(
     condition: str = "",
     experiment_id: str = "",
 ) -> "QwenVerificationAdapter":
-    """Factory used by the verification adapter registry."""
+    """Factory used by the verification adapter registry (all Qwen2.5-VL sizes).
+
+    dtype, attention backend, label and pinned revision come from
+    ``configs/models/<model_key>.yaml``.
+    """
+    settings = load_model_settings(model_key)
     return QwenVerificationAdapter(
         model_name=model_name,
         batch_size=batch_size,
@@ -56,6 +62,10 @@ def build_qwen_adapter(
         model_key=model_key,
         condition=condition,
         experiment_id=experiment_id,
+        dtype=settings.get("dtype") or "auto",
+        attn_implementation=settings.get("attn_implementation"),
+        model_label=settings.get("model_label") or "Qwen2.5-VL",
+        expected_revision=settings.get("revision") or "",
     )
 
 
@@ -76,9 +86,21 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
         model_key: str = "qwen2_5_vl",
         condition: str = "",
         experiment_id: str = "",
+        *,
+        dtype: str = "auto",
+        attn_implementation: str | None = None,
+        model_label: str = "Qwen2.5-VL",
+        expected_revision: str = "",
     ) -> None:
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+        if expected_revision:
+            found = read_download_revision(model_name)
+            if found != expected_revision:
+                raise ValueError(
+                    f"{model_key}: checkpoint {model_name} has revision {found!r}, "
+                    f"config pins {expected_revision!r}"
+                )
 
         self.model_name = model_name
         self.batch_size = batch_size
@@ -86,11 +108,21 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
         self.model_key = model_key
         self.condition = condition
         self.experiment_id = experiment_id
-        self._verifier = QwenVerifier(model_name=model_name, device_map=device_map)
+        self.dtype = dtype
+        self.attn_implementation = attn_implementation
+        self._model_label = model_label
+        self._verifier = QwenVerifier(
+            model_name=model_name,
+            device_map=device_map,
+            dtype=dtype,
+            attn_implementation=attn_implementation,
+        )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
-        return "Qwen2.5-VL"
+        return self._model_label
 
     def verify(self, job: VerificationJob) -> VerificationOutcome:
         """Run Qwen inference for one verification sample."""
@@ -131,6 +163,13 @@ class QwenVerificationAdapter(BaseVerificationAdapter):
                 parse_error=parse_error,
                 **metadata,
             )
+            record["generation"] = {
+                "max_new_tokens": self.max_new_tokens,
+                "do_sample": False,
+                "dtype": self.dtype,
+                "attn_implementation": self.attn_implementation,
+                **self._provenance,
+            }
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)
 

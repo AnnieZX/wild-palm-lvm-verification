@@ -9,6 +9,7 @@ canonicalize_model_key() {
     case "${raw}" in
         qwen|qwen25_vl_7b|qwen2_5_vl_7b|qwen2_5_vl) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
+        qwen2_5_vl_3b|qwen2_5_vl_32b) echo "${raw}" ;;
         qwen3_vl_2b|qwen3_vl_4b|qwen3_vl_32b) echo "${raw}" ;;
         internvl3_5_hf_2b|internvl3_5_hf_4b|internvl3_5_hf_14b) echo "${raw}" ;;
         ministral3_3b|ministral3_8b|ministral3_14b) echo "${raw}" ;;
@@ -35,6 +36,7 @@ model_family() {
     local key
     key="$(canonicalize_model_key "${1:?model key required}")" || return 1
     case "${key}" in
+        qwen2_5_vl|qwen2_5_vl_*) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_*) echo "qwen3_vl" ;;
         internvl3_5_hf|internvl3_5_hf_*) echo "internvl3_5_hf" ;;
         ministral3_*) echo "ministral3" ;;
@@ -84,6 +86,8 @@ model_default_batch_size() {
 model_default_checkpoint() {
     case "$(canonicalize_model_key "$1")" in
         qwen2_5_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct" ;;
+        qwen2_5_vl_3b) echo "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-3B-Instruct" ;;
+        qwen2_5_vl_32b) echo "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-32B-Instruct" ;;
         qwen3_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-8B-Instruct" ;;
         qwen3_vl_2b) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-2B-Instruct" ;;
         qwen3_vl_4b) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-4B-Instruct" ;;
@@ -250,16 +254,16 @@ PY
         # Default-cluster models (Qwen2.5 / LLaVA / Gemma / InternVL): mirror historical
         # jobs/run_qwen_ablation.slurm — do NOT module-load a bare Python that lacks
         # transformers. Use the submitting shell's python (/usr/bin/python on DEAC).
-        if [[ "${model_key}" == "internvl3_5_hf" ]]; then
-            # Pin the interpreter the completed InternVL3.5-8B-HF run used
-            # (/usr/bin/python 3.9, transformers 4.57.6) regardless of submit-shell modules.
+        if [[ "${model_key}" == "internvl3_5_hf" || "${model_key}" == "qwen2_5_vl" ]]; then
+            # Pin the interpreter the completed InternVL3.5-8B-HF and Qwen2.5-VL-7B runs
+            # used (/usr/bin/python 3.9) regardless of submit-shell modules.
             export PATH="/usr/bin:${PATH}"
             python - <<'PY'
 import sys
 import transformers
 assert sys.executable.startswith("/usr/bin/"), sys.executable
 assert transformers.__version__ == "4.57.6", transformers.__version__
-print("INTERNVL35_ENV_PIN_OK", sys.executable, transformers.__version__)
+print("SYSTEM_PYTHON_PIN_OK", sys.executable, transformers.__version__)
 PY
         fi
         export PYTHONPATH="${project_dir}${PYTHONPATH:+:${PYTHONPATH}}"

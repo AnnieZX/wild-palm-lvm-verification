@@ -18,6 +18,8 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "qwen2_5_vl": "qwen2_5_vl",
     "qwen25_vl_7b": "qwen2_5_vl",
     "qwen2_5_vl_7b": "qwen2_5_vl",
+    "qwen2_5_vl_3b": "qwen2_5_vl_3b",
+    "qwen2_5_vl_32b": "qwen2_5_vl_32b",
     "llava": "llava",
     "gemma": "gemma",
     "gemma4": "gemma4",

@@ -45,8 +45,10 @@ def resolved_attn_implementation(model: Any) -> str:
 
 def run_provenance(*, checkpoint: str | Path, model: Any = None) -> dict[str, str]:
     """Provenance fields recorded in each sample's ``generation`` block."""
+    dtype = getattr(model, "dtype", None)
     return {
         "attn_implementation_resolved": resolved_attn_implementation(model),
+        "torch_dtype_resolved": str(dtype).replace("torch.", "") if dtype is not None else "",
         "checkpoint_revision": read_download_revision(checkpoint),
         "git_commit": os.environ.get(GIT_COMMIT_ENV, ""),
     }

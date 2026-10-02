@@ -22,9 +22,14 @@ class QwenVerifier(BaseVerifier):
         self,
         model_name: str = "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct",
         device_map: str = "auto",
+        *,
+        dtype: str = "auto",
+        attn_implementation: str | None = None,
     ) -> None:
         super().__init__(model_name=model_name)
         self.device_map = device_map
+        self.dtype = dtype
+        self.attn_implementation = attn_implementation
         self.model = None
         self.processor = None
         self._load_model()
@@ -50,12 +55,16 @@ class QwenVerifier(BaseVerifier):
 
         print(f"Loading Qwen model from: {self.model_name}")
         print(f"Device map: {self.device_map}")
+        print(f"dtype: {self.dtype}  attn_implementation: {self.attn_implementation}")
+
+        load_kwargs: dict[str, Any] = {"torch_dtype": self.dtype, "device_map": self.device_map}
+        if self.attn_implementation:
+            load_kwargs["attn_implementation"] = self.attn_implementation
 
         try:
             self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 self.model_name,
-                torch_dtype="auto",
-                device_map=self.device_map,
+                **load_kwargs,
             )
             self.processor = AutoProcessor.from_pretrained(self.model_name)
         except Exception as error:
