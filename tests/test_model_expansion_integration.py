@@ -45,7 +45,11 @@ INTERNVL35_SIZES = {
     "internvl3_5_hf_4b": ("OpenGVLab/InternVL3_5-4B-HF", "4B", "L40S"),
     "internvl3_5_hf_14b": ("OpenGVLab/InternVL3_5-14B-HF", "14B", "L40S"),
 }
-# size key -> (family key, sizes, family env path)
+MINISTRAL3_SIZES = {
+    "ministral3_3b": ("mistralai/Ministral-3-3B-Instruct-2512-BF16", "3B", "L40S"),
+    "ministral3_14b": ("mistralai/Ministral-3-14B-Instruct-2512-BF16", "14B", "L40S"),
+}
+# family key -> (size keys, family env path); the family key's own config is the anchor
 FAMILIES = {
     "qwen3_vl": (QWEN3_SIZES, "/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl"),
     "internvl3_5_hf": (INTERNVL35_SIZES, ""),
@@ -259,6 +263,100 @@ class TestShellRuntime(unittest.TestCase):
                 self.assertEqual(checkpoint, cfg["model_path"])
                 checkpoints.add(checkpoint)
             self.assertEqual(len(checkpoints), len(sizes) + 1, family)
+
+
+MINISTRAL_FAILING_RAW = (
+    '```json\n{\n  "decision": "Unreliable",\n  "confidence_reasoning": "",\n'
+    '  "visual_reasoning": "\nThe highlighted bounding box does not exhibit a crown.\n"\n}\n```'
+)
+
+
+class TestMinistral3Normalizer(unittest.TestCase):
+    def parse(self, raw: str, key: str = "ministral3_8b") -> dict:
+        from src.lvm.parsers.base import parse_verification_response
+
+        return parse_verification_response(raw, model_key=key)
+
+    def test_literal_newlines_in_strings_recovered_for_all_sizes(self):
+        for key in ("ministral3_3b", "ministral3_8b", "ministral3_14b"):
+            parsed = self.parse(MINISTRAL_FAILING_RAW, key)
+            self.assertEqual(parsed["decision"], "Unreliable")
+            self.assertEqual(parsed["visual_reasoning"], "The highlighted bounding box does not exhibit a crown.")
+
+    def test_equivalent_to_json_strict_false(self):
+        raw = '{"decision": "Reliable", "confidence_reasoning": "a\tb", "visual_reasoning": "x\r\ny \\"q\\" z\n"}'
+        expected = json.loads(raw, strict=False)
+        parsed = self.parse(raw)
+        self.assertEqual(parsed["confidence_reasoning"], expected["confidence_reasoning"].strip())
+        self.assertEqual(parsed["visual_reasoning"], expected["visual_reasoning"].strip())
+
+    def test_structure_and_valid_json_untouched(self):
+        from src.lvm.parsers.cleanup import escape_control_chars_in_json_strings
+
+        valid = '{\n  "decision": "Uncertain",\n  "visual_reasoning": "already\\nescaped"\n}'
+        self.assertEqual(escape_control_chars_in_json_strings(valid), valid)
+
+    def test_other_models_stay_strict(self):
+        from src.lvm.parsers.cleanup import normalize_raw_response
+
+        for key in ("qwen3_vl", "qwen3_vl_4b", "internvl3_5_hf", "gemma4", "glm_4_6v_flash", "llama3_2_11b_vision", ""):
+            self.assertEqual(normalize_raw_response(MINISTRAL_FAILING_RAW, model_key=key), MINISTRAL_FAILING_RAW)
+            with self.assertRaises(ValueError):
+                self.parse(MINISTRAL_FAILING_RAW, key)
+
+    def test_no_coercion_of_invalid_or_truncated_output(self):
+        with self.assertRaises(ValueError):
+            self.parse('{"decision": "Probably reliable\n", "visual_reasoning": ""}')
+        with self.assertRaises(ValueError):
+            self.parse('{"decision": "Reliable", "visual_reasoning": "cut off\nmid')
+        with self.assertRaises(ValueError):
+            self.parse("The palm looks reliable.\n")
+
+
+class TestMinistral3Family(unittest.TestCase):
+    def test_configs_pinned_and_distinct(self):
+        paths = set()
+        for key in ("ministral3_3b", "ministral3_8b", "ministral3_14b"):
+            cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
+            self.assertEqual(cfg["registry_key"], key)
+            self.assertEqual(cfg["family"], "ministral3")
+            self.assertTrue(cfg["hf_repo"].endswith("-2512-BF16"))
+            self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")
+            self.assertEqual(cfg["attn_implementation"], "sdpa")
+            self.assertFalse(cfg["use_hf_default_system_prompt"])
+            self.assertIn(cfg["hf_repo"].split("/")[1], cfg["model_path"])
+            paths.add(cfg["model_path"])
+            self.assertEqual(resolve_registry_key(key), key)
+            self.assertEqual(normalize_model_key(key), key)
+            self.assertEqual(run_shell(f"model_family {key}"), "ministral3")
+            self.assertEqual(run_shell(f"model_venv_path {key}"), "/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4")
+            self.assertEqual(run_shell(f"model_default_checkpoint {key}"), cfg["model_path"])
+        self.assertEqual(len(paths), 3)
+        self.assertEqual(run_shell("model_venv_path gemma4"), "/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4")
+
+    def test_adapter_reads_size_settings(self):
+        from src.lvm import ministral3_8b_verification_adapter as ministral_adapter
+
+        FakeVerifier.instances.clear()
+        cfg = yaml.safe_load((CONFIG_DIR / "ministral3_14b.yaml").read_text())
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(ministral_adapter, "Ministral3Verifier", FakeVerifier):
+            (Path(tmp) / "DOWNLOAD_META.txt").write_text(f"revision={cfg['revision']}\n")
+            adapter = ministral_adapter.build_ministral3_8b_adapter(model_name=tmp, model_key="ministral3_14b")
+            self.assertEqual(adapter.model_label, "Ministral 3 14B Instruct")
+            kwargs = FakeVerifier.instances[-1].kwargs
+            self.assertEqual(kwargs["attn_implementation"], "sdpa")
+            self.assertFalse(kwargs["use_hf_default_system_prompt"])
+            prompt = Path(tmp) / "p.txt"
+            prompt.write_text("frozen prompt")
+            with mock.patch.object(FakeVerifier, "generate_response", lambda self, **_k: MINISTRAL_FAILING_RAW):
+                outcome = adapter.verify(mock.Mock(sample_id="s", image_path=Path("x"), prompt_path=prompt))
+            self.assertEqual(outcome.status, "ok")
+            self.assertEqual(outcome.record["decision"], "Unreliable")
+            self.assertEqual(outcome.record["raw_response"], MINISTRAL_FAILING_RAW)
+            self.assertEqual(
+                outcome.record["generation"]["raw_response_normalizer"], "escape_control_chars_in_json_strings"
+            )
 
 
 def write_probe(root: Path, ids: list[str]) -> Path:

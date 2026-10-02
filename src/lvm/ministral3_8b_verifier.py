@@ -1,4 +1,4 @@
-"""Ministral 3 8B Instruct verifier (mistralai/Ministral-3-8B-Instruct-2512-BF16)."""
+"""Ministral 3 Instruct 2512 verifier (BF16 checkpoints; 3B / 8B / 14B)."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ class Ministral3Verifier:
             )
 
         self._torch_dtype = self._resolve_torch_dtype(torch)
-        print(f"Loading Ministral 3 8B Instruct from: {self.model_name}")
+        print(f"Loading Ministral 3 Instruct from: {self.model_name}")
         print(f"Device map: {self.device_map}")
         print(f"dtype: {self.dtype} -> {self._torch_dtype}")
         print(f"attn_implementation: {self.attn_implementation}")
@@ -101,14 +101,14 @@ class Ministral3Verifier:
             )
         except Exception as error:
             raise RuntimeError(
-                "Failed to load Ministral 3 8B Instruct.\n"
+                f"Failed to load Ministral 3 Instruct from {self.model_name}.\n"
                 "Possible causes: incomplete checkpoint, transformers < 5.0, or "
-                "insufficient GPU memory (~17.8GB BF16 weights).\n"
+                "insufficient GPU memory.\n"
                 f"Original error: {error}"
             ) from error
 
         self.model.eval()
-        print("Ministral 3 8B Instruct loaded successfully.")
+        print("Ministral 3 Instruct loaded successfully.")
         print(f"Generation contract: {self.generation_kwargs(512)}")
 
     def generation_kwargs(self, max_new_tokens: int) -> dict[str, Any]:

@@ -51,6 +51,9 @@ CANONICAL_MODEL_KEYS: dict[str, str] = {
     "minicpm45": "minicpm_v4_5",
     "minicpm-v-4.5": "minicpm_v4_5",
     "minicpm_v45": "minicpm_v4_5",
+    "ministral3_3b": "ministral3_3b",
+    "ministral3_8b": "ministral3_8b",
+    "ministral3_14b": "ministral3_14b",
 }
 
 CHECKPOINT_KEYS = ("model_id", "model_path", "active_model")

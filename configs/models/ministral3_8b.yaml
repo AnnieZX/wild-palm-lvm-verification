@@ -1,10 +1,16 @@
-# Ministral 3 8B Instruct verification
+# Ministral 3 8B Instruct verification — scaling ladder 3B/8B/14B
 # Official HF: mistralai/Ministral-3-8B-Instruct-2512-BF16 (Apache-2.0; NOT gated)
-# Pinned revision: f6fae9795746f63c9be8344932f01275f3c63734
 # Requires transformers >= 5.0 (Mistral3ForConditionalGeneration + ministral3 text config)
 registry_key: ministral3_8b
 model_label: Ministral 3 8B Instruct
+family: ministral3
+parameter_size: 8B
 backend: local
+hf_repo: mistralai/Ministral-3-8B-Instruct-2512-BF16
+revision: f6fae9795746f63c9be8344932f01275f3c63734
+architecture: Mistral3ForConditionalGeneration
+processor_class: PixtralProcessor
+expected_weight_bytes: 17836123192
 model_id: null
 model_path: /deac/csc/yangGrp/luoz23/models/Ministral-3-8B-Instruct-2512-BF16
 dtype: bfloat16
@@ -12,9 +18,11 @@ device_map: auto
 max_new_tokens: 512
 do_sample: false
 trust_remote_code: false
+attn_implementation: sdpa
 min_transformers: "5.0.0"
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4
 # Rendering matches mistral-common (no default system prompt); see
 # src/lvm/ministral3_8b_verifier.py.
 use_hf_default_system_prompt: false
-generation:
-  attn_implementation: sdpa
+# Raw-response normalizer: src/lvm/parsers/cleanup.py::escape_control_chars_in_json_strings
+gpu_class: L40S

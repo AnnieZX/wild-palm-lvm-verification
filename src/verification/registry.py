@@ -105,7 +105,8 @@ def _register_builtin_adapters() -> None:
     register_adapter("minicpm_v4_5", build_minicpm_v4_5_adapter)
     register_adapter("minicpm45", build_minicpm_v4_5_adapter)
     register_adapter("minicpm-v-4.5", build_minicpm_v4_5_adapter)
-    register_adapter("ministral3_8b", build_ministral3_8b_adapter)
+    for ministral3_size_key in ("ministral3_3b", "ministral3_8b", "ministral3_14b"):
+        register_adapter(ministral3_size_key, build_ministral3_8b_adapter)
     register_adapter("llama3_2_11b_vision", build_llama3_2_11b_vision_adapter)
 
 

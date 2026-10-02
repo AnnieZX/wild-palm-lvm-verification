@@ -11,6 +11,7 @@ canonicalize_model_key() {
         qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
         qwen3_vl_2b|qwen3_vl_4b|qwen3_vl_32b) echo "${raw}" ;;
         internvl3_5_hf_2b|internvl3_5_hf_4b|internvl3_5_hf_14b) echo "${raw}" ;;
+        ministral3_3b|ministral3_8b|ministral3_14b) echo "${raw}" ;;
         internvl|internvl3_8b|internvl3) echo "internvl3" ;;
         internvl3_5_hf|internvl35_hf|internvl3.5_hf) echo "internvl3_5_hf" ;;
         phi4|phi4_multimodal) echo "phi4_multimodal" ;;
@@ -36,6 +37,7 @@ model_family() {
     case "${key}" in
         qwen3_vl|qwen3_vl_*) echo "qwen3_vl" ;;
         internvl3_5_hf|internvl3_5_hf_*) echo "internvl3_5_hf" ;;
+        ministral3_*) echo "ministral3" ;;
         *) echo "${key}" ;;
     esac
 }
@@ -65,6 +67,7 @@ model_venv_path() {
         molmo2_8b) echo "${MOLMO2_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-molmo2}" ;;
         minicpm_v4_5) echo "${MINICPM_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-minicpm45}" ;;
         gemma4) echo "${GEMMA4_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4}" ;;
+        ministral3) echo "${MINISTRAL3_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4}" ;;
         *) echo "" ;;
     esac
 }
@@ -72,7 +75,7 @@ model_venv_path() {
 # Default batch size per model (historical: Phi/GLM/InternVL often 1; Qwen/LLaVA 4).
 model_default_batch_size() {
     case "$(model_family "$1")" in
-        phi4_multimodal|glm_4_6v_flash|internvl3|internvl3_5_hf|qwen3_vl|molmo2_8b|minicpm_v4_5|gemma4) echo "1" ;;
+        phi4_multimodal|glm_4_6v_flash|internvl3|internvl3_5_hf|qwen3_vl|molmo2_8b|minicpm_v4_5|gemma4|ministral3) echo "1" ;;
         *) echo "4" ;;
     esac
 }
@@ -97,6 +100,9 @@ model_default_checkpoint() {
         gemma4) echo "/deac/csc/yangGrp/luoz23/models/gemma-4-12B-it" ;;
         molmo2_8b) echo "/deac/csc/yangGrp/luoz23/models/Molmo2-8B" ;;
         minicpm_v4_5) echo "/deac/csc/yangGrp/luoz23/models/MiniCPM-V-4_5" ;;
+        ministral3_3b) echo "/deac/csc/yangGrp/luoz23/models/Ministral-3-3B-Instruct-2512-BF16" ;;
+        ministral3_8b) echo "/deac/csc/yangGrp/luoz23/models/Ministral-3-8B-Instruct-2512-BF16" ;;
+        ministral3_14b) echo "/deac/csc/yangGrp/luoz23/models/Ministral-3-14B-Instruct-2512-BF16" ;;
         *) echo "" ;;
     esac
 }
@@ -222,6 +228,21 @@ def _ver(s: str) -> tuple[int, ...]:
 
 assert _ver(transformers.__version__) >= (5, 10, 1), transformers.__version__
 print("GEMMA4_TRANSFORMERS_OK", transformers.__version__)
+PY
+                ;;
+            ministral3)
+                case "$(which python)" in
+                    */envs/wild-palm-gemma4/*) ;;
+                    *)
+                        echo "ERROR: python is not from wild-palm-gemma4: $(which python)" >&2
+                        return 1
+                        ;;
+                esac
+                python - <<'PY'
+import transformers
+from transformers import AutoProcessor, Mistral3ForConditionalGeneration  # noqa: F401
+assert transformers.__version__ == "5.17.0", transformers.__version__
+print("MINISTRAL3_TRANSFORMERS_PIN_OK", transformers.__version__)
 PY
                 ;;
         esac

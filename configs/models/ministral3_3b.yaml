@@ -1,0 +1,24 @@
+# Ministral 3 3B Instruct verification — scaling ladder 3B/8B/14B
+registry_key: ministral3_3b
+model_label: Ministral 3 3B Instruct
+family: ministral3
+parameter_size: 3B
+backend: local
+hf_repo: mistralai/Ministral-3-3B-Instruct-2512-BF16
+revision: b6d637bef2393152b3da2b2fde72eecdee30557e
+architecture: Mistral3ForConditionalGeneration
+processor_class: PixtralProcessor
+expected_weight_bytes: 7698241056
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/Ministral-3-3B-Instruct-2512-BF16
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+attn_implementation: sdpa
+min_transformers: "5.0.0"
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4
+use_hf_default_system_prompt: false
+# Raw-response normalizer: src/lvm/parsers/cleanup.py::escape_control_chars_in_json_strings
+gpu_class: L40S

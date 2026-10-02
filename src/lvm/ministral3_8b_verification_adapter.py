@@ -1,4 +1,4 @@
-"""Ministral 3 8B Instruct verification adapter for the frozen verification framework."""
+"""Ministral 3 Instruct verification adapter for the frozen verification framework."""
 
 from __future__ import annotations
 
@@ -6,10 +6,13 @@ import time
 import traceback
 
 from src.lvm.ministral3_8b_verifier import Ministral3Verifier
+from src.lvm.model_settings import load_model_settings, read_download_revision, run_provenance
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
 from src.verification.jobs import VerificationJob
 from src.verification.records import build_result_record
+
+DEFAULT_MODEL_LABEL = "Ministral 3 8B Instruct"
 
 
 def build_ministral3_8b_adapter(
@@ -22,7 +25,8 @@ def build_ministral3_8b_adapter(
     condition: str = "",
     experiment_id: str = "",
 ) -> "Ministral3VerificationAdapter":
-    """Factory used by the verification adapter registry."""
+    """Factory used by the verification adapter registry (all Ministral 3 sizes)."""
+    settings = load_model_settings(model_key)
     return Ministral3VerificationAdapter(
         model_name=model_name,
         batch_size=batch_size,
@@ -31,13 +35,17 @@ def build_ministral3_8b_adapter(
         model_key=model_key,
         condition=condition,
         experiment_id=experiment_id,
+        dtype=settings.get("dtype") or "bfloat16",
+        attn_implementation=settings.get("attn_implementation") or "sdpa",
+        use_hf_default_system_prompt=bool(settings.get("use_hf_default_system_prompt", False)),
+        model_label=settings.get("model_label") or DEFAULT_MODEL_LABEL,
+        expected_revision=settings.get("revision") or "",
     )
 
 
 class Ministral3VerificationAdapter(BaseVerificationAdapter):
     """
-    Ministral 3 8B Instruct (mistralai/Ministral-3-8B-Instruct-2512-BF16)
-    verification adapter.
+    Ministral 3 Instruct 2512 (BF16) verification adapter, 3B / 8B / 14B.
 
     Implements model-specific inference only. Orchestration, resume, and
     output persistence are handled by VerificationRunner. Checkpoint is loaded
@@ -56,9 +64,19 @@ class Ministral3VerificationAdapter(BaseVerificationAdapter):
         *,
         dtype: str = "bfloat16",
         attn_implementation: str = "sdpa",
+        use_hf_default_system_prompt: bool = False,
+        model_label: str = DEFAULT_MODEL_LABEL,
+        expected_revision: str = "",
     ) -> None:
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+        if expected_revision:
+            found = read_download_revision(model_name)
+            if found != expected_revision:
+                raise ValueError(
+                    f"{model_key}: checkpoint {model_name} has revision {found!r}, "
+                    f"config pins {expected_revision!r}"
+                )
 
         self.model_name = model_name
         self.batch_size = batch_size
@@ -68,16 +86,32 @@ class Ministral3VerificationAdapter(BaseVerificationAdapter):
         self.experiment_id = experiment_id
         self.dtype = dtype
         self.attn_implementation = attn_implementation
+        self.use_hf_default_system_prompt = use_hf_default_system_prompt
+        self._model_label = model_label
         self._verifier = Ministral3Verifier(
             model_name=model_name,
             device_map=device_map,
             dtype=dtype,
             attn_implementation=attn_implementation,
+            use_hf_default_system_prompt=use_hf_default_system_prompt,
         )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
-        return "Ministral 3 8B Instruct"
+        return self._model_label
+
+    def _generation_meta(self) -> dict:
+        return {
+            "max_new_tokens": self.max_new_tokens,
+            "do_sample": False,
+            "dtype": self.dtype,
+            "attn_implementation": self.attn_implementation,
+            "use_hf_default_system_prompt": self.use_hf_default_system_prompt,
+            "raw_response_normalizer": "escape_control_chars_in_json_strings",
+            **self._provenance,
+        }
 
     def verify(self, job: VerificationJob) -> VerificationOutcome:
         """Run Ministral 3 inference for one verification sample."""
@@ -116,6 +150,7 @@ class Ministral3VerificationAdapter(BaseVerificationAdapter):
                 parse_error=parse_error,
                 **metadata,
             )
+            record["generation"] = self._generation_meta()
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)
 
@@ -137,4 +172,5 @@ class Ministral3VerificationAdapter(BaseVerificationAdapter):
                 inference_error=tb,
                 **metadata,
             )
+            record["generation"] = self._generation_meta()
             return VerificationOutcome(record=record, status="inference_error")

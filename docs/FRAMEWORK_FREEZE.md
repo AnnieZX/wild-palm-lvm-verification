@@ -284,4 +284,25 @@ Details: [`EVALUATION_PROTOCOL.md`](EVALUATION_PROTOCOL.md) · [`EXPERIMENT_RESU
 
 ---
 
-*Framework frozen July 2026; amended 2026-09-27 (Protocol v2). See `docs/SUPPORTED_MODELS.md` for per-model status.*
+## Amendment 2026-10-01 — Ministral 3 raw-response normalizer
+
+**Change.** `normalize_raw_response()` (`src/lvm/parsers/cleanup.py`) gains its first
+model-specific normalizer, for `ministral3_3b`, `ministral3_8b` and `ministral3_14b` only:
+`escape_control_chars_in_json_strings()` escapes literal newline / carriage-return / tab
+(and other < 0x20) characters that occur **inside JSON string literals**.
+
+**Reason.** Ministral 3 returns otherwise valid response objects whose `visual_reasoning`
+value starts and ends with literal newlines; strict `json.loads` rejects them as invalid
+control characters (7/10 failures on the Stage 0 set, all of them Unreliable responses).
+
+**Scope.** Equivalent to what `json.loads(..., strict=False)` accepts; decoded string
+content is unchanged and nothing outside string literals is touched. No decision is
+inferred or coerced: invalid labels, truncated objects and free text still fail. Every other
+model key remains an identity pass-through. `parse_json_response()`, `normalize_decision()`,
+the label set and the output schema are unchanged. No stored prediction is re-parsed.
+Records written with it carry `generation.raw_response_normalizer`. Tests:
+`tests/test_model_expansion_integration.py::TestMinistral3Normalizer`.
+
+---
+
+*Framework frozen July 2026; amended 2026-09-27 (Protocol v2) and 2026-10-01 (Ministral 3 normalizer). See `docs/SUPPORTED_MODELS.md` for per-model status.*

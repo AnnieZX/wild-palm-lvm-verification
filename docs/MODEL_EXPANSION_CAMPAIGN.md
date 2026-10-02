@@ -53,6 +53,21 @@ backend.
 - Qwen3-VL sizes: `/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl` (transformers 4.57.6, torch 2.8.0+cu128), same as the 8B anchor.
 - InternVL3.5-HF sizes: `/usr/bin/python` 3.9 (transformers 4.57.6), same interpreter as the 8B anchor;
   `model_runtime.sh` pins it for the family and asserts the transformers version.
+- Ministral 3 sizes: `/deac/csc/yangGrp/luoz23/envs/wild-palm-gemma4` (transformers 5.17.0,
+  torch 2.11.0+cu128), the env the 8B integration already used; reused unchanged.
+
+## Ministral 3 (2512, BF16 checkpoints)
+
+- Unquantized `-2512-BF16` repos for all sizes (the non-BF16 repos are FP8-quantized).
+  Duplicate Mistral-native `consolidated.safetensors`, `params.json`, `tekken.json` are not
+  downloaded (HF-format shards are complete).
+- The 8B interface failure (literal newlines inside `visual_reasoning`) is handled by the
+  permitted model-specific raw-response normalizer documented in
+  [`FRAMEWORK_FREEZE.md`](FRAMEWORK_FREEZE.md#amendment-2026-10-01--ministral-3-raw-response-normalizer).
+  On the historical Stage 0 responses it recovers 7/7 failures, identical to
+  `json.loads(strict=False)`. All seven failures were Unreliable responses, so without it
+  parse failures would be label-biased.
+- 8B is requalified on the paired probe like every new size.
 
 ## Ledger
 
@@ -66,3 +81,6 @@ backend.
 | `internvl3_5_hf_4b` | InternVL3.5-HF / 4B | `6bd44874` | L40S | pending | pending | — | — | — | — | — | integrating |
 | `internvl3_5_hf_14b` | InternVL3.5-HF / 14B | `226b96d5` | L40S | pending | pending | — | — | — | — | — | integrating |
 | `internvl3_5_hf_2b` | InternVL3.5-HF / 2B | `3f301ffc` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `ministral3_8b` | Ministral 3 / 8B | `f6fae979` | L40S | pending | requalify | — | — | — | — | — | integrating |
+| `ministral3_3b` | Ministral 3 / 3B | `b6d637be` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `ministral3_14b` | Ministral 3 / 14B | `3cea74c1` | L40S | pending | pending | — | — | — | — | — | integrating |

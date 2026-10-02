@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import sys
 from datetime import datetime, timezone
@@ -34,6 +35,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--revision", required=True, help="Full 40-char commit SHA")
     parser.add_argument("--local-dir", required=True, type=Path)
     parser.add_argument("--verify-only", action="store_true")
+    parser.add_argument(
+        "--ignore",
+        nargs="*",
+        default=[],
+        help="Upstream files to skip (fnmatch patterns), e.g. duplicate consolidated.safetensors",
+    )
     return parser.parse_args()
 
 
@@ -49,13 +56,17 @@ def read_meta(local_dir: Path) -> dict[str, str]:
     return meta
 
 
-def upstream_files(repo_id: str, revision: str) -> dict[str, int | None]:
+def upstream_files(repo_id: str, revision: str, ignore: list[str] | None = None) -> dict[str, int | None]:
     from huggingface_hub import HfApi
 
     info = HfApi().model_info(repo_id, revision=revision, files_metadata=True)
     if info.sha != revision:
         raise RuntimeError(f"Upstream sha {info.sha} != pinned revision {revision}")
-    return {s.rfilename: s.size for s in info.siblings}
+    return {
+        s.rfilename: s.size
+        for s in info.siblings
+        if not any(fnmatch.fnmatch(s.rfilename, pattern) for pattern in (ignore or []))
+    }
 
 
 def verify(local_dir: Path, files: dict[str, int | None]) -> list[str]:
@@ -90,7 +101,7 @@ def main() -> int:
         )
         return 2
 
-    files = upstream_files(args.repo_id, args.revision)
+    files = upstream_files(args.repo_id, args.revision, args.ignore)
     total = sum(size or 0 for size in files.values())
     print(f"repo_id={args.repo_id} revision={args.revision} files={len(files)} bytes={total}")
 
@@ -98,7 +109,12 @@ def main() -> int:
         from huggingface_hub import snapshot_download
 
         local_dir.mkdir(parents=True, exist_ok=True)
-        snapshot_download(repo_id=args.repo_id, revision=args.revision, local_dir=str(local_dir))
+        snapshot_download(
+            repo_id=args.repo_id,
+            revision=args.revision,
+            local_dir=str(local_dir),
+            ignore_patterns=args.ignore or None,
+        )
 
     problems = verify(local_dir, files)
     if problems:
@@ -114,6 +130,7 @@ def main() -> int:
             f"local_dir={local_dir}\n"
             f"files={len(files)}\n"
             f"total_bytes={total}\n"
+            f"ignored={','.join(args.ignore)}\n"
             f"verified_utc={datetime.now(timezone.utc).isoformat()}\n",
             encoding="utf-8",
         )
