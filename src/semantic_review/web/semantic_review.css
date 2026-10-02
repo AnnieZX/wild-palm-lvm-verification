@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 12px 18px; background: #16181c; color: #e8e8e8;
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+header { display: flex; justify-content: space-between; align-items: baseline; }
+.title { font-weight: 700; letter-spacing: 0.06em; font-size: 18px; }
+.mode { font-weight: 400; color: #9aa0a6; font-size: 14px; margin-left: 8px; letter-spacing: 0; }
+.progress { color: #c8c8c8; font-variant-numeric: tabular-nums; }
+.question { font-size: 21px; font-weight: 600; margin: 8px 0 10px; color: #fff; }
+main { display: flex; gap: 14px; align-items: flex-start; }
+figure { margin: 0; flex: 1 1 0; min-width: 0; }
+figure img {
+  width: 100%; height: auto; max-height: calc(100vh - 260px); object-fit: contain;
+  background: #000; display: block; border: 1px solid #333;
+}
+figcaption { color: #8a8f96; font-size: 12px; margin-top: 3px; }
+.label-line { margin-top: 8px; font-size: 16px; }
+#human-label { font-weight: 700; }
+#human-label.palm { color: #6fdc8c; }
+#human-label.non_palm { color: #ff7b72; }
+#human-label.ambiguous { color: #f2cc60; }
+.status { min-height: 22px; font-weight: 600; }
+.status.ok { color: #6fdc8c; }
+.status.warn { color: #f2cc60; }
+.status.err { color: #ff7b72; }
+nav { display: flex; gap: 10px; margin-top: 6px; }
+button {
+  font: inherit; padding: 9px 16px; border-radius: 6px; border: 1px solid #444;
+  background: #24272c; color: #e8e8e8; cursor: pointer;
+}
+button:hover { background: #2e3238; }
+button:disabled { opacity: 0.5; cursor: default; }
+.labels button { font-size: 17px; font-weight: 700; padding: 12px 26px; }
+button.palm { border-color: #2f7d45; }
+button.non-palm { border-color: #8e3a35; }
+button.ambiguous { border-color: #8a6d1f; }
+button.current { outline: 3px solid #fff; }
+kbd {
+  display: inline-block; padding: 0 6px; border: 1px solid #666; border-radius: 4px;
+  font: 12px/18px ui-monospace, Menlo, monospace; color: #ccc; margin-right: 4px;
+}
+.help { margin-top: 10px; color: #a8adb3; font-size: 13px; }
+.help p { margin: 4px 0; }

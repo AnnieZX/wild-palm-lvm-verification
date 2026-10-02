@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Semantic GT Review</title>
+<link rel="stylesheet" href="/static/semantic_review.css">
+</head>
+<body>
+<header>
+  <div class="title">SEMANTIC GT REVIEW <span id="mode-title" class="mode"></span></div>
+  <div class="progress"><span id="completed">Completed: – / –</span> · <span id="position">–</span></div>
+</header>
+
+<div class="question">Does the highlighted YOLO detection correspond to a real palm?</div>
+
+<main>
+  <figure>
+    <img id="img-context" alt="full patch with target detection">
+    <figcaption>Full patch · target box</figcaption>
+  </figure>
+  <figure>
+    <img id="img-crop" alt="enlarged crop around target detection">
+    <figcaption id="crop-caption">Enlarged crop · [H] toggle box / raw pixels</figcaption>
+  </figure>
+</main>
+
+<div id="label-line" class="label-line">Human label: <span id="human-label">–</span></div>
+<div id="status" class="status" aria-live="polite"></div>
+
+<nav class="labels">
+  <button id="btn-palm" data-label="palm" class="palm"><kbd>P</kbd> PALM</button>
+  <button id="btn-non-palm" data-label="non_palm" class="non-palm"><kbd>N</kbd> NON-PALM</button>
+  <button id="btn-ambiguous" data-label="ambiguous" class="ambiguous"><kbd>A</kbd> AMBIGUOUS</button>
+</nav>
+<nav class="controls">
+  <button id="btn-prev"><kbd>←</kbd> Previous</button>
+  <button id="btn-next"><kbd>→</kbd> Next unreviewed</button>
+  <button id="btn-skip"><kbd>S</kbd> Skip</button>
+  <button id="btn-undo"><kbd>U</kbd> Undo last label</button>
+</nav>
+
+<details class="help">
+  <summary>Label definitions</summary>
+  <p><b>PALM</b>: the highlighted target corresponds to a real palm crown. This includes partially
+    visible, border-truncated or tile-cut palms, poorly placed boxes, boxes with a lot of surrounding
+    vegetation, boxes showing only a recognizable portion of a palm, and repeated boxes on the same palm.</p>
+  <p><b>NON-PALM</b>: the highlighted target clearly does not correspond to a real palm crown.</p>
+  <p><b>AMBIGUOUS</b>: the visual evidence is insufficient to decide reliably. Do not force these into NON-PALM.</p>
+  <p>Judge the object only, not how well the box is placed.</p>
+  <p>To change an existing label, press the new key twice. Skip moves to the next item without labeling.</p>
+</details>
+
+<script src="/static/semantic_review.js"></script>
+</body>
+</html>
