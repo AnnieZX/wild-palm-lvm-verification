@@ -1,0 +1,23 @@
+# InternVL3.5-14B-HF verification (HF-native) — scaling ladder 2B/4B/8B/14B
+registry_key: internvl3_5_hf_14b
+model_label: InternVL3.5-14B-HF
+family: internvl3_5_hf
+parameter_size: 14B
+backend: local
+hf_repo: OpenGVLab/InternVL3_5-14B-HF
+revision: 226b96d5912e69159abc0384cefcbd51487fdce0
+architecture: InternVLForConditionalGeneration
+processor_class: InternVLProcessor
+expected_weight_bytes: 30239160600
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/InternVL3_5-14B-HF
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+attn_implementation: sdpa
+min_transformers: "4.52.1"
+python: /usr/bin/python
+# ~30 GB bf16 weights fit a 48 GB L40S
+gpu_class: L40S

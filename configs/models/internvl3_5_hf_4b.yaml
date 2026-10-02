@@ -1,0 +1,22 @@
+# InternVL3.5-4B-HF verification (HF-native) — scaling ladder 2B/4B/8B/14B
+registry_key: internvl3_5_hf_4b
+model_label: InternVL3.5-4B-HF
+family: internvl3_5_hf
+parameter_size: 4B
+backend: local
+hf_repo: OpenGVLab/InternVL3_5-4B-HF
+revision: 6bd4487402110ef9889ba50eb7aefeb302526fed
+architecture: InternVLForConditionalGeneration
+processor_class: InternVLProcessor
+expected_weight_bytes: 9465085464
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/InternVL3_5-4B-HF
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+attn_implementation: sdpa
+min_transformers: "4.52.1"
+python: /usr/bin/python
+gpu_class: L40S

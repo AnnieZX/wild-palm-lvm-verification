@@ -28,6 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 import evaluate_paired_probe_qualification as probe_eval  # noqa: E402
 from src.config.model_config import normalize_model_key  # noqa: E402
 from src.verification.registry import get_registered_models, resolve_registry_key  # noqa: E402
+from src.lvm import internvl3_5_hf_verification_adapter as internvl35_adapter  # noqa: E402
 from src.lvm import qwen3_vl_verification_adapter as qwen3_adapter  # noqa: E402
 from src.lvm.parsers.cleanup import normalize_raw_response  # noqa: E402
 
@@ -38,6 +39,16 @@ QWEN3_SIZES = {
     "qwen3_vl_2b": ("Qwen/Qwen3-VL-2B-Instruct", "2B", "L40S"),
     "qwen3_vl_4b": ("Qwen/Qwen3-VL-4B-Instruct", "4B", "L40S"),
     "qwen3_vl_32b": ("Qwen/Qwen3-VL-32B-Instruct", "32B", "H200"),
+}
+INTERNVL35_SIZES = {
+    "internvl3_5_hf_2b": ("OpenGVLab/InternVL3_5-2B-HF", "2B", "L40S"),
+    "internvl3_5_hf_4b": ("OpenGVLab/InternVL3_5-4B-HF", "4B", "L40S"),
+    "internvl3_5_hf_14b": ("OpenGVLab/InternVL3_5-14B-HF", "14B", "L40S"),
+}
+# size key -> (family key, sizes, family env path)
+FAMILIES = {
+    "qwen3_vl": (QWEN3_SIZES, "/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl"),
+    "internvl3_5_hf": (INTERNVL35_SIZES, ""),
 }
 
 EXISTING_KEYS = {
@@ -83,40 +94,44 @@ class TestKeysAndConfigs(unittest.TestCase):
 
     def test_size_keys_have_own_namespace(self):
         registered = get_registered_models()
-        for key in QWEN3_SIZES:
-            self.assertIn(key, registered)
-            self.assertEqual(resolve_registry_key(key), key)
-            self.assertEqual(normalize_model_key(key), key)
+        for sizes, _env in FAMILIES.values():
+            for key in sizes:
+                self.assertIn(key, registered)
+                self.assertEqual(resolve_registry_key(key), key)
+                self.assertEqual(normalize_model_key(key), key)
         self.assertEqual(resolve_registry_key("qwen3_vl_8b"), "qwen3_vl")
+        self.assertEqual(resolve_registry_key("internvl35_hf"), "internvl3_5_hf")
 
     def test_size_configs_pinned_and_distinct(self):
-        paths = set()
-        for key, (repo, size, gpu) in QWEN3_SIZES.items():
-            cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
-            self.assertEqual(cfg["registry_key"], key)
-            self.assertEqual(cfg["hf_repo"], repo)
-            self.assertEqual(cfg["parameter_size"], size)
-            self.assertEqual(cfg["family"], "qwen3_vl")
-            self.assertEqual(cfg["gpu_class"], gpu)
-            self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")
-            self.assertEqual(cfg["attn_implementation"], "sdpa")
-            self.assertEqual(cfg["dtype"], "bfloat16")
-            self.assertFalse(cfg["trust_remote_code"])
-            self.assertIn(repo.split("/")[1], cfg["model_path"])
-            paths.add(cfg["model_path"])
-        anchor = yaml.safe_load((CONFIG_DIR / "qwen3_vl.yaml").read_text())
-        paths.add(anchor["model_path"])
-        self.assertEqual(len(paths), 4)
+        for family, (sizes, _env) in FAMILIES.items():
+            anchor = yaml.safe_load((CONFIG_DIR / f"{family}.yaml").read_text())
+            paths = {anchor["model_path"]}
+            for key, (repo, size, gpu) in sizes.items():
+                cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
+                self.assertEqual(cfg["registry_key"], key)
+                self.assertEqual(cfg["hf_repo"], repo)
+                self.assertEqual(cfg["parameter_size"], size)
+                self.assertEqual(cfg["family"], family)
+                self.assertEqual(cfg["gpu_class"], gpu)
+                self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")
+                self.assertEqual(cfg["attn_implementation"], "sdpa")
+                self.assertEqual(cfg["dtype"], "bfloat16")
+                self.assertFalse(cfg["trust_remote_code"])
+                self.assertIn(repo.split("/")[1], cfg["model_path"])
+                paths.add(cfg["model_path"])
+            self.assertEqual(len(paths), len(sizes) + 1, family)
 
-    def test_anchor_config_unchanged(self):
-        anchor = yaml.safe_load((CONFIG_DIR / "qwen3_vl.yaml").read_text())
-        self.assertIsNone(anchor["attn_implementation"])
-        self.assertEqual(anchor["model_label"], "Qwen3-VL-8B-Instruct")
-        self.assertNotIn("revision", anchor)
+    def test_anchor_configs_unchanged(self):
+        for family, label in (("qwen3_vl", "Qwen3-VL-8B-Instruct"), ("internvl3_5_hf", "InternVL3.5-8B-HF")):
+            anchor = yaml.safe_load((CONFIG_DIR / f"{family}.yaml").read_text())
+            self.assertIsNone(anchor["attn_implementation"])
+            self.assertEqual(anchor["model_label"], label)
+            self.assertEqual(anchor["dtype"], "bfloat16")
+            self.assertNotIn("revision", anchor)
 
-    def test_qwen3_sizes_use_identity_normalizer(self):
+    def test_size_keys_use_identity_normalizer(self):
         raw = '{"decision": "Reliable"}\n'
-        for key in list(QWEN3_SIZES) + ["qwen3_vl"]:
+        for key in list(QWEN3_SIZES) + list(INTERNVL35_SIZES) + ["qwen3_vl", "internvl3_5_hf"]:
             self.assertEqual(normalize_raw_response(raw, model_key=key), raw)
 
 
@@ -177,6 +192,49 @@ class TestQwen3FamilyAdapter(unittest.TestCase):
         self.assertEqual(outcome.record["model_key"], "qwen3_vl_2b")
 
 
+class TestInternVL35FamilyAdapter(unittest.TestCase):
+    def setUp(self):
+        FakeVerifier.instances.clear()
+        patcher = mock.patch.object(internvl35_adapter, "InternVL35HfVerifier", FakeVerifier)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def checkpoint(self, revision: str | None) -> str:
+        path = Path(self.tmp.name) / "ckpt"
+        path.mkdir(exist_ok=True)
+        if revision:
+            (path / "DOWNLOAD_META.txt").write_text(f"revision={revision}\n")
+        return str(path)
+
+    def test_size_settings_flow_from_config(self):
+        cfg = yaml.safe_load((CONFIG_DIR / "internvl3_5_hf_14b.yaml").read_text())
+        adapter = internvl35_adapter.build_internvl3_5_hf_adapter(
+            model_name=self.checkpoint(cfg["revision"]), model_key="internvl3_5_hf_14b"
+        )
+        self.assertEqual(adapter.model_label, "InternVL3.5-14B-HF")
+        kwargs = FakeVerifier.instances[-1].kwargs
+        self.assertEqual(kwargs["attn_implementation"], "sdpa")
+        self.assertFalse(kwargs["trust_remote_code"])
+
+    def test_anchor_settings_unchanged(self):
+        adapter = internvl35_adapter.build_internvl3_5_hf_adapter(
+            model_name=self.checkpoint(None), model_key="internvl3_5_hf"
+        )
+        self.assertEqual(adapter.model_label, "InternVL3.5-8B-HF")
+        kwargs = FakeVerifier.instances[-1].kwargs
+        self.assertIsNone(kwargs["attn_implementation"])
+        self.assertEqual(kwargs["dtype"], "bfloat16")
+        self.assertFalse(kwargs["trust_remote_code"])
+
+    def test_revision_mismatch_refused(self):
+        with self.assertRaises(ValueError):
+            internvl35_adapter.build_internvl3_5_hf_adapter(
+                model_name=self.checkpoint("0" * 40), model_key="internvl3_5_hf_2b"
+            )
+
+
 class TestShellRuntime(unittest.TestCase):
     def test_existing_shell_keys_unchanged(self):
         self.assertEqual(run_shell("canonicalize_model_key qwen3_vl_8b"), "qwen3_vl")
@@ -189,17 +247,18 @@ class TestShellRuntime(unittest.TestCase):
         )
 
     def test_size_keys_share_family_env_not_checkpoint(self):
-        checkpoints = set()
-        for key in QWEN3_SIZES:
-            self.assertEqual(run_shell(f"canonicalize_model_key {key}"), key)
-            self.assertEqual(run_shell(f"model_family {key}"), "qwen3_vl")
-            self.assertEqual(run_shell(f"model_venv_path {key}"), "/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl")
-            self.assertEqual(run_shell(f"model_default_batch_size {key}"), "1")
-            cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
-            checkpoint = run_shell(f"model_default_checkpoint {key}")
-            self.assertEqual(checkpoint, cfg["model_path"])
-            checkpoints.add(checkpoint)
-        self.assertEqual(len(checkpoints), len(QWEN3_SIZES))
+        for family, (sizes, env) in FAMILIES.items():
+            checkpoints = {run_shell(f"model_default_checkpoint {family}")}
+            for key in sizes:
+                self.assertEqual(run_shell(f"canonicalize_model_key {key}"), key)
+                self.assertEqual(run_shell(f"model_family {key}"), family)
+                self.assertEqual(run_shell(f"model_venv_path {key}"), env)
+                self.assertEqual(run_shell(f"model_default_batch_size {key}"), "1")
+                cfg = yaml.safe_load((CONFIG_DIR / f"{key}.yaml").read_text())
+                checkpoint = run_shell(f"model_default_checkpoint {key}")
+                self.assertEqual(checkpoint, cfg["model_path"])
+                checkpoints.add(checkpoint)
+            self.assertEqual(len(checkpoints), len(sizes) + 1, family)
 
 
 def write_probe(root: Path, ids: list[str]) -> Path:

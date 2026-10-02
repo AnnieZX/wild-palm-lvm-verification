@@ -63,7 +63,7 @@ class InternVL35HfVerifier:
         if model_path.is_absolute() and not model_path.exists():
             raise FileNotFoundError(
                 f"Model path not found: {self.model_name}\n"
-                "Download OpenGVLab/InternVL3_5-8B-HF to the cluster path first."
+                "Download the pinned InternVL3.5-HF checkpoint to the cluster path first."
             )
 
         torch_dtype = self._resolve_torch_dtype(torch)
@@ -94,7 +94,7 @@ class InternVL35HfVerifier:
             )
         except Exception as error:
             raise RuntimeError(
-                "Failed to load InternVL3.5-8B-HF.\n"
+                f"Failed to load InternVL3.5-HF from {self.model_name}.\n"
                 "Possible causes: incomplete checkpoint, incompatible "
                 "transformers (<4.52.1), or insufficient GPU memory.\n"
                 f"Original error: {error}"

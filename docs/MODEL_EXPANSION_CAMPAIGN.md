@@ -44,8 +44,15 @@ Completed anchors are **not** rerun.
 ## Attention backend
 
 New scaling runs use SDPA (`attn_implementation: sdpa`). FlashAttention is not installed.
-The Qwen3-VL-8B anchor ran with `attn_implementation: null` under transformers 4.57.6
-without flash-attn, which resolves to SDPA, so the Qwen3-VL ladder shares one backend.
+The Qwen3-VL-8B and InternVL3.5-8B-HF anchors ran with `attn_implementation: null` under
+transformers 4.57.6 without flash-attn, which resolves to SDPA, so each ladder shares one
+backend.
+
+## Environments
+
+- Qwen3-VL sizes: `/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl` (transformers 4.57.6, torch 2.8.0+cu128), same as the 8B anchor.
+- InternVL3.5-HF sizes: `/usr/bin/python` 3.9 (transformers 4.57.6), same interpreter as the 8B anchor;
+  `model_runtime.sh` pins it for the family and asserts the transformers version.
 
 ## Ledger
 
@@ -55,3 +62,7 @@ without flash-attn, which resolves to SDPA, so the Qwen3-VL ladder shares one ba
 | `qwen3_vl_4b` | Qwen3-VL / 4B | `ebb281ec` | L40S | pending | pending | — | — | — | — | — | integrating |
 | `qwen3_vl_2b` | Qwen3-VL / 2B | `89644892` | L40S | pending | pending | — | — | — | — | — | integrating |
 | `qwen3_vl_32b` | Qwen3-VL / 32B | `0cfaf481` | H200 | pending | pending | — | — | — | — | — | integrating |
+| `internvl3_5_hf` | InternVL3.5-HF / 8B | `741a7d03` | L40S | (historical) | anchor | 8351993 | 8351994 | 8351995 | 8351996 | 8351997 | Complete — do not rerun |
+| `internvl3_5_hf_4b` | InternVL3.5-HF / 4B | `6bd44874` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `internvl3_5_hf_14b` | InternVL3.5-HF / 14B | `226b96d5` | L40S | pending | pending | — | — | — | — | — | integrating |
+| `internvl3_5_hf_2b` | InternVL3.5-HF / 2B | `3f301ffc` | L40S | pending | pending | — | — | — | — | — | integrating |

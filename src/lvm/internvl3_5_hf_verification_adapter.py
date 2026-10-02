@@ -6,10 +6,13 @@ import time
 import traceback
 
 from src.lvm.internvl3_5_hf_verifier import InternVL35HfVerifier
+from src.lvm.model_settings import load_model_settings, read_download_revision, run_provenance
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
 from src.verification.jobs import VerificationJob
 from src.verification.records import build_result_record
+
+DEFAULT_MODEL_LABEL = "InternVL3.5-8B-HF"
 
 
 def build_internvl3_5_hf_adapter(
@@ -22,7 +25,12 @@ def build_internvl3_5_hf_adapter(
     condition: str = "",
     experiment_id: str = "",
 ) -> "InternVL35HfVerificationAdapter":
-    """Factory used by the verification adapter registry."""
+    """Factory used by the verification adapter registry.
+
+    dtype, attention backend, label and pinned revision come from
+    ``configs/models/<model_key>.yaml`` so every InternVL3.5-HF size shares this adapter.
+    """
+    settings = load_model_settings(model_key)
     return InternVL35HfVerificationAdapter(
         model_name=model_name,
         batch_size=batch_size,
@@ -31,12 +39,17 @@ def build_internvl3_5_hf_adapter(
         model_key=model_key,
         condition=condition,
         experiment_id=experiment_id,
+        dtype=settings.get("dtype") or "bfloat16",
+        attn_implementation=settings.get("attn_implementation"),
+        trust_remote_code=bool(settings.get("trust_remote_code", False)),
+        model_label=settings.get("model_label") or DEFAULT_MODEL_LABEL,
+        expected_revision=settings.get("revision") or "",
     )
 
 
 class InternVL35HfVerificationAdapter(BaseVerificationAdapter):
     """
-    InternVL3.5-8B-HF verification adapter.
+    InternVL3.5-HF verification adapter (all parameter sizes).
 
     Implements model-specific inference only. Orchestration, resume, and
     output persistence are handled by VerificationRunner. Checkpoint is loaded
@@ -56,10 +69,20 @@ class InternVL35HfVerificationAdapter(BaseVerificationAdapter):
         dtype: str = "bfloat16",
         attn_implementation: str | None = None,
         trust_remote_code: bool = False,
+        model_label: str = DEFAULT_MODEL_LABEL,
+        expected_revision: str = "",
     ) -> None:
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+        if expected_revision:
+            found = read_download_revision(model_name)
+            if found != expected_revision:
+                raise ValueError(
+                    f"{model_key}: checkpoint {model_name} has revision {found!r}, "
+                    f"config pins {expected_revision!r}"
+                )
 
+        self._model_label = model_label
         self.model_name = model_name
         self.batch_size = batch_size
         self.max_new_tokens = max_new_tokens
@@ -76,10 +99,12 @@ class InternVL35HfVerificationAdapter(BaseVerificationAdapter):
             attn_implementation=attn_implementation,
             trust_remote_code=trust_remote_code,
         )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
-        return "InternVL3.5-8B-HF"
+        return self._model_label
 
     def verify(self, job: VerificationJob) -> VerificationOutcome:
         """Run InternVL3.5-HF inference for one verification sample."""
@@ -97,6 +122,7 @@ class InternVL35HfVerificationAdapter(BaseVerificationAdapter):
             "attn_implementation": self.attn_implementation,
             "trust_remote_code": self.trust_remote_code,
             "api": "AutoProcessor+AutoModelForImageTextToText+apply_chat_template+generate",
+            **self._provenance,
         }
         try:
             prompt = job.prompt_path.read_text(encoding="utf-8")

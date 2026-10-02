@@ -93,6 +93,8 @@ def _register_builtin_adapters() -> None:
     register_adapter("internvl", build_internvl_adapter)
     register_adapter("internvl3_5_hf", build_internvl3_5_hf_adapter)
     register_adapter("internvl35_hf", build_internvl3_5_hf_adapter)
+    for internvl35_size_key in ("internvl3_5_hf_2b", "internvl3_5_hf_4b", "internvl3_5_hf_14b"):
+        register_adapter(internvl35_size_key, build_internvl3_5_hf_adapter)
     register_adapter("glm_4_6v_flash", build_glm_4_6v_flash_adapter)
     register_adapter("glm46v_flash", build_glm_4_6v_flash_adapter)
     register_adapter("phi4_multimodal", build_phi4_multimodal_adapter)

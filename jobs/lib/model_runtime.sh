@@ -10,6 +10,7 @@ canonicalize_model_key() {
         qwen|qwen25_vl_7b|qwen2_5_vl_7b|qwen2_5_vl) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
         qwen3_vl_2b|qwen3_vl_4b|qwen3_vl_32b) echo "${raw}" ;;
+        internvl3_5_hf_2b|internvl3_5_hf_4b|internvl3_5_hf_14b) echo "${raw}" ;;
         internvl|internvl3_8b|internvl3) echo "internvl3" ;;
         internvl3_5_hf|internvl35_hf|internvl3.5_hf) echo "internvl3_5_hf" ;;
         phi4|phi4_multimodal) echo "phi4_multimodal" ;;
@@ -34,6 +35,7 @@ model_family() {
     key="$(canonicalize_model_key "${1:?model key required}")" || return 1
     case "${key}" in
         qwen3_vl|qwen3_vl_*) echo "qwen3_vl" ;;
+        internvl3_5_hf|internvl3_5_hf_*) echo "internvl3_5_hf" ;;
         *) echo "${key}" ;;
     esac
 }
@@ -87,6 +89,9 @@ model_default_checkpoint() {
         glm_4_6v_flash) echo "/deac/csc/yangGrp/luoz23/models/GLM-4.6V-Flash" ;;
         internvl3) echo "/deac/csc/yangGrp/luoz23/models/InternVL3-8B-Instruct" ;;
         internvl3_5_hf) echo "/deac/csc/yangGrp/luoz23/models/InternVL3_5-8B-HF" ;;
+        internvl3_5_hf_2b) echo "/deac/csc/yangGrp/luoz23/models/InternVL3_5-2B-HF" ;;
+        internvl3_5_hf_4b) echo "/deac/csc/yangGrp/luoz23/models/InternVL3_5-4B-HF" ;;
+        internvl3_5_hf_14b) echo "/deac/csc/yangGrp/luoz23/models/InternVL3_5-14B-HF" ;;
         llava) echo "/deac/csc/yangGrp/luoz23/models/llava_onevision" ;;
         gemma) echo "/deac/csc/yangGrp/luoz23/models/gemma-3-12b-it" ;;
         gemma4) echo "/deac/csc/yangGrp/luoz23/models/gemma-4-12B-it" ;;
@@ -224,6 +229,18 @@ PY
         # Default-cluster models (Qwen2.5 / LLaVA / Gemma / InternVL): mirror historical
         # jobs/run_qwen_ablation.slurm — do NOT module-load a bare Python that lacks
         # transformers. Use the submitting shell's python (/usr/bin/python on DEAC).
+        if [[ "${model_key}" == "internvl3_5_hf" ]]; then
+            # Pin the interpreter the completed InternVL3.5-8B-HF run used
+            # (/usr/bin/python 3.9, transformers 4.57.6) regardless of submit-shell modules.
+            export PATH="/usr/bin:${PATH}"
+            python - <<'PY'
+import sys
+import transformers
+assert sys.executable.startswith("/usr/bin/"), sys.executable
+assert transformers.__version__ == "4.57.6", transformers.__version__
+print("INTERNVL35_ENV_PIN_OK", sys.executable, transformers.__version__)
+PY
+        fi
         export PYTHONPATH="${project_dir}${PYTHONPATH:+:${PYTHONPATH}}"
         if ! python -c 'import transformers' 2>/dev/null; then
             echo "ERROR: default python lacks transformers: $(which python)" >&2
