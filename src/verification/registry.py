@@ -82,6 +82,8 @@ def _register_builtin_adapters() -> None:
     register_adapter("qwen3_vl_8b", build_qwen3_vl_adapter)
     register_adapter("qwen3vl", build_qwen3_vl_adapter)
     register_adapter("qwen3vl_8b", build_qwen3_vl_adapter)
+    for qwen3_size_key in ("qwen3_vl_2b", "qwen3_vl_4b", "qwen3_vl_32b"):
+        register_adapter(qwen3_size_key, build_qwen3_vl_adapter)
     register_adapter("llava", build_llava_adapter)
     register_adapter("gemma", build_gemma_adapter)
     register_adapter("gemma4", build_gemma4_adapter)

@@ -5,11 +5,14 @@ from __future__ import annotations
 import time
 import traceback
 
+from src.lvm.model_settings import load_model_settings, read_download_revision, run_provenance
 from src.lvm.qwen3_vl_verifier import Qwen3VlVerifier
 from src.lvm.verification_response_parser import parse_verification_response
 from src.verification.base_adapter import BaseVerificationAdapter, VerificationOutcome
 from src.verification.jobs import VerificationJob
 from src.verification.records import build_result_record
+
+DEFAULT_MODEL_LABEL = "Qwen3-VL-8B-Instruct"
 
 
 def build_qwen3_vl_adapter(
@@ -22,7 +25,12 @@ def build_qwen3_vl_adapter(
     condition: str = "",
     experiment_id: str = "",
 ) -> "Qwen3VlVerificationAdapter":
-    """Factory used by the verification adapter registry."""
+    """Factory used by the verification adapter registry.
+
+    dtype, attention backend, label and pinned revision come from
+    ``configs/models/<model_key>.yaml`` so every Qwen3-VL size shares this adapter.
+    """
+    settings = load_model_settings(model_key)
     return Qwen3VlVerificationAdapter(
         model_name=model_name,
         batch_size=batch_size,
@@ -31,12 +39,16 @@ def build_qwen3_vl_adapter(
         model_key=model_key,
         condition=condition,
         experiment_id=experiment_id,
+        dtype=settings.get("dtype") or "bfloat16",
+        attn_implementation=settings.get("attn_implementation"),
+        model_label=settings.get("model_label") or DEFAULT_MODEL_LABEL,
+        expected_revision=settings.get("revision") or "",
     )
 
 
 class Qwen3VlVerificationAdapter(BaseVerificationAdapter):
     """
-    Qwen3-VL-8B-Instruct verification adapter.
+    Qwen3-VL-Instruct verification adapter (all parameter sizes).
 
     Implements model-specific inference only. Orchestration, resume, and
     output persistence are handled by VerificationRunner. Checkpoint is loaded
@@ -55,9 +67,18 @@ class Qwen3VlVerificationAdapter(BaseVerificationAdapter):
         *,
         dtype: str = "bfloat16",
         attn_implementation: str | None = None,
+        model_label: str = DEFAULT_MODEL_LABEL,
+        expected_revision: str = "",
     ) -> None:
         if batch_size < 1:
             raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+        if expected_revision:
+            found = read_download_revision(model_name)
+            if found != expected_revision:
+                raise ValueError(
+                    f"{model_key}: checkpoint {model_name} has revision {found!r}, "
+                    f"config pins {expected_revision!r}"
+                )
 
         self.model_name = model_name
         self.batch_size = batch_size
@@ -67,16 +88,19 @@ class Qwen3VlVerificationAdapter(BaseVerificationAdapter):
         self.experiment_id = experiment_id
         self.dtype = dtype
         self.attn_implementation = attn_implementation
+        self._model_label = model_label
         self._verifier = Qwen3VlVerifier(
             model_name=model_name,
             device_map=device_map,
             dtype=dtype,
             attn_implementation=attn_implementation,
         )
+        self._provenance = run_provenance(checkpoint=model_name, model=self._verifier.model)
+        print(f"Run provenance: {self._provenance}")
 
     @property
     def model_label(self) -> str:
-        return "Qwen3-VL-8B-Instruct"
+        return self._model_label
 
     def verify(self, job: VerificationJob) -> VerificationOutcome:
         """Run Qwen3-VL inference for one verification sample."""
@@ -122,6 +146,7 @@ class Qwen3VlVerificationAdapter(BaseVerificationAdapter):
                 "do_sample": False,
                 "dtype": self.dtype,
                 "attn_implementation": self.attn_implementation,
+                **self._provenance,
             }
             status = "ok" if not parse_error else "parse_error"
             return VerificationOutcome(record=record, status=status)

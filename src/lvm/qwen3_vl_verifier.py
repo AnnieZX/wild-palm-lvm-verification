@@ -1,4 +1,4 @@
-"""Qwen3-VL-8B-Instruct verifier (Hugging Face Transformers)."""
+"""Qwen3-VL-Instruct verifier (Hugging Face Transformers; 2B/4B/8B/32B)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,8 @@ from typing import Any
 
 class Qwen3VlVerifier:
     """
-    Load Qwen/Qwen3-VL-8B-Instruct and run single-sample image+text generation.
+    Load a Qwen/Qwen3-VL-*-Instruct checkpoint and run single-sample image+text
+    generation. All dense Instruct sizes share this code path.
 
     Follows the official Hugging Face Quick Start for Qwen3-VL:
       Qwen3VLForConditionalGeneration + AutoProcessor
@@ -60,7 +61,7 @@ class Qwen3VlVerifier:
         if model_path.is_absolute() and not model_path.exists():
             raise FileNotFoundError(
                 f"Model path not found: {self.model_name}\n"
-                "Download Qwen/Qwen3-VL-8B-Instruct to the cluster path first."
+                "Download the pinned Qwen3-VL checkpoint to the cluster path first."
             )
 
         torch_dtype = self._resolve_torch_dtype(torch)
@@ -84,7 +85,7 @@ class Qwen3VlVerifier:
             )
         except Exception as error:
             raise RuntimeError(
-                "Failed to load Qwen3-VL-8B-Instruct.\n"
+                f"Failed to load Qwen3-VL from {self.model_name}.\n"
                 "Possible causes: incomplete checkpoint, incompatible "
                 "transformers (<4.57), or insufficient GPU memory.\n"
                 f"Original error: {error}"

@@ -179,6 +179,61 @@ if [[ ! -f "${MODEL_CONFIG}" ]]; then
     exit 1
 fi
 
+# Run provenance: written next to (not inside) the condition directory.
+GIT_COMMIT="$(git -C "${PROJECT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+GIT_DIRTY_FILES="$(git -C "${PROJECT_DIR}" status --porcelain -- src scripts jobs configs 2>/dev/null | wc -l)"
+export WILD_PALM_GIT_COMMIT="${GIT_COMMIT}"
+RUN_META_DIR="$(dirname "${RESULTS_DIR}")/_run_metadata"
+mkdir -p "${RUN_META_DIR}"
+RUN_META_JSON="${RUN_META_DIR}/${CONDITION}_${SLURM_JOB_ID:-local}.json"
+GPU_MEM_LOG="${RUN_META_DIR}/${CONDITION}_${SLURM_JOB_ID:-local}_gpu_mem.csv"
+python - "${RUN_META_JSON}" <<PY
+import json, sys
+from datetime import datetime, timezone
+from pathlib import Path
+import torch, transformers, yaml
+cfg = yaml.safe_load(Path("${MODEL_CONFIG}").read_text()) or {}
+revision = ""
+meta = Path("${MODEL_PATH}") / "DOWNLOAD_META.txt"
+if meta.is_file():
+    for line in meta.read_text().splitlines():
+        if line.startswith("revision="):
+            revision = line.split("=", 1)[1].strip()
+record = {
+    "model_key": "${MODEL}",
+    "model_label": cfg.get("model_label", ""),
+    "family": cfg.get("family", "${MODEL}"),
+    "parameter_size": cfg.get("parameter_size", ""),
+    "condition": "${CONDITION}",
+    "limit": int("${LIMIT}"),
+    "experiment_id": "${EXPERIMENT_ID}",
+    "results_dir": "${RESULTS_DIR}",
+    "slurm_job_id": "${SLURM_JOB_ID:-local}",
+    "slurm_partition": "${SLURM_JOB_PARTITION:-}",
+    "node": "${SLURMD_NODENAME:-}",
+    "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",
+    "git_commit": "${GIT_COMMIT}",
+    "git_dirty_tracked_files": int("${GIT_DIRTY_FILES}"),
+    "checkpoint": "${MODEL_PATH}",
+    "checkpoint_revision": revision,
+    "config_revision": cfg.get("revision", ""),
+    "hf_repo": cfg.get("hf_repo", ""),
+    "dtype": cfg.get("dtype", ""),
+    "attn_implementation_config": cfg.get("attn_implementation"),
+    "transformers": transformers.__version__,
+    "torch": torch.__version__,
+    "resume": "${RESUME}" == "1",
+    "started_utc": datetime.now(timezone.utc).isoformat(),
+}
+if record["config_revision"] and record["config_revision"] != revision:
+    sys.exit(f"ERROR: checkpoint revision {revision!r} != config revision {record['config_revision']!r}")
+Path(sys.argv[1]).write_text(json.dumps(record, indent=2))
+print(json.dumps(record, indent=2))
+PY
+nvidia-smi --query-gpu=timestamp,name,memory.used,memory.total --format=csv,noheader -l 5 > "${GPU_MEM_LOG}" &
+GPU_MEM_PID=$!
+trap 'kill ${GPU_MEM_PID} 2>/dev/null || true' EXIT
+
 VERIFICATION_ARGS=(
     --model "${MODEL}"
     --condition "${CONDITION}"
@@ -199,6 +254,8 @@ fi
 
 echo "===== Inference (load model ONCE, then iterate samples) ====="
 python -u scripts/run_verification.py "${VERIFICATION_ARGS[@]}"
+kill "${GPU_MEM_PID}" 2>/dev/null || true
+echo "Peak GPU memory (MiB): $(awk -F', ' '{gsub(/ MiB/,"",$3); if ($3+0>m) m=$3+0} END {print m}' "${GPU_MEM_LOG}")"
 
 if [[ "${RUN_EVAL}" == "1" ]]; then
     echo

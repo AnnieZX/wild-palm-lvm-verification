@@ -9,6 +9,7 @@ canonicalize_model_key() {
     case "${raw}" in
         qwen|qwen25_vl_7b|qwen2_5_vl_7b|qwen2_5_vl) echo "qwen2_5_vl" ;;
         qwen3_vl|qwen3_vl_8b|qwen3vl|qwen3vl_8b) echo "qwen3_vl" ;;
+        qwen3_vl_2b|qwen3_vl_4b|qwen3_vl_32b) echo "${raw}" ;;
         internvl|internvl3_8b|internvl3) echo "internvl3" ;;
         internvl3_5_hf|internvl35_hf|internvl3.5_hf) echo "internvl3_5_hf" ;;
         phi4|phi4_multimodal) echo "phi4_multimodal" ;;
@@ -20,9 +21,20 @@ canonicalize_model_key() {
         gemma4|gemma4_12b|gemma-4|gemma4_12b_it) echo "gemma4" ;;
         *)
             echo "ERROR: unsupported model key: ${raw}" >&2
-            echo "Supported: qwen2_5_vl, qwen3_vl, phi4_multimodal, glm_4_6v_flash, internvl3, internvl3_5_hf, llava, gemma, gemma4, molmo2_8b, minicpm_v4_5" >&2
+            echo "Supported: qwen2_5_vl, qwen3_vl, qwen3_vl_{2b,4b,32b}, phi4_multimodal, glm_4_6v_flash, internvl3, internvl3_5_hf, llava, gemma, gemma4, molmo2_8b, minicpm_v4_5" >&2
             return 1
             ;;
+    esac
+}
+
+# Family of a canonical key: parameter sizes of one family share env, adapter
+# and default batch size, but never an output namespace or checkpoint.
+model_family() {
+    local key
+    key="$(canonicalize_model_key "${1:?model key required}")" || return 1
+    case "${key}" in
+        qwen3_vl|qwen3_vl_*) echo "qwen3_vl" ;;
+        *) echo "${key}" ;;
     esac
 }
 
@@ -44,7 +56,7 @@ condition_dir_name() {
 # Isolated envs recovered from successful historical Slurm scripts.
 # Empty string → use the submitting shell / default cluster python.
 model_venv_path() {
-    case "$(canonicalize_model_key "$1")" in
+    case "$(model_family "$1")" in
         phi4_multimodal) echo "${PHI_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-phi4}" ;;
         glm_4_6v_flash) echo "${GLM_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-glm46v}" ;;
         qwen3_vl) echo "${QWEN3_VENV:-/deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl}" ;;
@@ -57,7 +69,7 @@ model_venv_path() {
 
 # Default batch size per model (historical: Phi/GLM/InternVL often 1; Qwen/LLaVA 4).
 model_default_batch_size() {
-    case "$(canonicalize_model_key "$1")" in
+    case "$(model_family "$1")" in
         phi4_multimodal|glm_4_6v_flash|internvl3|internvl3_5_hf|qwen3_vl|molmo2_8b|minicpm_v4_5|gemma4) echo "1" ;;
         *) echo "4" ;;
     esac
@@ -68,6 +80,9 @@ model_default_checkpoint() {
     case "$(canonicalize_model_key "$1")" in
         qwen2_5_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen2.5-VL-7B-Instruct" ;;
         qwen3_vl) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-8B-Instruct" ;;
+        qwen3_vl_2b) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-2B-Instruct" ;;
+        qwen3_vl_4b) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-4B-Instruct" ;;
+        qwen3_vl_32b) echo "/deac/csc/yangGrp/luoz23/models/Qwen3-VL-32B-Instruct" ;;
         phi4_multimodal) echo "/deac/csc/yangGrp/luoz23/models/Phi-4-multimodal-instruct" ;;
         glm_4_6v_flash) echo "/deac/csc/yangGrp/luoz23/models/GLM-4.6V-Flash" ;;
         internvl3) echo "/deac/csc/yangGrp/luoz23/models/InternVL3-8B-Instruct" ;;
@@ -95,7 +110,7 @@ suggest_time_limit() {
 
 activate_model_environment() {
     local model_key
-    model_key="$(canonicalize_model_key "${1:?}")"
+    model_key="$(model_family "${1:?}")"
     local venv
     venv="$(model_venv_path "${model_key}")"
     local project_dir="${2:?project dir required}"

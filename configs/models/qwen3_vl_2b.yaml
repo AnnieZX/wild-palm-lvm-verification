@@ -1,0 +1,22 @@
+# Qwen3-VL-2B-Instruct verification (local backend) — scaling ladder 2B/4B/8B/32B
+registry_key: qwen3_vl_2b
+model_label: Qwen3-VL-2B-Instruct
+family: qwen3_vl
+parameter_size: 2B
+backend: local
+hf_repo: Qwen/Qwen3-VL-2B-Instruct
+revision: 89644892e4d85e24eaac8bacfd4f463576704203
+architecture: Qwen3VLForConditionalGeneration
+processor_class: Qwen3VLProcessor
+expected_weight_bytes: 4255140312
+model_id: null
+model_path: /deac/csc/yangGrp/luoz23/models/Qwen3-VL-2B-Instruct
+dtype: bfloat16
+device_map: auto
+max_new_tokens: 512
+do_sample: false
+trust_remote_code: false
+attn_implementation: sdpa
+min_transformers: "4.57.0"
+isolated_env: /deac/csc/yangGrp/luoz23/envs/wild-palm-qwen3vl
+gpu_class: L40S
