@@ -80,6 +80,7 @@ cat > "${EXP_ROOT}/_run_metadata/probe_${SLURM_JOB_ID:-local}.json" <<JSON
   "node": "${SLURMD_NODENAME:-}",
   "git_commit": "${GIT_COMMIT}",
   "git_dirty_tracked_files": $(git -C "${PROJECT_DIR}" status --porcelain -- src scripts jobs configs | wc -l),
+  "git_dirty_paths": "$(git -C "${PROJECT_DIR}" status --porcelain -- src scripts jobs configs | awk '{print $NF}' | paste -sd, -)",
   "checkpoint": "${MODEL_PATH}",
   "model_config": "${MODEL_CONFIG}",
   "probe_root": "${PROBE_ROOT}",

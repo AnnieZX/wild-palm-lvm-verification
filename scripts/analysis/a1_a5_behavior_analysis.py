@@ -70,6 +70,8 @@ MODEL_RUNS: dict[str, tuple[str, str]] = {
     "phi4_multimodal": ("Phi-4-multimodal", "phi4_multimodal/20260921_phi4_A1A5_5747"),
     "qwen2_5_vl": ("Qwen2.5-VL-7B", "qwen/20260708_0020"),
     "qwen3_vl": ("Qwen3-VL-8B", "qwen3_vl/qwen3vl_A1A5_5747"),
+    # Model-expansion campaign (docs/MODEL_EXPANSION_CAMPAIGN.md), added as each completes.
+    "qwen3_vl_4b": ("Qwen3-VL-4B", "qwen3_vl_4b/20261001_qwen3_vl_4b_A1A5_5747"),
 }
 
 PROTECTED_DIRS = (

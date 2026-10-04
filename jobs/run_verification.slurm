@@ -182,11 +182,16 @@ fi
 # Run provenance: written next to (not inside) the condition directory.
 GIT_COMMIT="$(git -C "${PROJECT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
 GIT_DIRTY_FILES="$(git -C "${PROJECT_DIR}" status --porcelain -- src scripts jobs configs 2>/dev/null | wc -l)"
+GIT_DIRTY_LIST="$(git -C "${PROJECT_DIR}" status --porcelain -- src scripts jobs configs 2>/dev/null | awk '{print $NF}' | paste -sd, -)"
 export WILD_PALM_GIT_COMMIT="${GIT_COMMIT}"
 RUN_META_DIR="$(dirname "${RESULTS_DIR}")/_run_metadata"
 mkdir -p "${RUN_META_DIR}"
 RUN_META_JSON="${RUN_META_DIR}/${CONDITION}_${SLURM_JOB_ID:-local}.json"
 GPU_MEM_LOG="${RUN_META_DIR}/${CONDITION}_${SLURM_JOB_ID:-local}_gpu_mem.csv"
+if [[ "${GIT_DIRTY_FILES}" != "0" ]]; then
+    git -C "${PROJECT_DIR}" diff HEAD -- src scripts jobs configs \
+        > "${RUN_META_DIR}/${CONDITION}_${SLURM_JOB_ID:-local}_uncommitted.patch" 2>/dev/null || true
+fi
 python - "${RUN_META_JSON}" <<PY
 import json, sys
 from datetime import datetime, timezone
@@ -214,6 +219,7 @@ record = {
     "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",
     "git_commit": "${GIT_COMMIT}",
     "git_dirty_tracked_files": int("${GIT_DIRTY_FILES}"),
+    "git_dirty_paths": [p for p in "${GIT_DIRTY_LIST}".split(",") if p],
     "checkpoint": "${MODEL_PATH}",
     "checkpoint_revision": revision,
     "config_revision": cfg.get("revision", ""),
