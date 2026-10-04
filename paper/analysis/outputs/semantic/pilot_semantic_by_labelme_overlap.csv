@@ -1,0 +1,4 @@
+semantic_label,labelme_iou050_any_False,labelme_iou050_any_True
+palm,216,102
+ambiguous,71,2
+non_palm,9,0

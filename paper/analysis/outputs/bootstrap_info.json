@@ -1,0 +1,31 @@
+{
+  "resampling_unit": "image_id (source image)",
+  "n_images": 870,
+  "n_detections": 5747,
+  "replicates": 2000,
+  "seed": 20261002,
+  "rng": "numpy.random.default_rng (PCG64)",
+  "ci_method": "percentile, 95% (2.5th/97.5th)",
+  "pairing": "one image-weight vector per replicate shared across all models and conditions",
+  "undefined_metric_handling": "replicates with zero denominator dropped per metric; counted in n_undefined",
+  "partial_cells": "valid rows only; transition denominators = detections valid in both conditions",
+  "models_with_transitions": [
+    "Qwen2.5-VL-7B",
+    "Qwen3-VL-8B",
+    "Qwen3-VL-4B",
+    "InternVL3.5-8B",
+    "GLM-4.6V-Flash",
+    "Phi-4-multimodal",
+    "Gemma-4-12B",
+    "Qwen3-VL-2B",
+    "Qwen2.5-VL-3B",
+    "InternVL3.5-2B",
+    "InternVL3.5-4B",
+    "InternVL3.5-14B"
+  ],
+  "detections_per_image": {
+    "min": 1,
+    "median": 6.0,
+    "max": 20
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "same_sample_ids_as_cohort": true,
+  "stored_0.50_equals_v2_matched_gt": true,
+  "stored_v2_label_column_consistent": true,
+  "stored_max_iou_equals_v2": true,
+  "summary_counts_match_per_detection": true,
+  "no_unmatched_with_best_iou_below_t_becomes_matched": true,
+  "matched_counts_monotone_in_threshold": true,
+  "info_semantic_labelled_rows_used": 0,
+  "stored_files_mtime": {
+    "iou_sensitivity_info.json": "2026-09-30T02:13:16.034585476",
+    "iou_sensitivity_per_detection.csv": "2026-09-30T02:13:16.028194904",
+    "iou_sensitivity_summary.csv": "2026-09-30T02:13:16.016643762",
+    "semantic_rematch_by_threshold.csv": "2026-09-30T02:13:16.031811476"
+  },
+  "stored_files_sha256": {
+    "iou_sensitivity_info.json": "bd19992718639c6c86c35b885aeffa4d5b51b32f2d9e380f61cc5052959f158f",
+    "iou_sensitivity_per_detection.csv": "12a8203a630fb5b2820bc440a577855c1942ce9afdabacbbafee649db3ea2283",
+    "iou_sensitivity_summary.csv": "38399f30b9e756dbae4e7127d98d69f5a538c40ac8bc14730d866a6faeb87552",
+    "semantic_rematch_by_threshold.csv": "ad9985177b5121efd51cc0a50858c98ac8ccfc8cb1a74d47f5b6a1b6e2573928"
+  },
+  "independent_recompute_equals_stored_all_thresholds": true,
+  "usable_under_protocol_v2": true
+}

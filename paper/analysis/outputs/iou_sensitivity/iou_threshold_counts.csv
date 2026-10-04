@@ -1,0 +1,6 @@
+iou_threshold,protocol_v2_canonical,matched,unmatched,matched_share,v2_unmatched_now_matched,of_which_semantic_palm,of_which_semantic_ambiguous,of_which_semantic_non_palm,v2_matched_now_unmatched,v2_matched_now_unmatched_semantic_status
+0.3,False,5190,557,0.9030798677570907,81,80,1,0,0,
+0.4,False,5160,587,0.8978597529145641,51,51,0,0,0,
+0.5,True,5109,638,0.8889855576822691,0,0,0,0,0,
+0.6,False,4983,764,0.8670610753436575,0,0,0,0,126,not reviewed
+0.7,False,4719,1028,0.821124064729424,0,0,0,0,390,not reviewed

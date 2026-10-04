@@ -1,0 +1,16 @@
+ladder,quantity,checkpoints_in_size_order,n_points,values,excluded_single_label,not_available,observed_pattern,bootstrap_share_same_pattern,note,larger_minus_smaller,larger_minus_smaller_ci
+Qwen3-VL,changed_rate_A1_to_A5,Qwen3-VL-2B;Qwen3-VL-4B;Qwen3-VL-8B,3,0.209;0.477;0.734,,Qwen3-VL-32B,increasing,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+Qwen3-VL,toward_rejection_rate_A1_to_A5,Qwen3-VL-2B;Qwen3-VL-4B;Qwen3-VL-8B,3,0.207;0.282;0.578,,Qwen3-VL-32B,increasing,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+Qwen3-VL,toward_acceptance_rate_A1_to_A5,Qwen3-VL-2B;Qwen3-VL-4B;Qwen3-VL-8B,3,0.002;0.195;0.156,,Qwen3-VL-32B,non-monotone,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+Qwen3-VL,into_U_rate_A1_to_A5,Qwen3-VL-2B;Qwen3-VL-4B;Qwen3-VL-8B,3,0.207;0.214;0.654,,Qwen3-VL-32B,increasing,0.788,descriptive ordering of few points; not a test of monotonic scaling,,
+Qwen3-VL,into_Ur_rate_A1_to_A5,Qwen3-VL-2B;Qwen3-VL-4B;Qwen3-VL-8B,3,0.000;0.220;0.073,,Qwen3-VL-32B,non-monotone,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+InternVL3.5,changed_rate_A1_to_A5,InternVL3.5-4B;InternVL3.5-8B;InternVL3.5-14B,3,0.545;0.380;0.375,InternVL3.5-2B,,decreasing,0.7075,descriptive ordering of few points; not a test of monotonic scaling,,
+InternVL3.5,toward_rejection_rate_A1_to_A5,InternVL3.5-4B;InternVL3.5-8B;InternVL3.5-14B,3,0.416;0.321;0.300,InternVL3.5-2B,,decreasing,0.988,descriptive ordering of few points; not a test of monotonic scaling,,
+InternVL3.5,toward_acceptance_rate_A1_to_A5,InternVL3.5-4B;InternVL3.5-8B;InternVL3.5-14B,3,0.130;0.059;0.075,InternVL3.5-2B,,non-monotone,0.9995,descriptive ordering of few points; not a test of monotonic scaling,,
+InternVL3.5,into_U_rate_A1_to_A5,InternVL3.5-4B;InternVL3.5-8B;InternVL3.5-14B,3,0.148;0.310;0.170,InternVL3.5-2B,,non-monotone,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+InternVL3.5,into_Ur_rate_A1_to_A5,InternVL3.5-4B;InternVL3.5-8B;InternVL3.5-14B,3,0.375;0.027;0.184,InternVL3.5-2B,,non-monotone,1.0,descriptive ordering of few points; not a test of monotonic scaling,,
+Qwen2.5-VL,changed_rate_A1_to_A5,Qwen2.5-VL-3B;Qwen2.5-VL-7B,2,0.010;0.462,,Qwen2.5-VL-32B,two points only,,"two checkpoints: difference only, no ordering claim",0.452061945362798,"[0.436, 0.468]"
+Qwen2.5-VL,toward_rejection_rate_A1_to_A5,Qwen2.5-VL-3B;Qwen2.5-VL-7B,2,0.000;0.376,,Qwen2.5-VL-32B,two points only,,"two checkpoints: difference only, no ordering claim",0.37550026100574213,"[0.361, 0.390]"
+Qwen2.5-VL,toward_acceptance_rate_A1_to_A5,Qwen2.5-VL-3B;Qwen2.5-VL-7B,2,0.010;0.086,,Qwen2.5-VL-32B,two points only,,"two checkpoints: difference only, no ordering claim",0.07656168435705585,"[0.067, 0.087]"
+Qwen2.5-VL,into_U_rate_A1_to_A5,Qwen2.5-VL-3B;Qwen2.5-VL-7B,2,0.000;0.044,,Qwen2.5-VL-32B,two points only,,"two checkpoints: difference only, no ordering claim",0.04402296850530712,"[0.039, 0.050]"
+Qwen2.5-VL,into_Ur_rate_A1_to_A5,Qwen2.5-VL-3B;Qwen2.5-VL-7B,2,0.000;0.336,,Qwen2.5-VL-32B,two points only,,"two checkpoints: difference only, no ordering claim",0.3360013920306247,"[0.322, 0.351]"

@@ -1,0 +1,15 @@
+model_key,model,family,n_conditions_usable,conditions,n_conditions_partial,n_single_label,n_majority_ge_0.99,n_majority_ge_0.95,labels_never_used_in_any_condition,majority_labels,majority_share_min,majority_share_max,entropy_min,entropy_max,descriptive_pattern
+qwen2_5_vl,Qwen2.5-VL-7B,Qwen2.5-VL,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable,0.5333217330781277,0.7684009048199061,0.8047214566941671,1.3033559351239812,no condition with majority >= 0.99
+qwen3_vl,Qwen3-VL-8B,Qwen3-VL,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable;Uncertain,0.6869671132764921,0.8788933356533843,0.6498735636432129,1.2004193058207986,no condition with majority >= 0.99
+qwen3_vl_4b,Qwen3-VL-4B,Qwen3-VL,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable;Unreliable,0.4668522707499565,0.5736906211936662,1.2360596647203046,1.463890507993065,no condition with majority >= 0.99
+internvl3_5_hf,InternVL3.5-8B,InternVL3.5,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable;Uncertain,0.536801809639812,0.7095876109274404,0.9832135485592839,1.0964962443714277,no condition with majority >= 0.99
+glm_4_6v_flash,GLM-4.6V-Flash,GLM-4.6V,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable;Unreliable,0.4353575778667131,0.6890551592135027,0.9635271064933532,1.506475937031641,no condition with majority >= 0.99
+phi4_multimodal,Phi-4-multimodal,Phi-4,5,"A1,A2,A3,A4,A5",0,0,0,0,Uncertain,Reliable,0.6057073255611624,0.8721071863580999,0.5516307675924813,0.967513961626182,no condition with majority >= 0.99
+gemma4,Gemma-4-12B,Gemma 4,5,"A1,A2,A3,A4,A5",0,0,0,3,Uncertain,Reliable,0.9154341395510701,0.9735514181311988,0.17625630602939862,0.41806641217330054,no condition with majority >= 0.99
+minicpm_v4_5,MiniCPM-V-4.5,MiniCPM-V,3,"A1,A2,A3",0,0,0,3,,Reliable,0.9669392726639986,0.9872977205498521,0.09954371318975744,0.20951631752555228,no condition with majority >= 0.99
+molmo2_8b,Molmo2-8B,Molmo2,1,A1,0,0,0,0,,Uncertain,0.7894553680180963,0.7894553680180963,0.7445553626536588,0.7445553626536588,no condition with majority >= 0.99
+qwen3_vl_2b,Qwen3-VL-2B,Qwen3-VL,5,"A1,A2,A3,A4,A5",2,0,4,4,Unreliable,Reliable,0.7920292377305952,0.9996519923438316,0.004500099986475924,0.7375859792896375,majority >= 0.99 in 4 of 5 usable conditions
+qwen2_5_vl_3b,Qwen2.5-VL-3B,Qwen2.5-VL,5,"A1,A2,A3,A4,A5",0,3,5,5,Uncertain,Reliable,0.9902557856272838,1.0,0.0,0.07909263381556664,majority >= 0.99 in every usable condition
+internvl3_5_hf_2b,InternVL3.5-2B,InternVL3.5,5,"A1,A2,A3,A4,A5",5,5,5,5,Reliable;Unreliable,Uncertain,1.0,1.0,0.0,0.0,single label in every usable condition
+internvl3_5_hf_4b,InternVL3.5-4B,InternVL3.5,5,"A1,A2,A3,A4,A5",0,0,0,0,,Unreliable,0.5157473464416217,0.8025056551244127,0.7390527283525632,1.315335608416586,no condition with majority >= 0.99
+internvl3_5_hf_14b,InternVL3.5-14B,InternVL3.5,5,"A1,A2,A3,A4,A5",0,0,0,0,,Reliable,0.5903949886897512,0.880981381590395,0.6445450967805033,1.3849960291559724,no condition with majority >= 0.99

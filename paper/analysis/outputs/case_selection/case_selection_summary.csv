@@ -1,0 +1,10 @@
+category,pool_size,n_at_max_score,selected,min_score,max_score
+consensus_reliable,369,369,10,35.0,35.0
+consensus_unreliable,5747,2,10,28.0,31.0
+high_disagreement,5747,25,10,1.5566567074628228,1.5566567074628228
+strong_A2_to_A5_change,5747,3,10,6.0,7.0
+abstention_heavy,5747,1,10,19.0,23.0
+unmatched_semantic_palm:no_overlap,322,322,4,,
+unmatched_semantic_palm:partial_overlap,272,272,3,,
+unmatched_semantic_palm:iou_ge_0.5_lost_greedy,25,25,3,,
+semantic_ambiguous,19,19,19,,

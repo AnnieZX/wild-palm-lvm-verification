@@ -1,0 +1,4 @@
+diagnostic,definition,type
+diag_single_label,exactly one of R/U/Ur used,exact
+diag_majority_ge_0.99,majority share >= 0.99,"descriptive cut, not a scientific threshold"
+diag_majority_ge_0.95,majority share >= 0.95,"descriptive cut, not a scientific threshold"

@@ -1,0 +1,59 @@
+{
+  "provenance": {
+    "human_review.csv": {
+      "path": "outputs/semantic_gt_review/human_review.csv",
+      "sha256": "b2a0219df9b3310661752e2dcbcd5d9b5bb9501dcdc1d07cfeb5f7284f478485",
+      "matches_documented_sha256": true
+    },
+    "human_review.log.jsonl": {
+      "path": "outputs/semantic_gt_review/human_review.log.jsonl",
+      "sha256": "a1a4d62fe8e1ccfc20edb785eae7efd33e58604913bde0c398675866ad7a0691",
+      "matches_documented_sha256": true
+    },
+    "human_confidence_pilot.csv": {
+      "path": "outputs/semantic_gt_review/human_confidence_pilot.csv",
+      "sha256": "9a25cd38a1923e135b9ecef83b16397e8bf6254b1a9ba78948b77d01fdb97705",
+      "matches_documented_sha256": true
+    },
+    "semantic_pilot_reference.csv": {
+      "path": "outputs/semantic_candidate_audit/semantic_pilot_reference.csv",
+      "sha256": "4e02f77ab4ea44b026267833314cba688cea7e204da3eaa0623d2e26321ca062",
+      "matches_documented_sha256": true
+    }
+  },
+  "unmatched_review": {
+    "rows": 638,
+    "unique_sample_ids": 638,
+    "missing_labels": 0,
+    "labels_outside_vocabulary": 0,
+    "reviewers": [
+      "zixiao"
+    ],
+    "first_timestamp": "2026-10-01T15:28:08+00:00",
+    "last_timestamp": "2026-10-01T15:40:56+00:00",
+    "log_events": 642,
+    "log_label_changes": 4,
+    "cohort_labelme_unmatched": 638,
+    "reviewed_equals_unmatched_set": true,
+    "reviewed_not_unmatched": 0,
+    "unmatched_not_reviewed": 0,
+    "review_complete": true,
+    "labelme_matched_reviewed": 0,
+    "reason_field_recorded_by_reviewer": false,
+    "label_counts": {
+      "palm": 619,
+      "ambiguous": 19,
+      "non_palm": 0
+    }
+  },
+  "pilot": {
+    "rows": 400,
+    "unique_ids": 400,
+    "joined_to_reference": 400,
+    "min_conf": 0.1001409739255905,
+    "max_conf": 0.4997765719890594,
+    "inside_5747_cohort": false,
+    "has_vlm_predictions": false,
+    "familiarization_snapshot_used": false
+  }
+}

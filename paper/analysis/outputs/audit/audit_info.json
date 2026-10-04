@@ -1,0 +1,24 @@
+{
+  "cohort_n": 5747,
+  "n_images": 870,
+  "analysed_cells": 57,
+  "full_clean_cells": 57,
+  "partial_cells": 7,
+  "status_counts": {
+    "full_clean": 57,
+    "not_run": 9,
+    "partial": 7,
+    "incomplete": 2
+  },
+  "condition_policy": {
+    "qwen3_vl_2b": "A3 and A5 each have one parse error (512-token repetition loop; sample_000061 in A3, sample_005495 in A5). Those conditions are partial at N=5,746; the other three are full_clean. The model is not re-run.",
+    "internvl3_5_hf_2b": "Every condition has parse errors (malformed JSON). All five conditions are partial; only parseable rows are analysed. Every parseable decision is Uncertain, so the checkpoint is degenerate; no repair, no re-parsing, no re-run, no protocol change."
+  },
+  "cross_run_matched_gt_identical": true,
+  "cross_run_max_iou_identical": true,
+  "labelme_matched": 5109,
+  "labelme_unmatched": 638,
+  "known_exclusions": {
+    "qwen2_5_vl/20260708_0020/A5": "cancelled wrong-path resume job 8318954 (partial A5, no index); documented in docs/A1_A5_BEHAVIOR_ANALYSIS.md \u00a72"
+  }
+}
