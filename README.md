@@ -9,6 +9,10 @@ evaluated under five controlled visual-context ablations (**A1–A5**).
 
 <sub>CS Honors Thesis · <b>Annie Luo</b> · Mentor: <b>Fan Yang</b> · Wake Forest University · 2026</sub>
 
+### 🌴 [▶ Open the Live Demo](https://wild-palm-demo.vercel.app)
+
+<sub><a href="https://wild-palm-demo.vercel.app">wild-palm-demo.vercel.app</a> · interactive research snapshot · runs in the browser, no install</sub>
+
 <br/>
 
 ![Task](https://img.shields.io/badge/task-detection_verification-52514e?style=flat-square)
@@ -17,11 +21,30 @@ evaluated under five controlled visual-context ablations (**A1–A5**).
 ![Protocol](https://img.shields.io/badge/evaluation_protocol-v2-52514e?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-52514e?style=flat-square)
 
-[**Findings**](#key-findings) · [**Results**](#results) · [**Models**](#model-status) · [**Method**](#method) · [**Evaluation**](#evaluation) · [**Reproduce**](#reproduce) · [**Docs**](#documentation)
+[**Live Demo**](https://wild-palm-demo.vercel.app) · [**Findings**](#key-findings) · [**Results**](#results) · [**Models**](#model-status) · [**Method**](#method) · [**Evaluation**](#evaluation) · [**Reproduce**](#reproduce) · [**Docs**](#documentation)
 
 </div>
 
 <br/>
+
+## 🌴 Interactive Research Demo
+
+**[▶ Open the Live Demo](https://wild-palm-demo.vercel.app)**: explore how open-weight VLMs verify the *same* YOLO palm detection when shown five different visual contexts (**A1–A5**).
+
+**In brief.** WILD PALM studies wild-palm detection in UAV orthomosaics. A YOLO detector proposes candidate palm boxes. A vision-language model then acts as a **verifier**: it labels each box *Reliable*, *Uncertain* or *Unreliable* and explains why. The conditions A1–A5 change only **what visual context the VLM sees**, from a full-patch overlay to a crop of the box alone. The project measures how that context changes verification behavior.
+
+The demo includes:
+
+- **A1–A5 visual-context comparison** for the same detection
+- **Model decisions and reasoning**, using the stored responses from each checkpoint
+- **Detection explorer** with filters for LabelMe match status, human semantic label, confidence and box size
+- **Semantic human-review examples**, including LabelMe-unmatched detections that a human reviewed as palms
+- **Aggregate experiment analyses**: context shift, model scale and detection difficulty
+
+> [!NOTE]
+> The public demo is a **static research snapshot** with a curated subset of the full experiment. It runs no model inference in the browser. Canonical numbers live in [`docs/EXPERIMENT_RESULTS_CANONICAL.md`](docs/EXPERIMENT_RESULTS_CANONICAL.md).
+
+---
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/ablation_inputs_dark.png">
