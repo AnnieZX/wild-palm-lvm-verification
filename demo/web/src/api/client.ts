@@ -18,6 +18,7 @@ import type {
   Summary,
   VisitorLabel,
 } from "../types/api";
+import { staticApi } from "./static";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -61,7 +62,9 @@ export interface DetectionFilters {
   changed_model?: string | null;
 }
 
-export const api = {
+export const IS_STATIC = import.meta.env.VITE_STATIC === "1";
+
+const liveApi = {
   getSummary: () => request<Summary>("/api/summary"),
   getModels: () => request<{ models: ModelInfo[] }>("/api/models").then((r) => r.models),
 
@@ -93,3 +96,5 @@ export const api = {
     }),
   getReviewResults: (sessionId: string) => request<ReviewResults>(`/api/review/sessions/${sessionId}/results`),
 };
+
+export const api: typeof liveApi = IS_STATIC ? staticApi : liveApi;

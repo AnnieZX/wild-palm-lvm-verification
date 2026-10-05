@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, IS_STATIC } from "../api/client";
 import { ErrorNote, Loading, Section } from "../components/common/Section";
 import { SemanticBadge } from "../components/common/Labels";
 import { ConditionBar, ConditionImage, ConditionPrompt } from "../components/detection/ConditionView";
@@ -57,7 +57,7 @@ export function Explorer({ models, selected, setSelected }: Props) {
       title="One detection, five views, many verifiers"
       lede={
         <>
-          Pick any of the 5,747 YOLO detections. The box stays fixed; switch A1–A5 to change what the VLM is shown, and read
+          {IS_STATIC ? "Pick a YOLO detection from this snapshot's subset of the 5,747." : "Pick any of the 5,747 YOLO detections."} The box stays fixed; switch A1–A5 to change what the VLM is shown, and read
           what every checkpoint actually answered. Nothing on this page is re-inferred: images, prompts and decisions are the
           stored research artifacts.
         </>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../api/client";
+import { api, IS_STATIC } from "../api/client";
 import { ErrorNote, Section } from "../components/common/Section";
 import { Segmented } from "../components/common/Segmented";
 import { ReviewReveal } from "../components/review/ReviewReveal";
@@ -51,7 +51,10 @@ export function HumanReview({ results, onResults, onOpenDetection }: Props) {
         <>
           Repeat the project’s blind semantic audit on a random sample of real detections. You see only what the reviewer saw:
           the source patch and the YOLO box. No LabelMe annotation, YOLO confidence, IoU or model output is shown until you
-          finish. Your answers are stored only in the demo’s own folder and never touch the official annotations.
+          finish.{" "}
+          {IS_STATIC
+            ? "Your answers stay in your browser and never touch the official annotations. This snapshot draws from a fixed random subset of each deck."
+            : "Your answers are stored only in the demo’s own folder and never touch the official annotations."}
         </>
       }
     >

@@ -9,6 +9,8 @@ frontend/.tmp_sample.png
 # Research demo web app (Vite)
 web/node_modules/
 web/dist/
+web/public/snapshot/
+web/.vercel/
 
 # Visitor review sessions and other demo-local runtime data
 /data/

@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react";
-import { api } from "./api/client";
+import { api, IS_STATIC } from "./api/client";
+import { snapshotMeta, type SnapshotMeta } from "./api/static";
+import { num } from "./utils/format";
 import { TopNav } from "./components/navigation/TopNav";
 import { useApi } from "./hooks/useApi";
 import { ContextShift } from "./sections/ContextShift";
@@ -22,6 +24,7 @@ export default function App() {
   const models = useApi<ModelInfo[]>(() => api.getModels(), []);
   const [selected, setSelected] = useState<string | null>(initialDetection);
   const [review, setReview] = useState<ReviewResults | null>(null);
+  const meta = useApi<SnapshotMeta | null>(() => (IS_STATIC ? snapshotMeta() : Promise.resolve(null)), []);
 
   const openDetection = useCallback((id: string) => {
     setSelected(id);
@@ -35,7 +38,15 @@ export default function App() {
     <>
       <TopNav />
       <main className="page">
-        {backendDown && (
+        {IS_STATIC && meta.data && (
+          <p className="note small" style={{ marginTop: 24 }}>
+            Public snapshot ({meta.data.generated.slice(0, 10)}). All aggregate results cover the full study; the Detection Explorer
+            includes {num(meta.data.n_detections_included)} of the {num(meta.data.n_detections_total)} detections (every curated case,
+            the review sample and a random fill) and images are re-encoded ({meta.data.image_encoding}). Blind-review answers stay in
+            your browser.
+          </p>
+        )}
+        {backendDown && !IS_STATIC && (
           <p className="error" style={{ marginTop: 24 }}>
             The demo API is not reachable ({summary.error}). Start it with{" "}
             <span className="mono">cd demo/backend && python3 -m uvicorn app.main:app --port 8000</span>.
@@ -53,7 +64,8 @@ export default function App() {
       <footer>
         <div className="page">
           WILD PALM research demo. Read-only view of stored research artifacts (outputs/, paper/analysis/); no model inference
-          is run. Visitor review answers are written only under demo/data/.
+          is run.{" "}
+          {IS_STATIC ? "Static snapshot; visitor review answers never leave your browser." : "Visitor review answers are written only under demo/data/."}
           {summary.data && (
             <span className="mono"> · {summary.data.sources.decisions}</span>
           )}
