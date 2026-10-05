@@ -21,6 +21,7 @@ if str(DEMO_ROOT) not in sys.path:
 
 from app.api.router import api_router  # noqa: E402
 from app.config import settings  # noqa: E402
+from app.routers import router as research_router  # noqa: E402
 
 app = FastAPI(
     title="Wild Palm Verification Demo API",
@@ -37,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(research_router)
 
 
 @app.get("/")

@@ -10,6 +10,22 @@ demo/
 └── README.md
 ```
 
+## Interactive research demo (`web/` + `/api`)
+
+A React + TypeScript + Vite app (`web/`) on top of read-only FastAPI routes under `/api`
+(`backend/app/routers`, `services`, `data`). It reads `outputs/`, `paper/analysis/` and the raw
+patches; visitor blind-review answers are written only to `demo/data/visitor_reviews/`.
+
+```bash
+# terminal 1
+cd demo/backend && python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# terminal 2 (Node 20 + npm bundled under frontend/.tools/node)
+cd demo/web && PATH=$PWD/../frontend/.tools/node/bin:$PATH npm install && npx vite
+```
+
+Open http://localhost:5173 (forward port 5173 when using Remote SSH). Smoke test:
+`python3 demo/backend/scripts/smoke_test.py`.
+
 ## Architecture rules
 
 | Layer | Responsibility |
