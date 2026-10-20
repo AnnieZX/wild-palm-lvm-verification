@@ -1,14 +1,12 @@
 {
   "cohort_n": 5747,
   "n_images": 870,
-  "analysed_cells": 57,
-  "full_clean_cells": 57,
+  "analysed_cells": 68,
+  "full_clean_cells": 68,
   "partial_cells": 7,
   "status_counts": {
-    "full_clean": 57,
-    "not_run": 9,
-    "partial": 7,
-    "incomplete": 2
+    "full_clean": 68,
+    "partial": 7
   },
   "condition_policy": {
     "qwen3_vl_2b": "A3 and A5 each have one parse error (512-token repetition loop; sample_000061 in A3, sample_005495 in A5). Those conditions are partial at N=5,746; the other three are full_clean. The model is not re-run.",

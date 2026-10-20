@@ -150,7 +150,9 @@ def alignment_tables(t, path, label, nm, nu, base, lead, nlabel=None):
                 r"UM = LabelMe-unmatched (IoU $\geq 0.5$, greedy one-to-one). Uncertain excluded. "
                 r"R/M, R/UM, Ur/M, Ur/UM correspond to the legacy TP, FP, FN, TN. "
                 r"``Spec'' is alignment specificity on LabelMe-unmatched detections, \emph{not} "
-                r"semantic non-palm specificity: the human review found no confirmed non-palm among them.",
+                r"semantic non-palm specificity: the human review found no confirmed non-palm among them. "
+                r"Acc/F1 exclude Uncertain; read them with the Decided count (coverage $=$ Decided/$N$) "
+                r"and the Always-Reliable reference row.",
         label=label, colspec="ll" + "r" * (len(ta.columns) - 2), group_col="Model", escape_cells=False)
 
 

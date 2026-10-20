@@ -27,6 +27,14 @@ Gemma-4-12B,A1->A5,low_conf,small_box,2198,0.2083712465878071
 Gemma-4-12B,A1->A5,low_conf,large_box,676,0.028106508875739646
 Gemma-4-12B,A1->A5,high_conf,small_box,676,0.019230769230769232
 Gemma-4-12B,A1->A5,high_conf,large_box,2197,0.004551661356395084
+MiniCPM-V-4.5,A1->A5,low_conf,small_box,2198,0.45632393084622386
+MiniCPM-V-4.5,A1->A5,low_conf,large_box,676,0.3121301775147929
+MiniCPM-V-4.5,A1->A5,high_conf,small_box,676,0.2470414201183432
+MiniCPM-V-4.5,A1->A5,high_conf,large_box,2197,0.11561219845243514
+Molmo2-8B,A1->A5,low_conf,small_box,2198,0.09144676979071883
+Molmo2-8B,A1->A5,low_conf,large_box,676,0.09763313609467456
+Molmo2-8B,A1->A5,high_conf,small_box,676,0.17899408284023668
+Molmo2-8B,A1->A5,high_conf,large_box,2197,0.3691397360036413
 Qwen3-VL-2B,A1->A5,low_conf,small_box,2197,0.3782430587164315
 Qwen3-VL-2B,A1->A5,low_conf,large_box,676,0.2603550295857988
 Qwen3-VL-2B,A1->A5,high_conf,small_box,676,0.08727810650887574
@@ -47,3 +55,7 @@ InternVL3.5-14B,A1->A5,low_conf,small_box,2198,0.5559599636032757
 InternVL3.5-14B,A1->A5,low_conf,large_box,676,0.40236686390532544
 InternVL3.5-14B,A1->A5,high_conf,small_box,676,0.3254437869822485
 InternVL3.5-14B,A1->A5,high_conf,large_box,2197,0.1998179335457442
+Qwen3-VL-32B,A1->A5,low_conf,small_box,2198,0.8434940855323021
+Qwen3-VL-32B,A1->A5,low_conf,large_box,676,0.742603550295858
+Qwen3-VL-32B,A1->A5,high_conf,small_box,676,0.8624260355029586
+Qwen3-VL-32B,A1->A5,high_conf,large_box,2197,0.6959490213928083

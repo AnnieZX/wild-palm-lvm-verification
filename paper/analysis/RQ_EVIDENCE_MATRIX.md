@@ -1,9 +1,13 @@
 # RQ evidence matrix
 
-Status as of 2026-10-02. All numbers are descriptive and come from `paper/analysis/outputs/`.
-Seven models have all five conditions (the *complete set*): Qwen2.5-VL-7B, Qwen3-VL-8B,
+Status as of 2026-10-19. All numbers are descriptive and come from `paper/analysis/outputs/`.
+Thesis primary tables stay on the seven-model `CORE_PANEL`: Qwen2.5-VL-7B, Qwen3-VL-8B,
 Qwen3-VL-4B, InternVL3.5-8B, GLM-4.6V-Flash, Phi-4-multimodal, Gemma-4-12B.
-MiniCPM-V-4.5 and Molmo2-8B have A1 only. Qwen3-VL-2B is running and is excluded.
+Further completed checkpoints (MiniCPM-V-4.5 A1–A5, Molmo2-8B A1–A5, Qwen3-VL-2B/32B,
+InternVL3.5-2B/4B/14B, Qwen2.5-VL-3B) are in `*_extended` tables and the size ladder.
+Qwen2.5-VL-32B remains a qualification probe only (not run on the full cohort).
+CORE_PANEL descriptive bullets below were written 2026-10-02 and remain CORE_PANEL-true;
+do not silently rewrite them as if they included 32B / MiniCPM / Molmo2.
 
 Vocabulary:
 - "Alignment" means Protocol v2 IoU agreement with LabelMe. It is not correctness.
@@ -47,9 +51,9 @@ Vocabulary:
 - That any change is caused by the visual content alone. Every A2/A4/A5 contrast also changes prompt text.
 - That a condition is "best" or "improves reliability". Alignment metrics are not semantic correctness, and A5 gains in specificity coincide with large drops in coverage or sensitivity.
 - Statistical significance from non-overlapping CIs.
-- Anything about A2–A5 for MiniCPM-V-4.5, Molmo2-8B or Qwen3-VL-2B.
+- Anything that treats MiniCPM-V-4.5, Molmo2-8B, or Qwen3-VL-32B as if they were in `CORE_PANEL`. Their A1–A5 cells are complete and live in the extended tables.
 
-**Missing.** A2–A5 for MiniCPM-V-4.5 and Molmo2-8B (queued). An image-only control condition, which would need a new prompt variant; this is a design decision, not just an analysis.
+**Missing.** An image-only control condition, which would need a new prompt variant; this is a design decision, not just an analysis. A2–A5 for MiniCPM-V-4.5, Molmo2-8B, and Qwen3-VL-2B/32B are no longer missing.
 
 ---
 
@@ -58,9 +62,9 @@ Vocabulary:
 **Analyses needed.**
 - Per-model deltas and transitions side by side (done).
 - Within-family scale contrasts:
-  - Qwen3-VL 2B/4B/8B;
+  - Qwen3-VL 2B/4B/8B/32B;
   - InternVL3.5 2B/4B/8B/14B;
-  - Qwen2.5-VL 3B/7B (and 32B probes).
+  - Qwen2.5-VL 3B/7B (32B remains a probe only).
 - Cross-model agreement per condition (done).
 
 **Available evidence**
@@ -82,13 +86,12 @@ Vocabulary:
 - **Qwen3-VL-4B behaves very differently from Qwen3-VL-8B.** It answers Unreliable 43–57% of the time in every condition, versus 7–21% for the 8B. This is a single within-family pair, not a scaling trend.
 
 **Must NOT yet be concluded**
-- Any scaling relationship. Only one within-family pair (Qwen3-VL 4B vs 8B) is complete, and family and size are confounded across the other models.
+- Any monotonic scaling law. The Qwen3-VL 2B/4B/8B/32B ladder is now complete (see `tables/tab_size_ladder.tex`), but a few ordered points are not evidence of scaling, and family and size remain confounded across other models.
 - That κ differences indicate better or worse models. κ is bounded by each model's marginals (see κ_max).
 
-**Missing / blocked by running jobs**
-- Qwen3-VL-2B: A1 4,257/5,747 and A2 3,009/5,747 at last check; A3–A5 pending.
-- InternVL3.5 2B/4B/14B, Qwen2.5-VL-3B, MiniCPM-V-4.5 A2–A5, Molmo2-8B A2–A5: all pending.
-- 32B and Ministral3: probes only.
+**Still not run**
+- Qwen2.5-VL-32B: qualification probe only; listed as "not run" on the size ladder.
+- Ministral3: probe only.
 
 ---
 

@@ -118,7 +118,7 @@ script docstring for all rules.
 ## Excluded or pending runs
 
 - `qwen2_5_vl/20260708_0020/A5`: cancelled wrong-path job, excluded.
-- MiniCPM-V-4.5: A1–A3 full_clean; A4/A5 queued.
-- Molmo2-8B: A1 full_clean; A2–A5 queued.
-- Qwen3-VL-32B: A1–A5 submitted 2026-10-04; audited as not_run until complete.
+- MiniCPM-V-4.5: A1–A5 full_clean (A4/A5 completed after the 2026-10-04 audit).
+- Molmo2-8B: A1–A5 full_clean (A2–A5 completed after the 2026-10-04 audit).
+- Qwen3-VL-32B: A1–A5 full_clean (completed 2026-10-06; ingested 2026-10-19).
 - Qwen2.5-VL-32B: qualification probe only; listed as "not run" on the size ladder.

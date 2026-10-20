@@ -2,17 +2,23 @@
 \begin{table}[t]
 \centering
 \scriptsize
-\caption{Protocol-v2 IoU-alignment metrics for the further checkpoints ($^\dagger$ partial condition, valid rows only; -- = undefined, zero denominator). M = LabelMe-matched, UM = LabelMe-unmatched (IoU $\geq 0.5$, greedy one-to-one). Uncertain excluded. R/M, R/UM, Ur/M, Ur/UM correspond to the legacy TP, FP, FN, TN. ``Spec'' is alignment specificity on LabelMe-unmatched detections, \emph{not} semantic non-palm specificity: the human review found no confirmed non-palm among them.}
+\caption{Protocol-v2 IoU-alignment metrics for the further checkpoints ($^\dagger$ partial condition, valid rows only; -- = undefined, zero denominator). M = LabelMe-matched, UM = LabelMe-unmatched (IoU $\geq 0.5$, greedy one-to-one). Uncertain excluded. R/M, R/UM, Ur/M, Ur/UM correspond to the legacy TP, FP, FN, TN. ``Spec'' is alignment specificity on LabelMe-unmatched detections, \emph{not} semantic non-palm specificity: the human review found no confirmed non-palm among them. Acc/F1 exclude Uncertain; read them with the Decided count (coverage $=$ Decided/$N$) and the Always-Reliable reference row.}
 \label{tab:master_alignment_extended}
 \begin{tabular}{@{}llrrrrrrrrrrrr@{}}
 \toprule
-\textbf{Model} & \textbf{Cond.} & \textbf{\$N\$} & \textbf{Decided} & \textbf{R/M} & \textbf{R/UM} & \textbf{Ur/M} & \textbf{Ur/UM} & \textbf{Acc} & \textbf{Prec} & \textbf{Sens} & \textbf{Spec} & \textbf{F1} & \textbf{BalAcc} \\
+\textbf{Model} & \textbf{Cond.} & \textbf{$N$} & \textbf{Decided} & \textbf{R/M} & \textbf{R/UM} & \textbf{Ur/M} & \textbf{Ur/UM} & \textbf{Acc} & \textbf{Prec} & \textbf{Sens} & \textbf{Spec} & \textbf{F1} & \textbf{BalAcc} \\
 \midrule
 MiniCPM-V-4.5 & A1 & 5{,}747 & 5{,}747 & 4{,}991 & 566 & 118 & 72 & 0.881 & 0.898 & 0.977 & 0.113 & 0.936 & 0.545 \\
 MiniCPM-V-4.5 & A2 & 5{,}747 & 5{,}746 & 5{,}073 & 601 & 36 & 36 & 0.889 & 0.894 & 0.993 & 0.057 & 0.941 & 0.525 \\
 MiniCPM-V-4.5 & A3 & 5{,}747 & 5{,}747 & 5{,}064 & 599 & 45 & 39 & 0.888 & 0.894 & 0.991 & 0.061 & 0.940 & 0.526 \\
+MiniCPM-V-4.5 & A4 & 5{,}747 & 5{,}745 & 4{,}828 & 489 & 280 & 148 & 0.866 & 0.908 & 0.945 & 0.232 & 0.926 & 0.589 \\
+MiniCPM-V-4.5 & A5 & 5{,}747 & 5{,}542 & 3{,}762 & 271 & 1{,}199 & 310 & 0.735 & 0.933 & 0.758 & 0.534 & 0.837 & 0.646 \\
 \midrule
 Molmo2-8B & A1 & 5{,}747 & 1{,}210 & 1{,}148 & 61 & 1 & 0 & 0.949 & 0.950 & 0.999 & 0.000 & 0.974 & 0.500 \\
+Molmo2-8B & A2 & 5{,}747 & 4{,}325 & 4{,}054 & 271 & 0 & 0 & 0.937 & 0.937 & 1.000 & 0.000 & 0.968 & 0.500 \\
+Molmo2-8B & A3 & 5{,}747 & 2{,}032 & 2{,}008 & 24 & 0 & 0 & 0.988 & 0.988 & 1.000 & 0.000 & 0.994 & 0.500 \\
+Molmo2-8B & A4 & 5{,}747 & 3{,}392 & 3{,}245 & 147 & 0 & 0 & 0.957 & 0.957 & 1.000 & 0.000 & 0.978 & 0.500 \\
+Molmo2-8B & A5 & 5{,}747 & 13 & 13 & 0 & 0 & 0 & 1.000 & 1.000 & 1.000 & nan & 1.000 & -- \\
 \midrule
 Qwen3-VL-2B & A1 & 5{,}747 & 5{,}729 & 5{,}095 & 634 & 0 & 0 & 0.889 & 0.889 & 1.000 & 0.000 & 0.941 & 0.500 \\
 Qwen3-VL-2B & A2 & 5{,}747 & 5{,}745 & 5{,}108 & 637 & 0 & 0 & 0.889 & 0.889 & 1.000 & 0.000 & 0.941 & 0.500 \\
@@ -43,6 +49,12 @@ InternVL3.5-14B & A2 & 5{,}747 & 5{,}442 & 4{,}668 & 395 & 220 & 159 & 0.887 & 0
 InternVL3.5-14B & A3 & 5{,}747 & 5{,}518 & 4{,}653 & 374 & 290 & 201 & 0.880 & 0.926 & 0.941 & 0.350 & 0.933 & 0.645 \\
 InternVL3.5-14B & A4 & 5{,}747 & 5{,}505 & 4{,}464 & 308 & 466 & 267 & 0.859 & 0.935 & 0.905 & 0.464 & 0.920 & 0.685 \\
 InternVL3.5-14B & A5 & 5{,}747 & 4{,}635 & 3{,}217 & 176 & 1{,}078 & 164 & 0.729 & 0.948 & 0.749 & 0.482 & 0.837 & 0.616 \\
+\midrule
+Qwen3-VL-32B & A1 & 5{,}747 & 5{,}558 & 3{,}638 & 288 & 1{,}324 & 308 & 0.710 & 0.927 & 0.733 & 0.517 & 0.819 & 0.625 \\
+Qwen3-VL-32B & A2 & 5{,}747 & 5{,}520 & 3{,}724 & 282 & 1{,}208 & 306 & 0.730 & 0.930 & 0.755 & 0.520 & 0.833 & 0.638 \\
+Qwen3-VL-32B & A3 & 5{,}747 & 5{,}352 & 3{,}846 & 241 & 955 & 310 & 0.777 & 0.941 & 0.801 & 0.563 & 0.865 & 0.682 \\
+Qwen3-VL-32B & A4 & 5{,}747 & 5{,}408 & 3{,}366 & 272 & 1{,}464 & 306 & 0.679 & 0.925 & 0.697 & 0.529 & 0.795 & 0.613 \\
+Qwen3-VL-32B & A5 & 5{,}747 & 2{,}687 & 464 & 3 & 2{,}136 & 84 & 0.204 & 0.994 & 0.178 & 0.966 & 0.303 & 0.572 \\
 \midrule
 Always-Reliable (ref.) & -- & 5{,}747 & 5{,}747 & 5{,}109 & 638 & 0 & 0 & 0.889 & 0.889 & 1.000 & 0.000 & 0.941 & 0.500 \\
 \bottomrule

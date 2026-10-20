@@ -26,6 +26,15 @@ Qwen3-VL,Qwen3-VL-8B,Uncertain,Unreliable,51,0.00887419523229511
 Qwen3-VL,Qwen3-VL-8B,Unreliable,Reliable,41,0.007134156951452932
 Qwen3-VL,Qwen3-VL-8B,Unreliable,Uncertain,853,0.14842526535583783
 Qwen3-VL,Qwen3-VL-8B,Unreliable,Unreliable,298,0.05185314076909692
+Qwen3-VL,Qwen3-VL-32B,Reliable,Reliable,422,0.07342961545153993
+Qwen3-VL,Qwen3-VL-32B,Reliable,Uncertain,1968,0.3424395336697407
+Qwen3-VL,Qwen3-VL-32B,Reliable,Unreliable,1536,0.2672698799373586
+Qwen3-VL,Qwen3-VL-32B,Uncertain,Reliable,0,0.0
+Qwen3-VL,Qwen3-VL-32B,Uncertain,Uncertain,181,0.031494692883243434
+Qwen3-VL,Qwen3-VL-32B,Uncertain,Unreliable,8,0.001392030624673743
+Qwen3-VL,Qwen3-VL-32B,Unreliable,Reliable,45,0.007830172263789804
+Qwen3-VL,Qwen3-VL-32B,Unreliable,Uncertain,911,0.15851748738472246
+Qwen3-VL,Qwen3-VL-32B,Unreliable,Unreliable,676,0.11762658778493126
 InternVL3.5,InternVL3.5-2B,Reliable,Reliable,0,0.0
 InternVL3.5,InternVL3.5-2B,Reliable,Uncertain,0,0.0
 InternVL3.5,InternVL3.5-2B,Reliable,Unreliable,0,0.0

@@ -82,7 +82,7 @@ def pair_group(a: str, b: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Run registry. Paths verified on disk 2026-10-04.
+# Run registry. Paths re-verified on disk 2026-10-19.
 #   expected: free-text run state at registry time (informational only; the audit in
 #             a00 derives the actual per-condition status from the files).
 #   nominal_b: size in the checkpoint name (billions), None if the name states none.
@@ -111,9 +111,9 @@ RUNS = [
          "gemma-4-12B-it", "complete"),
     _run("minicpm_v4_5", "MiniCPM-V-4.5", "MiniCPM-V", "not stated", None,
          "minicpm_v4_5/20260923_minicpm_A1A5_5747", "MiniCPM-V-4_5",
-         "A1-A3 complete; A4/A5 queued (Slurm 8365886-87)"),
+         "complete"),
     _run("molmo2_8b", "Molmo2-8B", "Molmo2", "8B", 8, "molmo2_8b/20260923_molmo2_A1A5_5747", "Molmo2-8B",
-         "A1 complete; A2-A5 queued (Slurm 8365888-91)"),
+         "complete"),
     _run("qwen3_vl_2b", "Qwen3-VL-2B", "Qwen3-VL", "2B", 2, "qwen3_vl_2b/20261001_qwen3_vl_2b_A1A5_5747",
          "Qwen3-VL-2B-Instruct", "complete; A3 and A5 each contain one parse error (see CONDITION_POLICY)"),
     _run("qwen2_5_vl_3b", "Qwen2.5-VL-3B", "Qwen2.5-VL", "3B", 3,
@@ -127,7 +127,7 @@ RUNS = [
          "internvl3_5_hf_14b/20261001_internvl3_5_hf_14b_A1A5_5747", "InternVL3_5-14B-HF", "complete"),
     _run("qwen3_vl_32b", "Qwen3-VL-32B", "Qwen3-VL", "32B", 32,
          "qwen3_vl_32b/20261004_qwen3_vl_32b_A1A5_5747", "Qwen3-VL-32B-Instruct",
-         "submitted 2026-10-04 (Slurm 8370171-75), pending"),
+         "complete"),
 ]
 RUN_BY_KEY = {r["model_key"]: r for r in RUNS}
 MODEL_ORDER = [r["display"] for r in RUNS]
@@ -440,7 +440,7 @@ def write_latex_table(path: Path, df: pd.DataFrame, caption: str, label: str,
         r"\begin{table}[t]", r"\centering", size,
         rf"\caption{{{caption}}}", rf"\label{{{label}}}",
         rf"\begin{{tabular}}{{@{{}}{colspec}@{{}}}}", r"\toprule",
-        " & ".join(rf"\textbf{{{latex_escape(c)}}}" for c in cols) + r" \\", r"\midrule",
+        " & ".join(rf"\textbf{{{c if not escape_cells else latex_escape(c)}}}" for c in cols) + r" \\", r"\midrule",
     ]
     prev = None
     for _, row in df.iterrows():

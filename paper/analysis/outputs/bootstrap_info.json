@@ -17,11 +17,14 @@
     "GLM-4.6V-Flash",
     "Phi-4-multimodal",
     "Gemma-4-12B",
+    "MiniCPM-V-4.5",
+    "Molmo2-8B",
     "Qwen3-VL-2B",
     "Qwen2.5-VL-3B",
     "InternVL3.5-2B",
     "InternVL3.5-4B",
-    "InternVL3.5-14B"
+    "InternVL3.5-14B",
+    "Qwen3-VL-32B"
   ],
   "detections_per_image": {
     "min": 1,
