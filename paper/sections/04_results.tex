@@ -1,0 +1,255 @@
+% =====================================================================
+\section{Results}
+\label{sec:results}
+% =====================================================================
+% RULES FOR THIS SECTION
+%  - No conclusions yet. Every number must be generated from repository
+%    outputs (never typed by hand from README prose).
+%  - Primary numeric sources:
+%      outputs/a1_a5_behavior_analysis/            (Layer 1, reference-free)
+%      outputs/evaluation_protocol_v2/<model>/<exp>/A*/A*_metrics.json  (Layer 2)
+%      outputs/semantic_gt_review/human_review.csv (Layer 3; read-only)
+%  - Use "LabelMe-matched" / "LabelMe-unmatched". Never call an unmatched
+%    detection a "false positive" or "non-palm" unless the semantic review
+%    supports it.
+%  - Sub-5,747 runs: use raw counts; *_pct fields in their metrics JSON are
+%    divided by 5,747 (known evaluator quirk).
+
+\TODO{Write results prose only after all tables and figures below are generated. Report observations, not explanations; explanations belong in \cref{sec:discussion}.}
+
+% ---------------------------------------------------------------------
+\subsection{Overall Verification Behavior}
+\label{sec:results:overall}
+% ---------------------------------------------------------------------
+% Answers: context for RQ1--RQ3.
+% Content: for each model with full-scale runs, the R/U/Ur distribution,
+% coverage and abstention under every condition it was run on; the
+% always-Reliable baseline as a reference row for Layer-2 metrics.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_decision_distribution}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_alignment_metrics}
+
+\TODO{Describe the decision distributions and alignment metrics (\cref{tab:decision_distribution,tab:alignment_metrics}) without interpretation. Report coverage next to every accuracy/F1 value.}
+
+% ---------------------------------------------------------------------
+\subsection{Effect of Visual Context}
+\label{sec:results:context}
+% ---------------------------------------------------------------------
+% Answers: RQ1. Within-model comparison of A1--A5.
+% Contrasts to report separately:
+%   metadata-only (same image):  A1 vs A2 (confidence), A2 vs A3 (geometry)
+%   image-only (same text):      A2 vs A4 (add crop panel), A2 vs A5 (crop only),
+%                                A4 vs A5 (remove full-patch panel)
+%   A1 vs A4/A5 changes image AND text — label as such.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Context-ablation plot: per model, stacked R/U/Ur shares for A1--A5 (source: \texttt{outputs/a1\_a5\_behavior\_analysis/figures/decision\_distribution\_by\_condition.png}; regenerate in thesis style).}
+  \caption{Decision distribution by input condition for each model. \AUTOGEN{caption details}}
+  \label{fig:context_distribution}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Context-ablation plot: alignment specificity, sensitivity, balanced accuracy and coverage vs.\ condition, one line per model, with image-clustered bootstrap CIs.}
+  \caption{Protocol-v2 alignment metrics by input condition. These are annotation-alignment metrics, not semantic accuracy. \AUTOGEN{caption details}}
+  \label{fig:context_alignment}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_transitions}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Per-model $3\times3$ transition heatmaps for the image-only contrasts A2$\rightarrow$A4 and A2$\rightarrow$A5 (source script: \texttt{scripts/visualization/plot\_a1\_a5\_behavior.py}; existing figure uses A1 reference).}
+  \caption{Per-detection decision transitions between conditions. \AUTOGEN{caption details}}
+  \label{fig:transitions}
+\end{figure}
+
+\TODO{Report metadata-only and image-only contrasts separately. Note any condition in which a model's behavior changes sharply.}
+
+% ---------------------------------------------------------------------
+\subsection{Cross-Model and Scaling Analysis}
+\label{sec:results:scaling}
+% ---------------------------------------------------------------------
+% Answers: RQ2.
+% Valid comparisons:
+%   Across families: models with complete A1--A5 @5,747 on the same
+%     cohort (currently Qwen2.5-VL-7B, Qwen3-VL-8B, GLM-4.6V-Flash,
+%     Phi-4-multimodal, InternVL3.5-8B-HF, Gemma 4 12B; + MiniCPM-V-4.5,
+%     Molmo2-8B once A2--A5 finish).
+%   Within family (scale ladders, same family adapter/env):
+%     Qwen3-VL 2B / 4B / 8B (/ 32B if probe passes)
+%     InternVL3.5-HF 2B / 4B / 8B / 14B
+%     Qwen2.5-VL 3B / 7B (/ 32B if probe passes)
+%     Ministral 3 3B / 8B / 14B (only if probes pass and runs complete)
+% Caveats to state with every scaling plot: anchors (8B/7B) were run
+% earlier; Qwen2.5-VL-7B revision unrecorded; attention backend resolved
+% to SDPA for anchors per campaign doc; hardware differences (H200 vs L40S).
+% Do NOT compare across families by parameter count alone.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Scaling plot: per family (Qwen3-VL, InternVL3.5-HF, Qwen2.5-VL), x = parameter count (log), y = R/U/Ur shares and coverage, one panel per condition.}
+  \caption{Decision behavior versus model size within each family. \AUTOGEN{caption details}}
+  \label{fig:scaling_behavior}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Scaling plot: context sensitivity versus size, e.g.\ share of decisions changed A2$\rightarrow$A5 and A2$\rightarrow$A4 per model size, within family.}
+  \caption{Sensitivity to input condition versus model size. \AUTOGEN{caption details}}
+  \label{fig:scaling_sensitivity}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_cross_model_agreement}
+
+\TODO{Describe whether the direction of condition effects (\cref{sec:results:context}) agrees across families and sizes. Blocked until scaling runs finish (see \texttt{ANALYSIS\_PLAN.md}).}
+
+% ---------------------------------------------------------------------
+\subsection{Uncertainty and Abstention Behavior}
+\label{sec:results:abstention}
+% ---------------------------------------------------------------------
+% Answers: RQ3.
+% Content: R/U/Ur distributions (Table tab:decision_distribution), coverage
+% vs condition, where Uncertain mass goes when the condition changes
+% (transition matrices), and per-detection stability.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Ternary or stacked-bar plot of (R, U, Ur) shares for every model $\times$ condition cell, models grouped by family.}
+  \caption{Use of the three verdicts across models and conditions. \AUTOGEN{caption details}}
+  \label{fig:ruur_simplex}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Coverage (= (R+Ur)/N) vs.\ alignment balanced accuracy on decided samples, one point per model $\times$ condition.}
+  \caption{Coverage versus alignment balanced accuracy. Points with low coverage are evaluated on few samples. \AUTOGEN{caption details}}
+  \label{fig:coverage}
+\end{figure}
+
+\TODO{Describe verdict usage per model, without labeling a model ``good'' or ``bad''.}
+
+% ---------------------------------------------------------------------
+\subsection{Failure Modes}
+\label{sec:results:failures}
+% ---------------------------------------------------------------------
+% Answers: RQ3. Operational definitions must be fixed BEFORE counting
+% (see ANALYSIS_PLAN.md). Repository vocabulary
+% (EXPERIMENT_STATUS_CANONICAL.md §0): single-class collapse,
+% Reliable-heavy collapse (R >= ~91%), abstention-heavy collapse,
+% technical failure. Describe behavior, not causes.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_failure_modes}
+
+\subsubsection{Reliable-Class Collapse}
+\label{sec:results:failures:collapse}
+% TODO: AUTO-GENERATE FROM RESULTS
+\TODO{Models/conditions with $\geq$ threshold \R{} share; their alignment accuracy relative to the always-\R{} prior (0.889 full cohort; 0.928 on the A1@1{,}000 slice, which must not be compared directly with full-cohort numbers).}
+
+\subsubsection{Abstention-Heavy Behavior}
+\label{sec:results:failures:abstention}
+% TODO: AUTO-GENERATE FROM RESULTS
+\TODO{Models/conditions where \U{} dominates; report coverage and how few decided samples their alignment metrics rest on.}
+
+\subsubsection{Parsing and Instruction-Following Failures}
+\label{sec:results:failures:parsing}
+% TODO: AUTO-GENERATE FROM RESULTS
+\TODO{Parse-error and inference-error counts per run (all completed full-scale runs are recorded with zero; qualification-stage failures: InternVL3-8B unparsable outputs on balanced-100; Llama-3.2-Vision free-text answers; Ministral~3 control characters before the normalizer). Source: \texttt{outputs/diagnostics/model\_qualification/}, \texttt{docs/INTERNVL3\_QUALIFICATION.md}, \texttt{docs/MODEL\_EXPANSION\_CAMPAIGN.md}.}
+
+\subsubsection{Qualitative Visual Failure Cases}
+\label{sec:results:failures:visual}
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Grid of visual failure cases, e.g.\ detections whose verdict flips between A2 and A5 for several models; each tile shows the A2 overlay and A5 crop with the verdicts and the semantic label (if reviewed). Selection rule must be stated and must not be cherry-picked.}
+  \caption{Representative visual failure cases. \AUTOGEN{selection rule and caption}}
+  \label{fig:visual_failures}
+\end{figure}
+
+% ---------------------------------------------------------------------
+\subsection{IoU-Based versus Semantic Evaluation}
+\label{sec:results:iou_vs_semantic}
+% ---------------------------------------------------------------------
+% Answers: RQ4.
+% TERMINOLOGY (mandatory):
+%   "LabelMe-unmatched detection" = IoU-matching outcome only.
+%   "semantic non-palm"           = human review label non_palm.
+%   An unmatched detection is NOT a false positive unless the semantic
+%   review labels it non_palm. Protocol-v2 "FP"/"TN"/"specificity" are
+%   alignment quantities.
+
+Two references are distinguished throughout this subsection. A
+\emph{\unmatched{} detection} is one that IoU matching
+(\cref{sec:method:iou}) did not pair with any LabelMe palm box; this is a
+statement about annotation alignment only. A \emph{semantic non-palm} is a
+detection that the human reviewer labeled \texttt{non\_palm}
+(\cref{sec:method:semantic}). Alignment ``false positives'' (\R{} on a
+\unmatched{} detection) are interpreted as detector false positives only to the
+extent that the semantic review supports that interpretation.
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_semantic_review}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_semantic_by_decision}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_iou_sensitivity}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{For each model $\times$ condition: VLM verdict distribution on the 638 \unmatched{} detections, split by semantic label (palm / ambiguous / non-palm).}
+  \caption{VLM verdicts on \unmatched{} detections by human semantic label. \AUTOGEN{caption details}}
+  \label{fig:semantic_comparison}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\input{tables/tab_confusion}
+
+\TODO{Report how many \unmatched{} detections are semantic palms, ambiguous, or non-palms; how the IoU threshold changes the matched/unmatched split; and what this implies for the meaning of alignment specificity. Do not compute semantic non-palm specificity if the cohort contains no confirmed non-palms.}
+
+% ---------------------------------------------------------------------
+\subsection{Qualitative Case Studies}
+\label{sec:results:cases}
+% ---------------------------------------------------------------------
+% Selection must be rule-based and reproducible (record sample IDs and the
+% rule in the appendix). Candidate rules:
+%  (a) random sample (fixed seed) within strata of
+%      {matched, unmatched-palm, unmatched-ambiguous} x {stable, variable};
+%  (b) detections with maximal cross-model disagreement;
+%  (c) detections whose verdict flips A2 -> A5 for most models.
+% Show the A-condition images, every model's verdict, and (optionally) the
+% model's visual_reasoning excerpt (quoted verbatim, not paraphrased).
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Case study 1: one detection shown under A1--A5 with all models' verdicts and verbatim reasoning excerpts.}
+  \caption{Case study. \AUTOGEN{sample ID, selection rule, caption}}
+  \label{fig:case1}
+\end{figure}
+
+% TODO: AUTO-GENERATE FROM RESULTS
+\begin{figure}[t]
+  \centering
+  \FIGPLACEHOLDER{Case study 2: a LabelMe-unmatched detection reviewed as palm, with verdicts across models and conditions.}
+  \caption{Case study. \AUTOGEN{sample ID, selection rule, caption}}
+  \label{fig:case2}
+\end{figure}
+
+\TODO{Write 1--2 paragraphs per case. Quote model reasoning verbatim; do not infer model ``intent''.}

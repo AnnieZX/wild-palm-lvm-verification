@@ -1,0 +1,23 @@
+% TODO: AUTO-GENERATE FROM RESULTS
+% Two kinds of confusion matrix, kept visually separate:
+%  (1) Alignment: verdict (R/U/Ur, 3 rows) x {LabelMe-matched, LabelMe-unmatched}
+%      per model x condition. Source: Protocol-v2 A*_evaluation.csv.
+%      Keep the Uncertain row (do not drop it) so coverage is visible.
+%  (2) Semantic (unmatched subset only): verdict x {palm, ambiguous, non_palm}.
+%      See tab_semantic_by_decision.tex.
+% Where appropriate: only for models with substantive use of >= 2 verdicts;
+% for collapsed models a confusion matrix is uninformative — cite
+% tab_failure_modes instead. Consider moving the full set to the appendix.
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Verdict $\times$ annotation-alignment label for selected model $\times$ condition cells. Columns are IoU-matching outcomes, not semantic classes. \AUTOGEN{caption details}}
+  \label{tab:confusion}
+  \begin{tabular}{@{}l l l r r@{}}
+    \toprule
+    \textbf{Model} & \textbf{Cond.} & \textbf{Verdict} & \textbf{\matched{}} & \textbf{\unmatched{}} \\
+    \midrule
+    \AUTOGENROW{5}{3 rows (R, U, Ur) per model $\times$ condition} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

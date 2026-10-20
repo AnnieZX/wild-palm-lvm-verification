@@ -1,0 +1,133 @@
+% =====================================================================
+%  Undergraduate Honors Thesis — Wake Forest University, Computer Science
+%  Working title (TODO: finalize)
+%
+%  Build:  pdflatex main && bibtex main && pdflatex main && pdflatex main
+%
+%  Conventions used throughout this draft
+%    \TODO{...}        unresolved item (shown in red in the PDF)
+%    \AUTOGEN{...}     content that must be generated from repository outputs;
+%                      every such block is also marked in the source with
+%                      % TODO: AUTO-GENERATE FROM RESULTS
+%    \VERIFY{...}      a statement taken from repository documentation that
+%                      should be re-checked against the raw artifact before
+%                      submission
+%
+%  Source of truth for every methodological statement: the repository
+%  (src/, scripts/, configs/, docs/*_CANONICAL.md, docs/EVALUATION_PROTOCOL.md,
+%  docs/FRAMEWORK_FREEZE.md, docs/SEMANTIC_VALIDITY_AUDIT.md).
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+% cleveref is absent from the cluster TeX install; fall back to \autoref
+% (handles comma-separated label lists) so the draft builds everywhere.
+\makeatletter
+\newcommand{\fallbackcref}[1]{%
+  \def\@crefsep{}%
+  \@for\@creflabel:=#1\do{\@crefsep\autoref{\@creflabel}\def\@crefsep{, }}}
+\IfFileExists{cleveref.sty}{%
+  \usepackage[capitalise,noabbrev]{cleveref}%
+}{%
+  \def\section@autorefname{Section}%
+  \def\subsection@autorefname{Section}%
+  \def\subsubsection@autorefname{Section}%
+  \let\cref\fallbackcref
+  \let\Cref\fallbackcref
+}
+\makeatother
+
+\graphicspath{{figures/}}
+
+% ---------------------------------------------------------------------
+% Draft macros
+% ---------------------------------------------------------------------
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
+\newcommand{\AUTOGEN}[1]{\textcolor{blue}{\textbf{[AUTO-GENERATE FROM RESULTS:} #1\textbf{]}}}
+\newcommand{\VERIFY}[1]{\textcolor{orange}{\textbf{[VERIFY:} #1\textbf{]}}}
+
+% Full-width placeholder row for tables that are not generated yet
+\newcommand{\AUTOGENROW}[2]{%
+  \multicolumn{#1}{>{\centering\arraybackslash}p{0.75\linewidth}}{\AUTOGEN{#2}}}
+
+% Long file paths: allow line breaks after underscores and slashes in prose
+\let\origunderscore\_
+\renewcommand{\_}{\origunderscore\allowbreak}
+\setlength{\emergencystretch}{3em}
+
+% Placeholder box for figures that do not exist yet
+\newcommand{\FIGPLACEHOLDER}[1]{%
+  \fbox{\parbox[c][0.22\textheight][c]{0.9\linewidth}{\centering\AUTOGEN{#1}}}}
+
+% ---------------------------------------------------------------------
+% Terminology macros — use these so the construct distinction is
+% enforced consistently (see Section~\ref{sec:method:eval}).
+% ---------------------------------------------------------------------
+\newcommand{\R}{\textsc{Reliable}}
+\newcommand{\U}{\textsc{Uncertain}}
+\newcommand{\Ur}{\textsc{Unreliable}}
+\newcommand{\matched}{LabelMe-matched}
+\newcommand{\unmatched}{LabelMe-unmatched}
+\newcommand{\alignspec}{alignment specificity}
+\newcommand{\Acond}[1]{\textsf{A#1}}
+
+% Toggle to \citationstrue once references.bib contains at least one
+% verified entry that is actually \cite'd; until then bibtex has nothing
+% to process and the bibliography is suppressed.
+\newif\ifcitations
+\citationsfalse
+
+\title{%
+  \TODO{Final title}\\[0.5em]
+  \large Visual Context and Vision-Language Model Verification of\\
+  Object Detections: A Controlled Study on Wild-Palm Detection in UAV Imagery\\
+  \normalsize(working title)}
+\author{Annie Luo\\[0.25em]
+  \small Advisor: Fan Yang\\
+  \small Department of Computer Science, Wake Forest University}
+\date{\TODO{Submission date} 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% TODO: write last, after Results and Discussion are final.
+\TODO{Abstract (150--250 words). Write only after Sections~\ref{sec:results}--\ref{sec:conclusion} are final. Must state that LabelMe matching is an annotation-alignment reference, not semantic ground truth.}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_methodology}
+\input{sections/04_results}
+\input{sections/05_discussion}
+\input{sections/06_conclusion}
+
+\ifcitations
+  \bibliographystyle{plainnat}
+  \bibliography{references}
+\fi
+
+\appendix
+\input{appendix/appendix}
+
+\end{document}

@@ -1,0 +1,27 @@
+% TODO: AUTO-GENERATE FROM RESULTS
+% Sources (read-only; verify SHA-256 listed in docs/SEMANTIC_VALIDITY_AUDIT.md §G):
+%   outputs/semantic_gt_review/human_review.csv            (638 unmatched)
+%   outputs/semantic_gt_review/human_confidence_pilot.csv  (400 pilot)
+% The pilot is outside the 5,747 cohort; report per-bin counts only
+% (pooled shares are NOT prevalence because bins were sampled equally).
+% Do NOT analyse the familiarization snapshot.
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Human semantic review. Top: all \unmatched{} detections of the cohort. Bottom: lower-confidence pilot (outside the cohort; per-bin counts, not prevalence). \AUTOGEN{caption details}}
+  \label{tab:semantic_review}
+  \begin{tabular}{@{}l r r r r@{}}
+    \toprule
+    \textbf{Population} & \textbf{n} & \textbf{palm} & \textbf{ambiguous} & \textbf{non\_palm} \\
+    \midrule
+    \unmatched{} (conf.\ $\geq 0.5$) & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    \quad of which balanced-100 ``negatives'' & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    \quad of which A1@1{,}000 slice & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    \midrule
+    Pilot $[0.10, 0.20)$ & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    Pilot $[0.20, 0.30)$ & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    Pilot $[0.30, 0.40)$ & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    Pilot $[0.40, 0.50)$ & \multicolumn{4}{c}{\AUTOGEN{counts}} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

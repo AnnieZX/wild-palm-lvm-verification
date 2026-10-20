@@ -1,0 +1,20 @@
+% TODO: AUTO-GENERATE FROM RESULTS
+% Source: outputs/semantic_gt_evaluation/iou_sensitivity/iou_sensitivity_summary.csv
+%   produced by scripts/analysis/iou_sensitivity_analysis.py
+%   (Protocol-v2 matching, threshold varied; canonical threshold stays 0.5).
+% VERIFY provenance before use: output lives under a SUPERSEDED directory;
+% confirm the summary does not depend on superseded semantic labels, and
+% recompute the semantic re-match column against the OFFICIAL human_review.csv.
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Sensitivity of the \matched{}/\unmatched{} split to the IoU threshold (sensitivity analysis only; the canonical threshold is 0.5). \AUTOGEN{caption details}}
+  \label{tab:iou_sensitivity}
+  \begin{tabular}{@{}r r r r r@{}}
+    \toprule
+    \textbf{IoU thr.} & \textbf{Matched} & \textbf{Unmatched} & \textbf{Unmatched$\rightarrow$matched} & \textbf{Matched$\rightarrow$unmatched} \\
+    \midrule
+    \AUTOGENROW{5}{rows for thresholds 0.3--0.7; last two columns are changes relative to the canonical 0.5 split} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

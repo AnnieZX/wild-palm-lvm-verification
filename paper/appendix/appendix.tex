@@ -1,0 +1,148 @@
+% =====================================================================
+\section{Full Verification Prompt (\Acond{1})}
+\label{app:prompt}
+% =====================================================================
+% Source: src/prompts/ablation_verification_prompts.py; the stored file
+% outputs/verification_ablation_5747/A1_overlay_only/prompts/sample_000001.txt
+% TODO: replace this transcription with an \input or verbatiminput of the
+% stored prompt file so that it is byte-identical (copy it into paper/appendix/).
+The prompt below is the text built for \Acond{1}. Other conditions replace the
+``Input image'' block and the condition-specific block at the end
+(\cref{tab:conditions}).
+
+\begin{footnotesize}
+\begin{verbatim}
+You are an expert reviewer for aerial wild palm detection in UAV orthomosaic
+imagery.
+
+Your task is NOT to detect new palms.
+
+Your task is to verify whether the highlighted YOLO detection contains a valid
+wild palm.
+
+--------------------------------------------------
+
+Important instructions
+
+The highlighted green bounding box indicates the candidate detection.
+
+Focus primarily on the highlighted object.
+
+Use surrounding context only if it provides useful evidence.
+
+The YOLO confidence score is auxiliary information only.
+
+Do NOT base your decision primarily on the confidence score.
+
+Use visual evidence as the primary basis for your judgment.
+
+--------------------------------------------------
+
+Wild palm characteristics
+
+Wild palms in aerial orthomosaic imagery often exhibit:
+
+* a visible central crown
+* radial or circular crown structure
+* long feather-like fronds extending outward
+* repeated symmetric leaf patterns
+* texture distinguishable from surrounding broadleaf canopy
+* fronds radiating from a central point
+
+A palm may be partially occluded.
+
+A partially visible palm can still be considered Reliable if recognizable palm
+morphology is present.
+
+Dense vegetation without recognizable palm morphology should NOT be considered
+a valid palm.
+
+--------------------------------------------------
+
+Input image
+The input is an orthomosaic patch where the background outside the target
+region is slightly dimmed and a green bounding box highlights the candidate
+detection.
+
+--------------------------------------------------
+
+Decision definitions
+
+Reliable
+The highlighted bounding box clearly contains a valid wild palm.
+
+Uncertain
+Evidence is ambiguous due to occlusion, overlap, low image quality, partial
+visibility, or confusing vegetation.
+
+Unreliable
+The highlighted object is not a palm or the detection is clearly incorrect.
+
+--------------------------------------------------
+
+Reasoning requirements
+
+Base your reasoning primarily on:
+
+* crown structure
+* frond pattern
+* texture
+* morphology
+* spatial arrangement
+
+Do not rely mainly on confidence score.
+
+--------------------------------------------------
+
+Judge only from the highlighted bounding box in the image.
+Do not use YOLO confidence or bounding-box geometry.
+
+--------------------------------------------------
+
+Ablation condition: A1_overlay_only
+Sample ID: sample_000001
+
+Return ONLY valid JSON.
+{
+  "decision": "Reliable | Uncertain | Unreliable",
+  "confidence_reasoning": "",
+  "visual_reasoning": ""
+}
+\end{verbatim}
+\end{footnotesize}
+\noindent Note: bullet characters (\textbullet) in the source are shown as
+\texttt{*} here, and long lines are wrapped for the page.
+\VERIFY{Diff against the stored prompt file before submission.}
+
+% =====================================================================
+\section{Condition-Specific Prompt Blocks}
+\label{app:prompt_blocks}
+% =====================================================================
+\TODO{Reproduce the ``Input image'' descriptions for \Acond{4} and \Acond{5} and the metadata blocks/instructions for \Acond{2}--\Acond{5} from \texttt{src/prompts/ablation\_verification\_prompts.py}.}
+
+% =====================================================================
+\section{Reproducibility Details}
+\label{app:repro}
+% =====================================================================
+\TODO{Per-model table: checkpoint, upstream repository and revision (if recorded), dtype, attention backend, Python / \texttt{transformers} / \texttt{torch} versions, GPU, experiment ID, Slurm job IDs. Source: \texttt{docs/EXPERIMENT\_STATUS\_CANONICAL.md} §3, \texttt{docs/MODEL\_EXPANSION\_CAMPAIGN.md} ledger, \texttt{logs/campaign/submissions.csv}, per-run \texttt{\_run\_metadata/}.}
+
+\TODO{Git commit(s) of the code used for each run and for each analysis script; Protocol-v2 \texttt{PROTOCOL.json} records the base commit of the re-score.}
+
+% =====================================================================
+\section{Qualification History}
+\label{app:qualification}
+% =====================================================================
+\TODO{Summarize per-model qualification path and documented deviations (\texttt{docs/EXPERIMENT\_STATUS\_CANONICAL.md} §5). State that historical balanced-100 gates were alignment-based.}
+
+% =====================================================================
+\section{Additional Results}
+\label{app:additional}
+% =====================================================================
+% TODO: AUTO-GENERATE FROM RESULTS
+\TODO{Full per-model confusion matrices; full pairwise transition tables; A1@1{,}000 results for LLaVA-OneVision and Gemma~3 (separately; prior 0.928, not comparable with full-cohort numbers); Protocol~v1$\rightarrow$v2 comparison (provenance).}
+
+% =====================================================================
+\section{Semantic Review Interface and Criteria}
+\label{app:semantic}
+% =====================================================================
+\TODO{Screenshot of the blind review app (\texttt{scripts/semantic\_review\_app.py}); labeling criteria; provenance hashes from \texttt{docs/SEMANTIC\_VALIDITY\_AUDIT.md} §G.}

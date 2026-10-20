@@ -1,0 +1,23 @@
+% TODO: AUTO-GENERATE FROM RESULTS
+% Source: outputs/evaluation_protocol_v2/<model>/<experiment_id>/A*/A*_metrics.json
+%   (fields: accuracy, precision, recall, f1, specificity, balanced_accuracy,
+%    true_positive, false_positive, false_negative, true_negative,
+%    evaluation_protocol == "v2").
+% Include an "always-Reliable" baseline row (acc 0.889, spec 0, F1 from prior)
+%   computed by the same script, not typed by hand.
+% Use only full-cohort (N=5,747) runs. Do not mix @1000 runs into this table.
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Protocol-v2 annotation-alignment metrics, model $\times$ condition ($N=5{,}747$; \U{} excluded). ``Spec'' is alignment specificity on \unmatched{} detections, not semantic non-palm specificity. \AUTOGEN{caption details}}
+  \label{tab:alignment_metrics}
+  \begin{tabular}{@{}l l r r r r r r r@{}}
+    \toprule
+    \textbf{Model} & \textbf{Cond.} & \textbf{Cov.} & \textbf{Acc} & \textbf{Prec} & \textbf{Sens} & \textbf{Spec} & \textbf{BalAcc} & \textbf{F1} \\
+    \midrule
+    Always-\R{} baseline & -- & \multicolumn{7}{c}{\AUTOGEN{baseline row}} \\
+    \midrule
+    \AUTOGENROW{9}{one row per model $\times$ condition} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

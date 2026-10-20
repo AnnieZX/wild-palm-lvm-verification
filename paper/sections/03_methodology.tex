@@ -1,0 +1,455 @@
+% =====================================================================
+\section{Methodology}
+\label{sec:method}
+% =====================================================================
+% Every statement in this section was checked against the repository
+% (file paths given in comments). Anything that could not be verified is
+% marked \TODO. Do not add details from memory.
+
+% ---------------------------------------------------------------------
+\subsection{Overview and Scope}
+\label{sec:method:overview}
+% ---------------------------------------------------------------------
+The pipeline has five stages: (i) a fixed YOLO detector is run on UAV
+orthomosaic patches; (ii) detections with confidence $\geq 0.5$ become
+verification samples, one per box; (iii) each sample is rendered under five
+input conditions (\Acond{1}--\Acond{5}) with pre-generated prompts; (iv) each
+VLM returns a JSON verdict that is parsed by a shared parser; (v) verdicts are
+analyzed (a) without any reference labels (behavioral analysis), (b) against
+LabelMe annotations through IoU matching (annotation alignment), and (c) against
+a human semantic review of a subset (semantic audit). LabelMe annotations are
+used only for evaluation and are never shown to the VLM.
+% Source: README.md "Overview"; docs/ARCHITECTURE.md; docs/FRAMEWORK_FREEZE.md
+
+\begin{figure}[t]
+  \centering
+  % TODO: AUTO-GENERATE FROM RESULTS
+  % Candidate source: README mermaid flowchart (redraw as vector figure).
+  \FIGPLACEHOLDER{Pipeline diagram: UAV patches $\rightarrow$ frozen YOLO detections $\rightarrow$ one sample per box $\rightarrow$ A1--A5 builder $\rightarrow$ VLM adapter $\rightarrow$ shared parser $\rightarrow$ \{R, U, Ur\} $\rightarrow$ behavioral / alignment / semantic analyses. LabelMe enters only at evaluation.}
+  \caption{Verification pipeline. Blue components are frozen and shared by all models; only the VLM adapter is model-specific.}
+  \label{fig:pipeline}
+\end{figure}
+
+% ---------------------------------------------------------------------
+\subsection{Frozen Protocol versus Later Analyses}
+\label{sec:method:freeze}
+% ---------------------------------------------------------------------
+The verification framework was frozen in July 2026
+(\texttt{docs/FRAMEWORK\_FREEZE.md}). The frozen components are fixed across all
+models: verification dataset and sample identifiers, \Acond{1}--\Acond{5}
+definitions and image files, prompt text, output label set, JSON output schema,
+response parser, IoU threshold (0.5), greedy one-to-one matching, exclusion of
+\U{} from binary metrics, metric formulas, resume convention, and treatment of
+failed outputs (recorded as \texttt{parse\_error} with an empty decision; never
+coerced). What may vary across models is the checkpoint, vision encoder,
+processor/tokenizer, chat-template wrapping of the shared prompt text,
+generation settings (e.g., dtype), and model-specific raw-response cleanup.
+
+Several elements were added \emph{after} the freeze. They change how stored
+predictions are scored or interpreted, but no stored prediction was modified and
+no inference was rerun for any of them (\cref{tab:freeze_vs_later}).
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Frozen experimental protocol versus later amendments and analyses. Dates are from repository documentation.}
+  \label{tab:freeze_vs_later}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth} >{\raggedright\arraybackslash}p{0.17\linewidth} >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Element} & \textbf{Status} & \textbf{Effect / source} \\
+    \midrule
+    Detections, sample IDs, \Acond{1}--\Acond{5} images and prompts, parser, schema, decoding & Frozen (Jul 2026) & Shared by all models. \texttt{FRAMEWORK\_FREEZE.md} \\
+    IoU $\geq 0.5$, greedy one-to-one matching, \U{} excluded & Frozen (Jul 2026) & \texttt{EVALUATION\_PROTOCOL.md} \\
+    Protocol v2 palm-label normalization & Amendment (2026-09-27) & Case-insensitive \texttt{palm} label; re-scored all stored predictions; changed reference labels only (\cref{sec:method:labelme}) \\
+    Construct reframing of Protocol v2 & Interpretation (2026-10-01) & Matched/unmatched read as \emph{annotation alignment}, not semantic truth; no number changed \\
+    Human semantic audit & Later analysis (2026-10-01) & 638 \unmatched{} detections + 400-item lower-confidence pilot (\cref{sec:method:semantic}) \\
+    Ministral~3 raw-response normalizer & Amendment (2026-10-01) & Escapes control characters inside JSON strings, Ministral~3 keys only; no stored prediction re-parsed \\
+    GT-independent \Acond{1}--\Acond{5} behavior analysis & Later analysis & \texttt{scripts/analysis/a1\_a5\_behavior\_analysis.py} \\
+    Detection-property behavior analysis & Later analysis & \texttt{scripts/analysis/detection\_property\_behavior\_analysis.py} \\
+    IoU-threshold sensitivity & Later analysis & \texttt{scripts/analysis/iou\_sensitivity\_analysis.py}; canonical threshold unchanged \\
+    Model-scaling campaign and paired-probe qualification & New runs under the frozen protocol (Oct 2026) & \texttt{docs/MODEL\_EXPANSION\_CAMPAIGN.md} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------------
+\subsection{Imagery and Candidate Detection Construction}
+\label{sec:method:detections}
+% ---------------------------------------------------------------------
+\paragraph{Imagery.} Inputs are UAV orthomosaic patches stored as PNG files
+together with LabelMe JSON annotations (880 annotation files).
+% Source: src/paths.py RAW_PATCHES_ROOT; docs/EXPERIMENT_RESULTS_CANONICAL.md §3
+\TODO{Study site, acquisition platform/sensor, flight altitude, ground sampling distance, orthomosaic generation, and patch-tiling procedure. None of these are documented in the repository.}
+\TODO{Patch dimensions: the one patch checked (source of \texttt{sample\_000001}) is $912\times912$ px; verify for all patches.}
+
+\paragraph{Detector.} Candidates come from a single YOLO11x model
+(Ultralytics) with weights \texttt{yolo11x\_palm\_new/weights/best.pt}. The
+detector is frozen and is not trained or modified in this work.
+% Source: src/paths.py YOLO_MODEL_PATH; scripts/run_full_inference.py
+\TODO{Detector training data, training procedure, and whether the training set overlaps the 880 evaluation patches. Weights come from a separate training directory not tracked in this repository.}
+
+Inference was run on all raw patches with confidence threshold $0.001$ and at
+most 300 detections per image, producing 123{,}405 detections in total.
+% Source: scripts/run_full_inference.py (CONF_THRESHOLD=0.001, MAX_DET=300);
+%         docs/EXPERIMENT_RESULTS_CANONICAL.md §3 (123,405)
+\TODO{Inference image size and NMS settings (Ultralytics defaults were used; record the exact values from the Ultralytics version used).}
+
+\paragraph{Verification cohort.} Detections with YOLO confidence
+$\geq 0.5$ were retained, giving $N = 5{,}747$ detections on 870 images
+(confidence range 0.500--0.924, median 0.834). Each retained detection becomes
+one verification sample. Samples are sorted by image identifier and then by
+descending confidence, and assigned sequential identifiers
+\texttt{sample\_000001}--\texttt{sample\_005747}.
+% Source: src/preprocessing/verification_dataset.py (iter_verification_samples,
+%         group_samples_by_image); scripts/pipeline/generate_verification_dataset.py
+%         (--confidence default 0.5); outputs/verification_dataset/index.csv
+Consequently the first $k$ samples (used for @100/@1000 qualification runs) are
+\emph{not} a random sample of the cohort.
+\TODO{Justify the 0.5 confidence threshold (not documented beyond being the default).}
+
+For each sample the stored metadata are the box $(x, y, w, h)$, confidence,
+width, height, area, and center coordinates. Box widths range from 26 to 357~px
+(median 150~px).
+% Source: build_detection_metadata(); index.csv describe()
+
+% ---------------------------------------------------------------------
+\subsection{LabelMe Reference Annotations}
+\label{sec:method:labelme}
+% ---------------------------------------------------------------------
+Reference annotations are LabelMe shapes. Under Evaluation Protocol~v2 a shape
+is a palm iff its label satisfies
+\texttt{label.strip().lower() == "palm"}; each palm shape, whatever its
+\texttt{shape\_type}, is converted to its axis-aligned envelope
+$(\min x, \min y, \max x, \max y)$. This yields 5{,}853 palm boxes
+(3{,}306 rotation, 2{,}544 rectangle, 3 point shapes). Point shapes produce
+zero-area boxes that can never be matched; they are retained.
+% Source: src/preprocessing/gt_palm_bboxes.py (is_palm_label,
+%         EVALUATION_PROTOCOL_VERSION="v2"); docs/EVALUATION_PROTOCOL.md §1
+The annotations are not documented as exhaustive, so a real palm may lack a
+LabelMe box.
+\TODO{Who produced the LabelMe annotations, under what instructions, and whether exhaustiveness was intended.}
+
+\paragraph{Protocol v1 $\rightarrow$ v2.} Until 2026-09-27 the label rule was
+the case-sensitive \texttt{label == "palm"}. Seventy annotation files label palms
+\texttt{"Palm"}; v1 therefore dropped 486 boxes. Protocol~v2 corrected only the
+label rule; all stored predictions were re-scored without rerunning inference.
+All results in this thesis use Protocol~v2.
+% Source: docs/EVALUATION_PROTOCOL.md §7; docs/EXPERIMENT_RESULTS_CANONICAL.md §2
+
+% ---------------------------------------------------------------------
+\subsection{IoU-Based Annotation Matching}
+\label{sec:method:iou}
+% ---------------------------------------------------------------------
+Matching is performed independently per image. Pairwise IoU is computed between
+every detection and every LabelMe palm box; candidate pairs are sorted by
+descending IoU and matched greedily one-to-one (each detection and each box is
+used at most once). A pair is accepted iff $\mathrm{IoU} \geq 0.5$.
+% Source: src/evaluation/gt_matching.py; docs/EVALUATION_PROTOCOL.md §2
+A matched detection is labeled \emph{\matched{}} (legacy notation: GT+); an
+unmatched detection is labeled \emph{\unmatched{}} (legacy: GT$-$). A detection
+can be \unmatched{} because (a) no LabelMe box exists for the object, (b) its
+best LabelMe box overlaps it with $\mathrm{IoU} < 0.5$, or (c) a
+better-overlapping duplicate detection already took that box.
+% Source: docs/SEMANTIC_VALIDITY_AUDIT.md §A; EVALUATION_PROTOCOL.md §2
+The cohort contains 5{,}109 \matched{} and 638 \unmatched{} detections; an
+always-\R{} verifier therefore attains alignment accuracy 0.889.
+% Source: docs/EVALUATION_PROTOCOL.md §1.3
+
+\paragraph{Terminology.} Throughout this thesis, ``\unmatched{}'' denotes an
+IoU-matching outcome. It is \emph{not} synonymous with ``non-palm'' or
+``detector false positive''; whether an \unmatched{} detection is semantically a
+palm is a separate question answered only by the human audit
+(\cref{sec:method:semantic}).
+
+% ---------------------------------------------------------------------
+\subsection{Input Conditions \Acond{1}--\Acond{5}}
+\label{sec:method:conditions}
+% ---------------------------------------------------------------------
+Each sample is rendered under five conditions that vary the image and the
+detector metadata included in the prompt (\cref{tab:conditions}). All images
+derive from the same raw patch and box.
+% Source: src/preprocessing/verification_overlay.py;
+%         src/preprocessing/ablation_verification_images.py;
+%         src/prompts/ablation_verification_prompts.py
+
+\begin{itemize}
+  \item \textbf{Overlay} (\Acond{1}--\Acond{3}, left panel of \Acond{4}): the
+    full patch with every pixel outside the box multiplied by 0.55, the box
+    region at original brightness, and a green rectangle (BGR $(0,200,0)$,
+    2~px) drawn on the box.
+  \item \textbf{\Acond{4} dual panel}: a canvas twice the patch width; left
+    panel is the overlay, right panel is the unpadded box region cropped
+    \emph{from the overlay} and resized to the patch size (aspect ratio not
+    preserved).
+  \item \textbf{\Acond{5} crop only}: the box expanded by 15~px on each side
+    (clamped to the image), cropped from the \emph{raw} patch (no dimming, no
+    rectangle), and resized to $512\times512$ (aspect ratio not preserved).
+\end{itemize}
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Input conditions as implemented. Metadata are inserted as text into the prompt.}
+  \label{tab:conditions}
+  \begin{tabularx}{\linewidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Code} & \textbf{Image} & \textbf{Prompt metadata} \\
+    \midrule
+    \Acond{1} & Overlay & None (prompt instructs not to use confidence or geometry) \\
+    \Acond{2} & Overlay & YOLO confidence \\
+    \Acond{3} & Overlay & YOLO confidence; box width, height, area; aspect ratio (w/h) \\
+    \Acond{4} & Overlay + enlarged crop (two panels) & YOLO confidence \\
+    \Acond{5} & Enlarged padded crop only & YOLO confidence \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{Discrepancy with design documents.} \texttt{README.md} and
+\texttt{docs/ABLATION\_STUDY.md} list ``center coordinates'' among the \Acond{3}
+metadata. The implemented prompt builder does not include them and instead
+instructs ``Do not use center coordinates or raw bbox coordinates''; the stored
+\Acond{3} prompt files confirm this. This thesis reports the implemented
+condition.
+
+\paragraph{Confounds in the design.} (i) \Acond{1}, \Acond{2} and \Acond{3}
+share an identical image, so their differences are purely textual. (ii)
+\Acond{1}$\rightarrow$\Acond{4} and \Acond{1}$\rightarrow$\Acond{5} change both
+the image and the text (confidence is added); the image-only contrasts are
+\Acond{2}$\rightarrow$\Acond{4} and \Acond{2}$\rightarrow$\Acond{5}. (iii)
+\Acond{4} and \Acond{5} differ in more than surrounding context: the \Acond{4}
+crop comes from the overlay (dimmed outside, rectangle visible at the box
+border) without padding, whereas the \Acond{5} crop comes from the raw image with
+15~px padding and a fixed $512\times512$ output. (iv) The condition name (e.g.,
+\texttt{A3\_overlay\_confidence\_geometry}) and the sample ID appear in every
+prompt (\cref{sec:method:prompt}).
+
+\begin{figure}[t]
+  \centering
+  % TODO: AUTO-GENERATE FROM RESULTS
+  % Candidate source: docs/assets/readme/ablation_inputs_light.png — BUT that
+  % illustration uses a LabelMe box, not a YOLO candidate (README caption).
+  % Regenerate with a real YOLO candidate from outputs/verification_ablation_5747/.
+  \FIGPLACEHOLDER{One YOLO candidate rendered under A1/A2/A3 (identical image), A4 and A5, taken from \texttt{outputs/verification\_ablation\_5747/}.}
+  \caption{The five input conditions for one candidate detection.}
+  \label{fig:conditions}
+\end{figure}
+
+% ---------------------------------------------------------------------
+\subsection{Prompt Protocol}
+\label{sec:method:prompt}
+% ---------------------------------------------------------------------
+Prompts are generated once per sample and condition by
+\texttt{build\_ablation\_verification\_prompt()} and stored as text files;
+adapters read these files and never rebuild prompts. All models therefore
+receive byte-identical prompt text, wrapped in their own chat template.
+% Source: src/prompts/ablation_verification_prompts.py;
+%         scripts/pipeline/build_ablation_verification_prompts.py;
+%         docs/FRAMEWORK_FREEZE.md "Prompt builder"
+Every prompt contains, in order: a role statement (expert reviewer; the task is
+to verify, \emph{not} to detect new palms); general instructions (focus on the
+highlighted box; use surrounding context only if useful; YOLO confidence is
+auxiliary and must not be the primary basis); a list of wild-palm visual
+characteristics; a condition-specific image description; the decision
+definitions; reasoning requirements; the condition-specific metadata block and
+instruction (\cref{tab:conditions}); the condition name and sample ID; and a
+request to return only JSON in a fixed template. The full \Acond{1} prompt is
+reproduced in \cref{app:prompt}.
+
+Two properties of the shared text are relevant for interpretation. First, the
+general instructions mention the YOLO confidence score in every condition,
+including \Acond{1}, where no score is given. Second, the \Acond{1} instruction
+``Judge only from the highlighted bounding box in the image'' differs from the
+general instruction to use surrounding context when useful.
+\TODO{Decide whether to discuss these as threats to validity in \cref{sec:discussion}.}
+
+% ---------------------------------------------------------------------
+\subsection{Output Schema and Parsing}
+\label{sec:method:schema}
+% ---------------------------------------------------------------------
+The model is asked to return
+\begin{verbatim}
+{
+  "decision": "Reliable | Uncertain | Unreliable",
+  "confidence_reasoning": "",
+  "visual_reasoning": ""
+}
+\end{verbatim}
+with the following decision definitions (verbatim from the prompt):
+\begin{description}[leftmargin=1.5em]
+  \item[\R{}] ``The highlighted bounding box clearly contains a valid wild palm.''
+  \item[\U{}] ``Evidence is ambiguous due to occlusion, overlap, low image quality, partial visibility, or confusing vegetation.''
+  \item[\Ur{}] ``The highlighted object is not a palm or the detection is clearly incorrect.''
+\end{description}
+Note that \Ur{} covers both semantic rejection (not a palm) and localization
+rejection (``clearly incorrect''); it is not a pure non-palm verdict.
+
+Parsing is shared: model-specific raw-text cleanup
+(\texttt{normalize\_raw\_response}; identity for all models except the
+Ministral~3 keys), then JSON extraction (direct parse, then a fenced
+\texttt{```json} block, then the first \texttt{\{...\}} span), then decision
+normalization, which accepts exactly the three labels case-insensitively. Any
+other output is recorded as a \texttt{parse\_error} with an empty decision and is
+never coerced into a label.
+% Source: src/lvm/parsers/base.py; src/lvm/response_schema.py::parse_json_response;
+%         src/lvm/parsers/cleanup.py; FRAMEWORK_FREEZE.md amendment 2026-10-01
+Each prediction is stored as one JSON record per sample containing at least the
+decision, both reasoning fields, the raw response, the parsed response, runtime,
+parse/inference error fields, and a UTC timestamp.
+
+% ---------------------------------------------------------------------
+\subsection{Models and Execution Protocol}
+\label{sec:method:models}
+% ---------------------------------------------------------------------
+Each model is integrated through a verifier and an adapter that use the model's
+native processor and chat template, a per-model YAML configuration, and a
+registry entry. The shared runner handles job iteration, resume (keyed by
+\texttt{sample\_id} within a results directory) and output persistence; each
+job loads the model once and runs one condition. All configurations use greedy
+decoding (\texttt{do\_sample=False}) with \texttt{max\_new\_tokens=512};
+Gemma~4 runs with \texttt{enable\_thinking=False}.
+% Source: docs/FRAMEWORK_FREEZE.md; configs/models/*.yaml;
+%         docs/EXPERIMENT_STATUS_CANONICAL.md §3
+\TODO{Per-model image preprocessing (resolution limits, tiling, max pixels) applied by each native processor; these differ across families and are not summarized in the repository.}
+
+\Cref{tab:models} lists every model integrated in the repository and its
+evaluation status as of this draft.
+
+\begin{table}[t]
+  \centering
+  \scriptsize
+  \caption{Integrated models and evaluation status (N = 5{,}747 unless stated). Status as recorded in \texttt{docs/EXPERIMENT\_STATUS\_CANONICAL.md}, \texttt{docs/MODEL\_EXPANSION\_CAMPAIGN.md} and the Slurm queue on 2026-10-02. \TODO{Refresh before submission.}}
+  \label{tab:models}
+  \begin{tabularx}{\linewidth}{@{}l l l X@{}}
+    \toprule
+    \textbf{Family} & \textbf{Checkpoint / size} & \textbf{Registry key} & \textbf{Status} \\
+    \midrule
+    Qwen2.5-VL & 7B-Instruct & \texttt{qwen2\_5\_vl} & A1--A5 complete (legacy launch path; A5 resumed) \\
+               & 3B          & \texttt{qwen2\_5\_vl\_3b} & A1--A5 queued \\
+               & 32B         & \texttt{qwen2\_5\_vl\_32b} & qualification probe pending (H200) \\
+    Qwen3-VL   & 8B-Instruct & \texttt{qwen3\_vl} & A1--A5 complete \\
+               & 4B          & \texttt{qwen3\_vl\_4b} & A1--A5 predictions and v2 evaluation present; not yet in canonical docs \\
+               & 2B          & \texttt{qwen3\_vl\_2b} & A1, A2 running; A3--A5 queued \\
+               & 32B         & \texttt{qwen3\_vl\_32b} & qualification probe pending (H200) \\
+    InternVL3.5-HF & 8B      & \texttt{internvl3\_5\_hf} & A1--A5 complete \\
+               & 2B, 4B, 14B & \texttt{internvl3\_5\_hf\_\{2b,4b,14b\}} & A1--A5 queued \\
+    GLM        & GLM-4.6V-Flash \TODO{size} & \texttt{glm\_4\_6v\_flash} & A1--A5 complete \\
+    Phi-4      & multimodal-instruct \TODO{size} & \texttt{phi4\_multimodal} & A1--A5 complete \\
+    Gemma 4    & 12B IT      & \texttt{gemma4} & A1--A5 complete (skipped qualification ladder) \\
+    MiniCPM-V  & 4.5         & \texttt{minicpm\_v4\_5} & A1 complete (H200); A2--A5 queued (H200) \\
+    Molmo2     & 8B          & \texttt{molmo2\_8b} & A1 complete (H200); A2--A5 queued (H200) \\
+    LLaVA-OneVision & Qwen2-7B OV & \texttt{llava} & A1 @1{,}000 only \\
+    Gemma 3    & 12B IT      & \texttt{gemma} & A1 @1{,}000 only \\
+    InternVL3  & 8B-Instruct & \texttt{internvl3} & stopped at qualification (parse failures) \\
+    Llama 3.2 Vision & 11B-Instruct & \texttt{llama3\_2\_11b\_vision} & engineering check only; held \\
+    Ministral 3 & 3B, 8B, 14B & \texttt{ministral3\_\{3b,8b,14b\}} & qualification probes pending \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{Hardware and environments.} Full-scale runs used single NVIDIA L40S
+GPUs, except MiniCPM-V-4.5 and Molmo2-8B (H200; their A2--A5 runs are also
+scheduled on H200 for parity), and the 32B probes (H200). Several families run
+in isolated Python environments with different \texttt{transformers}
+versions. Attention backend is SDPA for the scaling runs; Phi-4 uses eager
+attention.
+% Source: EXPERIMENT_STATUS_CANONICAL.md §3; MODEL_EXPANSION_CAMPAIGN.md;
+%         configs/models/phi4_multimodal.yaml
+\TODO{Complete per-model environment table (Python, \texttt{transformers}, \texttt{torch}, dtype, attention, revision) in \cref{app:repro}. Revision of the Qwen2.5-VL-7B anchor was not recorded.}
+
+\paragraph{Qualification.} Models passed through qualification runs before
+full-scale inference, but the ladder was \emph{not} applied uniformly
+(\texttt{EXPERIMENT\_STATUS\_CANONICAL.md} §5). The original gates
+(balanced-100) used alignment-based thresholds; the scaling campaign uses a
+GT-independent paired probe (the first 100 samples under all five conditions)
+with only technical hard gates (record completeness, zero inference errors,
+$\geq 95\%$ parseable outputs per condition, valid labels, pinned revision, one
+attention backend).
+% Source: docs/MODEL_EXPANSION_CAMPAIGN.md "Technical qualification"
+\TODO{Decide how to report gate deviations (Gemma~4 skipped Stage~0/balanced-100/A1@1000; InternVL3.5 skipped A1@1000).}
+
+\paragraph{Run integrity.} For every completed full-scale run used here, the
+repository records exactly 5{,}747 prediction files per condition, all with
+status \texttt{ok}, zero parse errors and zero inference errors, and decision
+counts that match the evaluation files.
+% Source: EXPERIMENT_STATUS_CANONICAL.md §2; A1_A5_BEHAVIOR_ANALYSIS.md §2
+\VERIFY{Re-run the integrity audit for every scaling-campaign run (Qwen3-VL-4B and later) before including it.}
+
+% ---------------------------------------------------------------------
+\subsection{Evaluation}
+\label{sec:method:eval}
+% ---------------------------------------------------------------------
+Results are reported at three layers that measure different constructs.
+
+\paragraph{Layer 1 — Behavior (reference-free; primary).} Computed from stored
+decisions only: the distribution of \R{}/\U{}/\Ur{} over all $N$ samples;
+coverage $=(\R+\Ur)/N$; abstention $=\U/N$; per-detection $3\times3$ transition
+matrices between conditions on identical sample IDs; the share of decisions that
+change; direction of change along the order
+\R{}$\rightarrow$\U{}$\rightarrow$\Ur{} (``toward rejection'' versus ``toward
+acceptance''; neither direction is better); and per-detection stability (number
+of distinct labels over \Acond{1}--\Acond{5}).
+% Source: docs/A1_A5_BEHAVIOR_ANALYSIS.md §3
+
+\paragraph{Layer 2 — Annotation alignment (Protocol v2; secondary).} \R{} is a
+positive prediction, \Ur{} a negative prediction, and \U{} is excluded. Against
+the matching label:
+\begin{center}
+\small
+\begin{tabular}{lcc}
+  \toprule
+  & \matched{} & \unmatched{} \\
+  \midrule
+  \R{}  & TP & FP \\
+  \Ur{} & FN & TN \\
+  \U{}  & excluded & excluded \\
+  \bottomrule
+\end{tabular}
+\end{center}
+Accuracy, precision, sensitivity (recall), \alignspec{} $=\mathrm{TN}/(\mathrm{TN}+\mathrm{FP})$,
+F1 and balanced accuracy $=(\text{sensitivity}+\text{specificity})/2$ are
+computed on decided samples only. Because the class prior is high (0.889) and
+\U{} is excluded, accuracy and F1 are always reported with \alignspec{},
+balanced accuracy and coverage. In this thesis TP/FP/TN/FN and
+specificity are \emph{alignment} quantities: ``FP'' means \R{} on a
+\unmatched{} detection, not acceptance of a non-palm.
+% Source: docs/EVALUATION_PROTOCOL.md §3--4; scripts/compute_verification_metrics.py
+
+\paragraph{Layer 3 — Semantic audit.} See \cref{sec:method:semantic}.
+
+\TODO{Specify uncertainty quantification for Layers 1--2 (e.g., image-clustered bootstrap CIs; see \texttt{ANALYSIS\_PLAN.md}). The existing detection-property analysis uses a source-image bootstrap; reuse its design if appropriate.}
+
+% ---------------------------------------------------------------------
+\subsection{Semantic Review Procedure}
+\label{sec:method:semantic}
+% ---------------------------------------------------------------------
+\paragraph{Unmatched-detection audit.} All 638 \unmatched{} detections of the
+cohort were visually reviewed by one human reviewer, who saw only the raw patch
+and the target box. No LabelMe annotation, YOLO confidence, IoU, other detection
+or VLM output was shown. Labels were \texttt{palm}, \texttt{non\_palm} or
+\texttt{ambiguous}. Labeling took place on 2026-10-01 through a dedicated blind
+review application.
+% Source: docs/SEMANTIC_VALIDITY_AUDIT.md §B; scripts/semantic_review_app.py
+\TODO{Reviewer identity/expertise and written labeling criteria (``criteria were standardized'' after a familiarization round, per the audit record; locate the criteria).}
+
+\paragraph{Lower-confidence pilot.} To test whether non-palm candidates exist
+\emph{below} the cohort threshold, 400 YOLO detections with confidence in
+$[0.10, 0.50)$ were sampled, 100 per 0.1-wide bin (with patch and frame caps;
+selection seed 20261001; review-order seed 20261002), and reviewed blind in
+shuffled order. These detections are outside the verification cohort and have
+no VLM predictions. Because bins were sampled equally, raw pooled shares are not
+prevalence estimates.
+% Source: docs/SEMANTIC_VALIDITY_AUDIT.md §C--D
+
+\paragraph{Limitations of the audit (recorded in the repository).} Single
+reviewer (no inter-rater agreement); localization quality not assessed (a
+\texttt{palm} label does not mean the box is well localized, whereas \Ur{} also
+covers ``clearly incorrect'' detections); \matched{} detections were not
+reviewed; no matched controls were interleaved; the review was fast (638 items in
+about 13 minutes).
+% Source: docs/SEMANTIC_VALIDITY_AUDIT.md §F
+
+\paragraph{Superseded pipeline.} An earlier semantic-GT pipeline
+(\texttt{src/evaluation/semantic\_gt.py},
+\texttt{outputs/semantic\_gt\_evaluation/}) predates the official review and is
+marked superseded; it is not used for any result in this thesis.
+\VERIFY{The IoU-sensitivity outputs are written under \texttt{outputs/semantic\_gt\_evaluation/iou\_sensitivity/}; confirm they do not depend on superseded semantic labels before citing them.}

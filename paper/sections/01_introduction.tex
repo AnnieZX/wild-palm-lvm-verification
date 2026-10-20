@@ -1,0 +1,97 @@
+% =====================================================================
+\section{Introduction}
+\label{sec:intro}
+% =====================================================================
+
+% ---------------------------------------------------------------------
+\subsection{Motivation}
+% ---------------------------------------------------------------------
+% TODO: 2--3 paragraphs. Points to cover (no claims about results here):
+%  - Object detectors applied to UAV orthomosaics produce candidate boxes
+%    whose reliability must be checked before downstream use.
+%  - Human verification is costly; open-weight vision-language models
+%    (VLMs) could act as a second-stage verifier of individual detections.
+%  - It is not known how the visual input given to such a verifier
+%    (overlay, crop, both) and auxiliary detector metadata shape its
+%    decisions, nor whether such effects transfer across VLM families
+%    and sizes.
+%  - Evaluating a verifier requires a reference; the common choice
+%    (IoU matching to existing annotations) measures annotation
+%    alignment, which may differ from semantic correctness.
+\TODO{Motivation: UAV wild-palm detection; why verify detections; why VLMs; why visual context matters. Cite application context once references are verified.}
+
+\TODO{Domain context: what wild palms are and why mapping them matters (ecological / applied motivation). Requires a verified source; not documented in the repository.}
+
+% ---------------------------------------------------------------------
+\subsection{Problem Setting}
+% ---------------------------------------------------------------------
+This thesis studies VLMs as \emph{second-stage verifiers}. A fixed object
+detector (a YOLO11x model trained for wild palms; \cref{sec:method:detections})
+proposes candidate boxes. The verifier does not detect new objects. For each
+candidate box it returns exactly one of three closed-set verdicts:
+\R{} (accept), \U{} (abstain and defer to a human), or \Ur{} (reject). The
+detector outputs, the set of candidates, the verifier inputs and prompts, the
+response parser and the evaluator are frozen and shared by every model; only
+the VLM changes (\cref{sec:method:freeze}).
+
+% ---------------------------------------------------------------------
+\subsection{Research Questions}
+\label{sec:intro:rqs}
+% ---------------------------------------------------------------------
+The overarching question is: \emph{How does visual context affect the ability
+of vision-language models to verify object detections, and how consistent is
+this behavior across model families and model scales?} We address it through
+four research questions.
+
+\begin{description}[leftmargin=2.2em,style=nextline]
+  \item[RQ1] How does the visual input representation (\Acond{1}--\Acond{5})
+    affect VLM verification behavior and performance?
+  \item[RQ2] Are the effects of visual context consistent across VLM families
+    and model scales?
+  \item[RQ3] How do VLMs differ in their use of \R{}, \U{}, and \Ur{}
+    predictions, including collapse and abstention behavior?
+  \item[RQ4] What limitations arise when IoU-based annotation matching is
+    used as the reference for evaluating semantic detection reliability?
+\end{description}
+
+% NOTE (construct scope, verified from src/prompts/ablation_verification_prompts.py):
+% A1, A2 and A3 use the SAME image; they differ only in text metadata
+% (none / confidence / confidence + geometry). Visual-context contrasts in
+% the closest sense are A2 vs A4 vs A5 (identical confidence text, different
+% images), but the executed prompts also change the "Input image" description
+% paragraph (and, for A2->A4/A5, one instruction line), so these are
+% image-representation contrasts, not image-only ones
+% (paper/analysis/scripts/common.py::PAIR_GROUP_NOTES). RQ1 must therefore be
+% framed as "input representation" (image + its description + metadata).
+\TODO{State explicitly in prose that \Acond{1}--\Acond{3} vary textual metadata over an identical image, so ``visual context'' in the strict sense is isolated only by the \Acond{2}/\Acond{4}/\Acond{5} contrasts (\cref{sec:method:conditions}).}
+
+% ---------------------------------------------------------------------
+\subsection{Contributions}
+% ---------------------------------------------------------------------
+% TODO: finalize after results. Candidate contributions that are
+% supported by the repository as *artifacts* (not as findings):
+\TODO{Finalize after Results. Candidate contributions (artifact-level, already supported by the repository):}
+\begin{itemize}
+  \item A frozen, model-agnostic verification protocol: one sample per
+    detection, five input conditions (\Acond{1}--\Acond{5}), a shared prompt,
+    a shared JSON parser and a shared evaluator
+    (\cref{sec:method:freeze}).
+  \item A controlled comparison of VLMs from multiple families on the same
+    5{,}747 detections, including within-family size ladders
+    (\cref{sec:method:models}). \TODO{finalize model list once scaling runs finish}
+  \item A ground-truth-independent behavioral analysis of verifier decisions
+    (decision distributions, abstention, cross-condition transitions).
+  \item A human semantic audit that separates \emph{annotation alignment}
+    (IoU matching to LabelMe) from \emph{semantic validity}
+    (\cref{sec:method:semantic}).
+\end{itemize}
+\TODO{Add finding-level contributions only after Section~\ref{sec:results} is complete.}
+
+% ---------------------------------------------------------------------
+\subsection{Thesis Organization}
+% ---------------------------------------------------------------------
+\Cref{sec:related} reviews related work. \Cref{sec:method} describes the
+frozen experimental protocol and the later analyses. \Cref{sec:results}
+reports results organized by research question. \Cref{sec:discussion}
+interprets them and discusses limitations, and \cref{sec:conclusion}
+concludes.

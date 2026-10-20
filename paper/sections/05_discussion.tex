@@ -1,0 +1,52 @@
+% =====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% =====================================================================
+% Write only after Section 4 is final. Each subsection must point back to
+% specific tables/figures. Separate observation from interpretation, and
+% mark every interpretation as such ("one possible explanation is ...").
+% Competing interpretations for each RQ are listed in ANALYSIS_PLAN.md.
+
+\TODO{Write after Results are final.}
+
+% ---------------------------------------------------------------------
+\subsection{Visual Context and Verification Behavior (RQ1)}
+% ---------------------------------------------------------------------
+\TODO{Interpret metadata-only vs.\ image-only effects separately. Address the confounds listed in \cref{sec:method:conditions} (A4 vs.\ A5 differ in crop source, padding and output size, not only in surrounding context).}
+
+% ---------------------------------------------------------------------
+\subsection{Consistency Across Families and Scales (RQ2)}
+% ---------------------------------------------------------------------
+\TODO{Discuss only comparisons that are valid (same cohort, same conditions; within-family ladders). State the caveats on anchors vs.\ newly run sizes.}
+
+% ---------------------------------------------------------------------
+\subsection{Abstention, Collapse, and the Three-Way Output (RQ3)}
+% ---------------------------------------------------------------------
+\TODO{Discuss how \U{} exclusion interacts with accuracy/F1 and coverage; describe collapse as observed behavior, not as a diagnosed cause.}
+
+% ---------------------------------------------------------------------
+\subsection{What IoU-Based Matching Can and Cannot Measure (RQ4)}
+% ---------------------------------------------------------------------
+\TODO{Discuss annotation alignment vs.\ semantic validity, using the semantic audit. Note that \Ur{} covers both ``not a palm'' and ``detection clearly incorrect'', while the audit scored only palm identity, not localization.}
+
+% ---------------------------------------------------------------------
+\subsection{Implications for Using VLMs as Detection Verifiers}
+% ---------------------------------------------------------------------
+\TODO{Practical implications, strictly limited to what Results support.}
+
+% ---------------------------------------------------------------------
+\subsection{Threats to Validity and Limitations}
+\label{sec:discussion:limitations}
+% ---------------------------------------------------------------------
+% Items verified in the repository; expand as needed.
+\begin{itemize}
+  \item \textbf{Reference construct.} LabelMe matching measures annotation alignment; annotations are not documented as exhaustive.
+  \item \textbf{Semantic audit scope.} One reviewer; only \unmatched{} detections reviewed; localization not assessed; review of 638 items took about 13 minutes; the cohort contains no confirmed non-palms, so semantic non-palm rejection cannot be estimated on it.
+  \item \textbf{Design confounds.} \Acond{1}--\Acond{3} share one image; \Acond{1}$\rightarrow$\Acond{4}/\Acond{5} change image and text; \Acond{4} and \Acond{5} crops differ in source, padding and resolution.
+  \item \textbf{Prompt content.} Condition name and sample ID appear in every prompt; confidence is mentioned in the general instructions even under \Acond{1}.
+  \item \textbf{Documentation discrepancy.} Design documents list center coordinates for \Acond{3}; the implementation omits them.
+  \item \textbf{Single detector, single dataset, single prompt.} Results may not transfer to other detectors, regions, or prompt wordings. No prompt-wording ablation was performed for the main study. \TODO{Check whether the label-robustness probes (\texttt{scripts/diagnostics/*label\_robustness*}) can be cited as partial evidence.}
+  \item \textbf{Non-uniform qualification and hardware.} Qualification ladders differed across models; some runs used H200 rather than L40S GPUs; environments differ by family.
+  \item \textbf{Cohort ordering.} Sub-cohort runs (@100/@1{,}000) use the first samples in image/confidence order, not a random sample.
+  \item \textbf{Greedy decoding only.} All runs use greedy decoding; sampling variability is not characterized. \TODO{Cite the paired-probe determinism check where available.}
+\end{itemize}

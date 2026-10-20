@@ -1,0 +1,22 @@
+% TODO: AUTO-GENERATE FROM RESULTS
+% Join: human_review.csv (sample_id -> semantic label) x stored decisions
+% (outputs/verification/<model>/<exp>/A*/sample_*.json or Protocol-v2
+% evaluation CSV verification_label column). Only the 638 unmatched.
+% A related, earlier file exists:
+%   outputs/semantic_gt_evaluation/negative_pool_decisions_by_semantic.csv
+% but that directory is SUPERSEDED — recompute from the official labels.
+\begin{table}[t]
+  \centering
+  \small
+  \caption{VLM verdicts on the 638 \unmatched{} detections, by human semantic label. An \Ur{} verdict on a semantic palm counts as an alignment ``TN'' under Protocol~v2. \AUTOGEN{caption details}}
+  \label{tab:semantic_by_decision}
+  \begin{tabular}{@{}l l r r r r r r@{}}
+    \toprule
+    & & \multicolumn{3}{c}{\textbf{semantic palm}} & \multicolumn{3}{c}{\textbf{ambiguous}} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){6-8}
+    \textbf{Model} & \textbf{Cond.} & \R{} & \U{} & \Ur{} & \R{} & \U{} & \Ur{} \\
+    \midrule
+    \AUTOGENROW{8}{one row per model $\times$ condition; add a non\_palm block only if any exist} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
